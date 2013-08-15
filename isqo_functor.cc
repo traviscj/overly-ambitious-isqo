@@ -281,24 +281,31 @@ public:
 		return two_vectors(con_values_eq, con_values_ieq);
 	}
 	double operator()(const iSQOIterate &iterate, const iSQOStep &step) {
+		bool PRINT = false;
 		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
 		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
 		
+		if (PRINT) cout << "constraintviolationfunction e 0: " << con_values_eq[0] << endl;
 		// J(x)*d
 		matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
+		if (PRINT) jac_ce.print();
 		for (size_t row=0; row<iterate.num_dual_eq_; ++row) {
 			for (size_t col=0; col<iterate.num_primal_; ++col) {
 				con_values_eq[row] += jac_ce.get(row,col)*step.primal_values_[col];
 			}
 		}
+		if (PRINT) cout << "constraintviolationfunction e 1: " << con_values_eq[0] << endl;
 		
 		// \bar{J}(x)*d
+		if (PRINT) cout << "constraintviolationfunction i 0: " << con_values_ieq[0] << endl;
 		matrix jac_ci = nlp_->constraints_inequality_jacobian(iterate);
+		if (PRINT) jac_ci.print();
 		for (size_t row=0; row<iterate.num_dual_ieq_; ++row) {
 			for (size_t col=0; col<iterate.num_primal_; ++col) {
 				con_values_ieq[row] += jac_ci.get(row,col)*step.primal_values_[col];
 			}
 		}
+		if (PRINT) cout << "constraintviolationfunction i 1: " << con_values_ieq[0] << endl;
 		
 		return two_vectors(con_values_eq, con_values_ieq);
 	}
@@ -425,6 +432,7 @@ public:
 		matrix ji = nlp_->constraints_inequality_jacobian(iterate);
 		// ji.print();
 	
+		// TODO major cleanup needed here.
 		matrix slack_jac(iterate.num_dual_eq_ + iterate.num_dual_ieq_, iterate.num_primal_ + 2*(iterate.num_dual_eq_ + iterate.num_dual_ieq_));
 		for (size_t eq_constraint_index=0; eq_constraint_index < iterate.num_dual_eq_; ++eq_constraint_index) {
 			for (size_t variables=0; variables<iterate.num_primal_; ++variables) {
@@ -501,34 +509,41 @@ public:
 		g[3] = 1.0;
 		g[4] = 1.0;
 		g[5] = 0.0;
-		// cout << "slack gradient: " << endl;
-		// for(size_t i=0; i<6; ++i) cout << g[i] << " ";
-		// cout << endl;
+		
 		
 		real_t lb[6];
 		for (size_t i=0; i<6; ++i) lb[i] = lower_bound_var[i];
-		// cout << "slack lb: " << endl;
-		// for(size_t i=0; i<6; ++i) cout << lb[i] << " ";
-		// cout << endl;
 		
 		real_t ub[6];
 		for (size_t i=0; i<6; ++i) ub[i] = upper_bound_var[i];
-		// cout << "slack ub: " << endl;
-		// for(size_t i=0; i<6; ++i) cout << ub[i] << " ";
-		// cout << endl;
+		
 		
 		real_t lbA[2];
 		for (size_t i=0; i<2; ++i) lbA[i] = lower_bound_jac[i];
-		// cout << "slack lbA: " << endl;
-		// for(size_t i=0; i<2; ++i) cout << lbA[i] << " ";
-		// cout << endl;
 		
 		real_t ubA[2];
 		for (size_t i=0; i<2; ++i) ubA[i] = upper_bound_jac[i];
-		// cout << "slack ubA: " << endl;
-		// for(size_t i=0; i<2; ++i) cout << ubA[i] << " ";
-		// cout << endl;
-
+		
+		bool PRINT = true;
+		if (PRINT) {
+			cout << endl;
+			cout << "slack gradient: " << endl;
+			for(size_t i=0; i<6; ++i) cout << g[i] << " ";
+			cout << endl;
+			cout << "slack lb: " << endl;
+			for(size_t i=0; i<6; ++i) cout << lb[i] << " ";
+			cout << endl;
+			cout << "slack ub: " << endl;
+			for(size_t i=0; i<6; ++i) cout << ub[i] << " ";
+			cout << endl;
+			cout << "slack lbA: " << endl;
+			for(size_t i=0; i<2; ++i) cout << lbA[i] << " ";
+			cout << endl;
+			cout << "slack ubA: " << endl;
+			for(size_t i=0; i<2; ++i) cout << ubA[i] << " ";
+			cout << endl;
+			
+		}
 		/* Setting up QProblem object. */
 		// SQProblem example_( 6,2 );
 		example_.setPrintLevel(PL_NONE);
@@ -553,12 +568,8 @@ public:
 		}
 		cerr.flush();
 		cout.flush();
-		/* Solve second QP. */
-		// nWSR = 10;
-// 		example.hotstart( g_new,lb_new,ub_new,lbA_new,ubA_new, nWSR );
 
 		size_t return_status = example_.getStatus();
-		// cout << "status: " << return_status << endl;
 		// if (return_status != 0) {
 			// exit(10);
 		// }
@@ -571,35 +582,24 @@ public:
 		// cout << "got primal" << endl;
 		real_t *yOpt = new real_t[200];
 		example_.getDualSolution( yOpt );
-		// cout << "got dual..." << endl;
-		// cout << yOpt[0] << endl;
-// 		cout << yOpt[1] << endl;
-// 		cout << yOpt[2] << endl;
-// 		cout << yOpt[3] << endl;
-// 		cout << yOpt[4] << endl;
-// 		cout << yOpt[5] << endl;
-// 		cout << yOpt[6] << endl;
-// 		cout << yOpt[7] << endl;
-// 		cout << yOpt[8] << endl;
-// 		cout << yOpt[9] << endl;
-// 		cout << yOpt[10] << endl;
 		
-		// for (size_t i=0; i<2; ++i) return_dual_ieq[i] = yOpt[i];
-		// return_dual_eq[0] = ;
-		// cout << "got dual..." << endl;
-		// return_dual_ieq[0] = -yOpt[6+1];
-		// cout << "got dual..." << endl;
-		// printf( "\nxOpt = [ %e, %e, %e, %e, %e, %e ];  objVal = %e\n\n", xOpt[0],xOpt[1],xOpt[2],xOpt[3],xOpt[4],xOpt[5],example.getObjVal() );
-		// cout << "printed status..." << endl;
-		// getGlobalMessageHandler( )->listAllMessages( );
-		// example.printOptions();
-		// return primal_return;
-		iSQOStep step(2,1,1);
+		if (PRINT) {
+			cout << "status: " << return_status << endl;
+			printf( "xOpt = [ %e, %e, %e, %e, %e, %e ];  objVal = %e\n", xOpt[0],xOpt[1],xOpt[2],xOpt[3],xOpt[4],xOpt[5],example_.getObjVal() );
+			printf( "yOpt = [ %e, %e, %e, %e, %e, %e, %e, %e]\n", yOpt[0], yOpt[1], yOpt[2], yOpt[3], yOpt[4], yOpt[5], yOpt[6], yOpt[7]);
+		}
+		
+		iSQOStep step(iterate.num_primal_,iterate.num_dual_eq_,iterate.num_dual_ieq_);
 		step.status_ = return_status;
-		step.primal_values_[0] = xOpt[0];
-		step.primal_values_[1] = xOpt[1];
-		step.dual_eq_values_[0] = -yOpt[6+0];
-		step.dual_ieq_values_[0] = -yOpt[6+1];
+		for (size_t i=0; i<iterate.num_primal_; ++i) {
+			step.primal_values_[i] = xOpt[i];
+		}
+		for (size_t i=0; i<iterate.num_dual_eq_; ++i) {
+			step.dual_eq_values_[i] = -yOpt[iterate.num_primal_+i];
+		}
+		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) {
+			step.dual_ieq_values_[i] = -yOpt[iterate.num_primal_+iterate.num_dual_eq_+i];
+		}
 		return step;
 	}
 private:
@@ -654,16 +654,32 @@ private:
 protected:
 	ConstraintViolationFunction constraint_violation_func_;
 };
+
 class LinearDecreaseFunction : public FunctionWithNLPState {
 public:
-	LinearDecreaseFunction(Nlp &nlp) : FunctionWithNLPState(nlp) {
+	LinearDecreaseFunction(Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp) {
 		
 	}
 	double operator()(const iSQOIterate &iterate, const iSQOStep &step) {
-		return 3.14159;
+		bool PRINT=false;
+		double f = nlp_->objective(iterate);
+		vector<double> gradient = nlp_->objective_gradient(iterate);
+		// dotproduct(gradient, )
+		double dot_product=0.0;
+		for (size_t i=0; i<iterate.num_primal_; ++i) {
+			dot_product += gradient[i]*step.primal_values_[i];
+		}
+		
+		if (PRINT) cout << "linear decrease: " << endl;
+		if (PRINT) cout << " - " << -iterate.penalty_parameter_*dot_product << endl;
+		if (PRINT) cout << " - " << constraint_violation_func_(iterate) << endl;
+		if (PRINT) cout << " - " << constraint_violation_func_(iterate,step) << endl;
+		
+		return -iterate.penalty_parameter_*dot_product + constraint_violation_func_(iterate) - constraint_violation_func_(iterate,step);
 	}
 private:
 protected:
+	ConstraintViolationFunction constraint_violation_func_;
 };
 int main() {
 	Hs014 problem;
@@ -729,9 +745,10 @@ int main() {
 		double alpha = linesearch(iterate, step);
 		iterate.update(iterate, alpha, step);
 		
+		LinearDecreaseFunction linear_decrease_func(problem);
 		printf(output_format_post,
 				-42.1, -42, step.x_norm(),
-				-42.1, -42.1,
+				linear_decrease_func(iterate, step), -42.1,
 				alpha
 					);
 		if (residual_func(iterate) < 1e-8) {

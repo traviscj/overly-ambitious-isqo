@@ -153,11 +153,11 @@ public:
 	void set(size_t r, size_t c, double val) {
 		data_[columns_*r + c] = val;
 	}
-	double get(size_t r, size_t c) {
+	double get(size_t r, size_t c) const {
 		return data_[columns_*r + c];
 	}
 	// double
-	void print() {
+	void print() const {
 		for (size_t r=0; r<rows_; r++) {
 			for (size_t c=0; c<columns_; c++) {
 				cout << " " << data_[columns_*r + c];
@@ -165,14 +165,14 @@ public:
 			cout << endl;
 		}
 	}
-	vector<double> multiply(const vector<double> x) {
-		// for (size_t i=0; i<)
-		vector<double> retval(3);
-		retval[0] = 1;
-		retval[1] = 2;
-		retval[2] = 3;
-		return retval;
-	}
+	// vector<double> multiply(const vector<double> x) {
+	// 	// for (size_t i=0; i<)
+	// 	vector<double> retval(3);
+	// 	retval[0] = 1;
+	// 	retval[1] = 2;
+	// 	retval[2] = 3;
+	// 	return retval;
+	// }
 	int rows_, columns_;
 	vector<double> data_;
 private:
@@ -346,137 +346,8 @@ protected:
 	// double penalty_parameter_;
 };
 
-class ResidualFunction : public FunctionWithNLPState {
-public:
-	ResidualFunction(Nlp &nlp) : 
-			FunctionWithNLPState(nlp) 
-			// constraint_violation_func_(nlp),
-			// penalty_parameter_(1.0) 
-			{
-		// cout << "-- Initializing nlp residual function." << endl;
-	}
-	double operator()(const iSQOIterate &iterate) {
-		// first entry of rho(x,y,bary,mu):
-		vector<double> grad_obj = nlp_->objective_gradient(iterate);
-		matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
-		matrix jac_ci = nlp_->constraints_inequality_jacobian(iterate);
-		vector<double> rho_1(iterate.num_primal_);
-		vector<double> rho_2(iterate.num_dual_eq_), rho_3(iterate.num_dual_eq_);
-		vector<double> rho_4(iterate.num_dual_ieq_), rho_5(iterate.num_dual_ieq_);
-		for (size_t i=0; i<iterate.num_primal_; ++i) {
-			rho_1[i] = 0.0;
-			rho_1[i] += iterate.penalty_parameter_*grad_obj[i];
-			size_t j=0; // TODO: make this a for loop instead...
-			
-			rho_1[i] += jac_ce.get(j,i)*iterate.dual_eq_values_[j];
-			rho_1[i] += jac_ci.get(j,i)*iterate.dual_ieq_values_[j];
-			// cout << "debug rho1_a: " << iterate.penalty_parameter_*grad_obj[i] << "; "
-				// << jac_ce.get(i,j)*iterate.dual_eq_values_[j] << "; "
-				// << jac_ci.get(i,j)*iterate.dual_ieq_values_[j] << "; " << endl;
-			// cout << "rho_1[i=" << i << "]: " << rho_1[i] << endl;
-		}
-		// second & third entry of rho(iter)
-		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
-		for (size_t i=0; i<iterate.num_dual_eq_; ++i) {
-
-			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
-			// cout << "rho3debug_b: " << iterate.dual_eq_values_[i] << endl;
-			rho_2[i] = min( max( con_values_eq[i], 0.0), 1.0-iterate.dual_eq_values_[i]);
-			rho_3[i] = min( max(-con_values_eq[i], 0.0), 1.0+iterate.dual_eq_values_[i]);
-			// cout << "rho_2[i=" << i << "]: " << rho_2[i] << endl;
-			// cout << "rho_3[i=" << i << "]: " << rho_3[i] << endl;
-		}
-		// fourth & fifth entry of rho(iter)
-		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
-		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) {
-			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
-			// cout << "rho5debug_b: " << iterate.dual_ieq_values_[i] << endl;
-			rho_4[i] = min( max( con_values_ieq[i], 0.0), 1.0-iterate.dual_ieq_values_[i]);
-			rho_5[i] = min( max(-con_values_ieq[i], 0.0),     iterate.dual_ieq_values_[i]);
-			// cout << "rho_4[i=" << i << "]: " << rho_4[i] << endl;
-			// cout << "rho_5[i=" << i << "]: " << rho_5[i] << endl;
-		}
-		
-		double total=0.0;
-		for (size_t i=0; i<iterate.num_primal_; ++i) { total += rho_1[i]*rho_1[i]; }
-		for (size_t i=0; i<iterate.num_dual_eq_; ++i) { total += rho_2[i]*rho_2[i]+rho_3[i]*rho_3[i]; }
-		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) { total += rho_4[i]*rho_4[i]+rho_5[i]*rho_5[i]; }
-		if (total > 1e10) {
-			cerr << "Bad shit's going down...";
-			exit(5);
-		}
-		return sqrt(total);
-	}
-	double operator()(const iSQOIterate &iterate, const iSQOStep &step) {
-		// first entry of rho(x,y,bary,mu):
-		vector<double> grad_obj = nlp_->objective_gradient(iterate);
-		matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
-		matrix jac_ci = nlp_->constraints_inequality_jacobian(iterate);
-		vector<double> rho_1(iterate.num_primal_);
-		vector<double> rho_2(iterate.num_dual_eq_), rho_3(iterate.num_dual_eq_);
-		vector<double> rho_4(iterate.num_dual_ieq_), rho_5(iterate.num_dual_ieq_);
-		for (size_t i=0; i<iterate.num_primal_; ++i) {
-			rho_1[i] = 0.0;
-			rho_1[i] += iterate.penalty_parameter_*grad_obj[i];
-			for (size_t variable_index=0; variable_index < iterate.num_primal_; ++variable_index) {
-				
-			}
-			size_t j=0; // TODO: make this a for loop instead...
-			
-			rho_1[i] += jac_ce.get(j,i)*iterate.dual_eq_values_[j];
-			rho_1[i] += jac_ci.get(j,i)*iterate.dual_ieq_values_[j];
-			// cout << "debug rho1_a: " << iterate.penalty_parameter_*grad_obj[i] << "; "
-				// << jac_ce.get(i,j)*iterate.dual_eq_values_[j] << "; "
-				// << jac_ci.get(i,j)*iterate.dual_ieq_values_[j] << "; " << endl;
-			// cout << "rho_1[i=" << i << "]: " << rho_1[i] << endl;
-		}
-		// second & third entry of rho(iter)
-		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
-		for (size_t i=0; i<iterate.num_dual_eq_; ++i) {
-
-			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
-			// cout << "rho3debug_b: " << iterate.dual_eq_values_[i] << endl;
-			rho_2[i] = min( max( con_values_eq[i], 0.0), 1.0-iterate.dual_eq_values_[i]);
-			rho_3[i] = min( max(-con_values_eq[i], 0.0), 1.0+iterate.dual_eq_values_[i]);
-			// cout << "rho_2[i=" << i << "]: " << rho_2[i] << endl;
-			// cout << "rho_3[i=" << i << "]: " << rho_3[i] << endl;
-		}
-		// fourth & fifth entry of rho(iter)
-		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
-		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) {
-			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
-			// cout << "rho5debug_b: " << iterate.dual_ieq_values_[i] << endl;
-			rho_4[i] = min( max( con_values_ieq[i], 0.0), 1.0-iterate.dual_ieq_values_[i]);
-			rho_5[i] = min( max(-con_values_ieq[i], 0.0),     iterate.dual_ieq_values_[i]);
-			// cout << "rho_4[i=" << i << "]: " << rho_4[i] << endl;
-			// cout << "rho_5[i=" << i << "]: " << rho_5[i] << endl;
-		}
-		
-		double total=0.0;
-		for (size_t i=0; i<iterate.num_primal_; ++i) { total += rho_1[i]*rho_1[i]; }
-		for (size_t i=0; i<iterate.num_dual_eq_; ++i) { total += rho_2[i]*rho_2[i]+rho_3[i]*rho_3[i]; }
-		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) { total += rho_4[i]*rho_4[i]+rho_5[i]*rho_5[i]; }
-		if (total > 1e10) {
-			cerr << "Bad shit's going down...";
-			exit(5);
-		}
-		return sqrt(total);
-	}
-protected:
-};
-
-USING_NAMESPACE_QPOASES
 class iSQOQuadraticSubproblem : public FunctionWithNLPState{
 public:
-	// iSQOQuadraticSubproblem(int num_vars, int num_cons) : 
-// 			num_variables_(num_vars), num_constraints_(num_cons),
-// 			num_nlp_variables_(2), num_nlp_constraints_eq_(1), num_nlp_constraints_ieq_(1),
-// 			hessian_(num_vars, num_vars), 
-// 			jacobian_(num_cons, num_vars), 
-// 			gradient_(num_vars),lower_bound_(num_vars), upper_bound_(num_vars), 
-// 			jacobian_lower_bound_(num_cons), jacobian_upper_bound_(num_cons) {
-// 				
-// 	}
 	iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate) :
 				FunctionWithNLPState(nlp),
 				num_variables_(6), num_constraints_(2),
@@ -589,13 +460,152 @@ private:
 protected:
 };
 
+class ResidualFunction : public FunctionWithNLPState {
+public:
+	ResidualFunction(Nlp &nlp) : 
+			FunctionWithNLPState(nlp) 
+			// constraint_violation_func_(nlp),
+			// penalty_parameter_(1.0) 
+			{
+		// cout << "-- Initializing nlp residual function." << endl;
+	}
+	double operator()(const iSQOIterate &iterate) {
+		// first entry of rho(x,y,bary,mu):
+		vector<double> grad_obj = nlp_->objective_gradient(iterate);
+		matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
+		matrix jac_ci = nlp_->constraints_inequality_jacobian(iterate);
+		vector<double> rho_1(iterate.num_primal_);
+		vector<double> rho_2(iterate.num_dual_eq_), rho_3(iterate.num_dual_eq_);
+		vector<double> rho_4(iterate.num_dual_ieq_), rho_5(iterate.num_dual_ieq_);
+		for (size_t i=0; i<iterate.num_primal_; ++i) {
+			rho_1[i] = 0.0;
+			rho_1[i] += iterate.penalty_parameter_*grad_obj[i];
+			size_t j=0; // TODO: make this a for loop instead...
+			
+			rho_1[i] += jac_ce.get(j,i)*iterate.dual_eq_values_[j];
+			rho_1[i] += jac_ci.get(j,i)*iterate.dual_ieq_values_[j];
+			// cout << "debug rho1_a: " << iterate.penalty_parameter_*grad_obj[i] << "; "
+				// << jac_ce.get(i,j)*iterate.dual_eq_values_[j] << "; "
+				// << jac_ci.get(i,j)*iterate.dual_ieq_values_[j] << "; " << endl;
+			// cout << "rho_1[i=" << i << "]: " << rho_1[i] << endl;
+		}
+		// second & third entry of rho(iter)
+		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
+		for (size_t i=0; i<iterate.num_dual_eq_; ++i) {
+
+			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
+			// cout << "rho3debug_b: " << iterate.dual_eq_values_[i] << endl;
+			rho_2[i] = min( max( con_values_eq[i], 0.0), 1.0-iterate.dual_eq_values_[i]);
+			rho_3[i] = min( max(-con_values_eq[i], 0.0), 1.0+iterate.dual_eq_values_[i]);
+			// cout << "rho_2[i=" << i << "]: " << rho_2[i] << endl;
+			// cout << "rho_3[i=" << i << "]: " << rho_3[i] << endl;
+		}
+		// fourth & fifth entry of rho(iter)
+		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
+		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) {
+			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
+			// cout << "rho5debug_b: " << iterate.dual_ieq_values_[i] << endl;
+			rho_4[i] = min( max( con_values_ieq[i], 0.0), 1.0-iterate.dual_ieq_values_[i]);
+			rho_5[i] = min( max(-con_values_ieq[i], 0.0),     iterate.dual_ieq_values_[i]);
+			// cout << "rho_4[i=" << i << "]: " << rho_4[i] << endl;
+			// cout << "rho_5[i=" << i << "]: " << rho_5[i] << endl;
+		}
+		
+		double total=0.0;
+		for (size_t i=0; i<iterate.num_primal_; ++i) { total += rho_1[i]*rho_1[i]; }
+		for (size_t i=0; i<iterate.num_dual_eq_; ++i) { total += rho_2[i]*rho_2[i]+rho_3[i]*rho_3[i]; }
+		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) { total += rho_4[i]*rho_4[i]+rho_5[i]*rho_5[i]; }
+		if (total > 1e10) {
+			cerr << "Bad shit's going down...";
+			exit(5);
+		}
+		return sqrt(total);
+	}
+	double operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) {
+		// first entry of rho(x,y,bary,mu):
+		bool PRINT=false;
+		vector<double> grad_obj = nlp_->objective_gradient(iterate);
+		matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
+		matrix jac_ci = nlp_->constraints_inequality_jacobian(iterate);
+		vector<double> rho_1(iterate.num_primal_);
+		vector<double> rho_2(iterate.num_dual_eq_), rho_3(iterate.num_dual_eq_);
+		vector<double> rho_4(iterate.num_dual_ieq_), rho_5(iterate.num_dual_ieq_);
+		for (size_t i=0; i<iterate.num_primal_; ++i) {
+			rho_1[i] = 0.0;
+			rho_1[i] += iterate.penalty_parameter_*grad_obj[i];
+			for (size_t variable_index=0; variable_index < iterate.num_primal_; ++variable_index) {
+				rho_1[i] += subproblem.hessian_.get(i, variable_index)*step.primal_values_[variable_index];
+			}
+			for (size_t dual_eq_index=0; dual_eq_index<iterate.num_dual_eq_; dual_eq_index++) {
+				rho_1[i] += jac_ce.get(dual_eq_index,i)*step.dual_eq_values_[dual_eq_index];
+			}
+			for (size_t dual_ieq_index=0; dual_ieq_index<iterate.num_dual_ieq_; dual_ieq_index++) {
+				rho_1[i] += jac_ci.get(dual_ieq_index,i)*step.dual_ieq_values_[dual_ieq_index];
+			}
+			// cout << "debug rho1_a: " << iterate.penalty_parameter_*grad_obj[i] << "; "
+				// << jac_ce.get(i,j)*iterate.dual_eq_values_[j] << "; "
+				// << jac_ci.get(i,j)*iterate.dual_ieq_values_[j] << "; " << endl;
+			if (PRINT) cout << "rho_1[i=" << i << "]: " << rho_1[i] << endl;
+		}
+		// second & third entry of rho(iter)
+		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
+		for (size_t con_eq_index=0; con_eq_index<iterate.num_dual_eq_; ++con_eq_index) {
+			for (size_t variable_index=0 ; variable_index < iterate.num_primal_; ++variable_index){
+				con_values_eq[con_eq_index] += subproblem.jacobian_.get(con_eq_index,variable_index)*step.primal_values_[variable_index];
+			}
+		
+			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
+			// cout << "rho3debug_b: " << iterate.dual_eq_values_[i] << endl;			
+			rho_2[con_eq_index] = min( max( con_values_eq[con_eq_index], 0.0), 1.0-step.dual_eq_values_[con_eq_index]);
+			rho_3[con_eq_index] = min( max(-con_values_eq[con_eq_index], 0.0), 1.0+step.dual_eq_values_[con_eq_index]);
+			if (PRINT) cout << "rho_2[i=" << con_eq_index << "]: " << rho_2[con_eq_index] << endl;
+			if (PRINT) cout << "rho_3[i=" << con_eq_index << "]: " << rho_3[con_eq_index] << endl;
+		}
+		// fourth & fifth entry of rho(iter)
+		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
+		for (size_t con_ieq_index=0; con_ieq_index<iterate.num_dual_ieq_; ++con_ieq_index) {
+			if (PRINT) cout << "rho4debug_a: " << max( con_values_ieq[con_ieq_index], 0.0) << endl;
+			if (PRINT) cout << "rho4debug_b: " << 1.0-iterate.dual_ieq_values_[con_ieq_index] << endl;
+			if (PRINT) subproblem.jacobian_.print();
+			if (PRINT) cout << " - " << subproblem.jacobian_.get(0,0) << " * " << step.primal_values_[0] << endl;
+			if (PRINT) cout << " - " << subproblem.jacobian_.get(0,1) << " * " << step.primal_values_[1] << endl;
+			if (PRINT) cout << " - " << subproblem.jacobian_.get(1,0) << " * " << step.primal_values_[0] << endl;
+			if (PRINT) cout << " - " << subproblem.jacobian_.get(1,1) << " * " << step.primal_values_[1] << endl;
+			for (size_t variable_index=0 ; variable_index < iterate.num_primal_; ++variable_index){
+				if (PRINT) cout << "-- Term: " << subproblem.jacobian_.get(iterate.num_dual_eq_+con_ieq_index,variable_index)*step.primal_values_[variable_index] << endl;
+				con_values_ieq[con_ieq_index] += subproblem.jacobian_.get(iterate.num_dual_eq_+con_ieq_index,variable_index)*step.primal_values_[variable_index];
+			}
+			if (PRINT) cout << "rho4debug_a: " << max( con_values_ieq[con_ieq_index], 0.0) << endl;
+			if (PRINT) cout << "rho4debug_b: " << 1.0-iterate.dual_ieq_values_[con_ieq_index] << endl;
+		
+			// cout << "rho5debug_a: " << max(-con_values_ieq[i], 0.0) << endl;
+			// cout << "rho5debug_b: " << iterate.dual_ieq_values_[i] << endl;
+			rho_4[con_ieq_index] = min( max( con_values_ieq[con_ieq_index], 0.0), 1.0-step.dual_ieq_values_[con_ieq_index]);
+			rho_5[con_ieq_index] = min( max(-con_values_ieq[con_ieq_index], 0.0),     step.dual_ieq_values_[con_ieq_index]);
+			if (PRINT) cout << "rho_4[i=" << con_ieq_index << "]: " << rho_4[con_ieq_index] << endl;
+			if (PRINT) cout << "rho_5[i=" << con_ieq_index << "]: " << rho_5[con_ieq_index] << endl;
+		}
+		
+		double total=0.0;
+		for (size_t i=0; i<iterate.num_primal_; ++i) { total += rho_1[i]*rho_1[i]; }
+		for (size_t i=0; i<iterate.num_dual_eq_; ++i) { total += rho_2[i]*rho_2[i]+rho_3[i]*rho_3[i]; }
+		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) { total += rho_4[i]*rho_4[i]+rho_5[i]*rho_5[i]; }
+		if (total > 1e10) {
+			cerr << "Bad shit's going down...";
+			exit(5);
+		}
+		return sqrt(total);
+	}
+protected:
+};
+
 class SolveQuadraticProgram : public FunctionWithNLPState {
 public:
 	SolveQuadraticProgram(Nlp &nlp) : FunctionWithNLPState(nlp), example_(6,2), first_(true)  {}
 	
 	iSQOStep operator()(const iSQOQuadraticSubproblem &subproblem) {
 		/* Setting up QProblem object. */
-		example_.setPrintLevel(PL_LOW);
+		example_.setPrintLevel(qpOASES::PL_LOW);
 		int nWSR = 2000;
 		qpOASES::returnValue ret;
 		if (first_) {
@@ -626,8 +636,9 @@ public:
 		if( ret != qpOASES::SUCCESSFUL_RETURN )
 		        printf( "%s\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
 		
-		real_t xOpt[6];
-		example_.getPrimalSolution( xOpt );
+		iSQOStep step(subproblem.num_nlp_variables_,subproblem.num_nlp_constraints_eq_,subproblem.num_nlp_constraints_ieq_);
+		// real_t xOpt[6];
+		example_.getPrimalSolution( &step.primal_values_[0] );
 
 		// 	- every QP variable has a multiplier:
 		//		-- iterate.num_primal_: primal variables in NLP
@@ -637,21 +648,10 @@ public:
 		//		-- iterate.num_dual_eq_
 		//		-- iterate.num_dual_ieq_
 		// so in total: 
-		real_t *yOpt = new real_t[subproblem.num_variables_ + subproblem.num_constraints_];
-		example_.getDualSolution( yOpt );
+		vector<double> yOpt(subproblem.num_variables_ + subproblem.num_constraints_);
+		example_.getDualSolution( &yOpt[0] );				
 		
-		bool PRINT=false;
-		if (PRINT) {
-			cout << "status: " << return_status << endl;
-			printf( "xOpt = [ %e, %e, %e, %e, %e, %e ];  objVal = %e\n", xOpt[0],xOpt[1],xOpt[2],xOpt[3],xOpt[4],xOpt[5],example_.getObjVal() );
-			printf( "yOpt = [ %e, %e, %e, %e, %e, %e, %e, %e]\n", yOpt[0], yOpt[1], yOpt[2], yOpt[3], yOpt[4], yOpt[5], yOpt[6], yOpt[7]);
-		}
-				
-		iSQOStep step(subproblem.num_nlp_variables_,subproblem.num_nlp_constraints_eq_,subproblem.num_nlp_constraints_ieq_);
 		step.status_ = ret;
-		for (size_t i=0; i<subproblem.num_nlp_variables_; ++i) {
-			step.primal_values_[i] = xOpt[i];
-		}
 		// to get eq con multipliers, read past NLP & slack variables:
 		for (size_t i=0; i<subproblem.num_nlp_constraints_eq_; ++i) {
 			step.dual_eq_values_[i] = -yOpt[subproblem.num_variables_+i];
@@ -660,53 +660,15 @@ public:
 		for (size_t i=0; i<subproblem.num_nlp_constraints_ieq_; ++i) {
 			step.dual_ieq_values_[i] = -yOpt[subproblem.num_variables_+subproblem.num_nlp_constraints_eq_+i];
 		}
+		bool PRINT=false;
+		if (PRINT) {
+			step.print();
+		}
 		return step;
-	}
-	
-	void generateQP(const iSQOIterate &iterate) {
-		
-		
-		// TODO integrate this section + above to avoid extra copies...
-		// real_t H[num_qp_variables*num_qp_variables], A[2*num_qp_variables];
-	// 		for (size_t r=0; r<num_qp_variables; ++r) 
-	// 			for(size_t c=0; c<num_qp_variables; ++c) 
-	// 				H[num_qp_variables*r+c] = slack_hess.get(r,c);
-	// 		for (size_t r=0; r<num_qp_constraints; ++r)
-	// 			for(size_t c=0; c<num_qp_variables; ++c)
-	// 				A[num_qp_variables*r+c] = slack_jac.get(r,c);
-	// 		
-	// 		real_t g[num_qp_variables];
-	// 		// NLP gradient copied over
-	// 		for (size_t i=0; i<iterate.num_primal_; ++i)
-	// 			g[i] = iterate.penalty_parameter_*grad_obj[i];
-	// 		// equality slacks both have positive:
-	// 		for (size_t i=0; i<iterate.num_dual_eq_; ++i) {
-	// 			g[iterate.num_primal_+i] = 1.0;
-	// 			g[iterate.num_primal_+iterate.num_dual_eq_+i] = 1.0;
-	// 		}
-	// 		// inequality slacks only penalize the positive parts:
-	// 		for (size_t i=0; i<iterate.num_dual_ieq_; ++i) {
-	// 			g[iterate.num_primal_+2*iterate.num_dual_eq_+i] = 1.0;
-	// 			g[iterate.num_primal_+2*iterate.num_dual_eq_+iterate.num_dual_ieq_+i] = 0.0;
-	// 		}
-	// 		
-	// 		real_t lb[num_qp_variables], ub[num_qp_variables];
-	// 		for (size_t i=0; i<num_qp_variables; ++i) {
-	// 			lb[i] = lower_bound_var[i];
-	// 			ub[i] = upper_bound_var[i];
-	// 		}
-	// 		
-	// 		real_t lbA[num_qp_constraints], ubA[num_qp_constraints];
-	// 		for (size_t i=0; i<num_qp_constraints; ++i) {
-	// 			lbA[i] = lower_bound_jac[i];
-	// 			ubA[i] = upper_bound_jac[i];
-	// 		}
-	// 		
-		
 	}
 private:
 protected:
-	SQProblem example_;
+	qpOASES::SQProblem example_;
 	bool first_;
 };
 
@@ -879,9 +841,11 @@ int main() {
 		
 		double alpha = linesearch(iterate, step);
 		
+		// cout << endl << "Testing residual: " <<  << endl;
+		
 		printf(output_format_post,
 				0.0, step.status_, step.x_norm(),
-				linear_decrease_func(iterate, step), -42.1,
+				linear_decrease_func(iterate, step),residual_func(iterate, penalty_subproblem, step),
 				alpha
 					);
 		
@@ -890,13 +854,6 @@ int main() {
 		
 	}
 	cout << endl << endl;
-	// printf(output_format_pre, 
-	// 		iter, 
-	// 		problem.objective(iterate), constraintviolation(iterate),
-	// 		iterate.penalty_parameter_, penfunc(iterate),
-	// 		-residual_func(iterate), residual_func(iterate)
-	// 		);
-	// printf("\n");
 	
 	return 0;
 }

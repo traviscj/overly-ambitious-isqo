@@ -4,8 +4,52 @@
 // #include <array>
 #include <cmath>
 #include <qpOASES.hpp>
+#include "asl.h"
+
 
 using namespace std;
+
+// template < double >
+// just for convenience.
+// stolen from http://stackoverflow.com/questions/4077609/overloading-output-stream-operator-for-vectort
+inline std::ostream& operator << (std::ostream& os, const std::vector<double >& v) 
+{
+    os << "[";
+    for (std::vector<double>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+    {
+        os << " " << *ii;
+    }
+    os << " ]";
+    return os;
+}
+
+void named_vector_print(string str, vector< double > vec) {
+	cout << str << ": [";
+	for (size_t vector_index = 0; vector_index < vec.size(); ++vector_index) {
+		if (vector_index != 0) cout << ", ";
+		cout << vec[vector_index];
+	}
+	cout << "]" << endl;
+}
+void named_vector_print(string str, vector< int > vec) {
+	cout << str << ": [";
+	for (size_t vector_index = 0; vector_index < vec.size(); ++vector_index) {
+		if (vector_index != 0) cout << ", ";
+		cout << vec[vector_index];
+	}
+	cout << "]" << endl;
+}
+string ordinal(int n) {
+	if (n%10==1)
+		return string("st");
+	if (n%10==2)
+		return string("nd");
+	if (n%10==3)
+		return string("rd");
+	else
+		return string("th");
+}
+
 
 class iSQOStep {
 public:
@@ -23,7 +67,7 @@ public:
 		iSQOStep(const iSQOStep& s) {
 			cerr << "copy being made!" << endl;
 		}
-	double x_norm() {
+	double x_norm() const {
 		double norm=0.0;
 		double norm_sqrt=0.0;
 		for (size_t i=0; i<num_primal_; ++i) {
@@ -92,7 +136,7 @@ public:
 		cerr << "copy being made!" << endl;
 		
 	}
-	double x_norm() {
+	double x_norm() const {
 		double norm=0.0;
 		double norm_sqrt=0.0;
 		for (size_t i=0; i<num_primal_; ++i) {
@@ -127,12 +171,12 @@ public:
 		for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index) {
 			primal_values_[primal_index] = iterate.primal_values_[primal_index] + alpha*step.primal_values_[primal_index];
 		}
-		for (size_t dual_eq_index=0; dual_eq_index < iterate.num_dual_eq_; ++dual_eq_index) {
-			dual_eq_values_[dual_eq_index] = step.dual_eq_values_[dual_eq_index];
-		}
-		for (size_t dual_ieq_index=0; dual_ieq_index < iterate.num_dual_ieq_; ++dual_ieq_index) {
-			dual_ieq_values_[dual_ieq_index] = step.dual_ieq_values_[dual_ieq_index];
-		}
+		// for (size_t dual_eq_index=0; dual_eq_index < iterate.num_dual_eq_; ++dual_eq_index) {
+		// 	dual_eq_values_[dual_eq_index] = step.dual_eq_values_[dual_eq_index];
+		// }
+		// for (size_t dual_ieq_index=0; dual_ieq_index < iterate.num_dual_ieq_; ++dual_ieq_index) {
+		// 	dual_ieq_values_[dual_ieq_index] = step.dual_ieq_values_[dual_ieq_index];
+		// }
 	}
 // private:
 // protected:
@@ -160,9 +204,10 @@ public:
 	void print() const {
 		for (size_t r=0; r<rows_; r++) {
 			for (size_t c=0; c<columns_; c++) {
-				cout << " " << data_[columns_*r + c];
+				if (c!=0) cout << ", ";
+				cout << data_[columns_*r + c];
 			}
-			cout << endl;
+			if (r+1 != rows_) cout << "; ";
 		}
 	}
 	// vector<double> multiply(const vector<double> x) {
@@ -179,6 +224,18 @@ private:
 protected:
 	
 };
+inline std::ostream& operator << (std::ostream& os, const matrix& m) 
+{
+    os << "[";
+    // for (std::vector<double>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+    // {
+        // os << " " << *ii;
+    // }
+	m.print();
+    os << " ]";
+    return os;
+}
+
 class Nlp {
 	// this class implements 
 public:
@@ -254,11 +311,311 @@ public:
 	matrix lagrangian_hessian(const iSQOIterate &iterate) {
 		matrix hess(iterate.num_primal_, iterate.num_primal_);
 		// cout << "lagrangian hessian: ieq: " << iterate.dual_ieq_values_[0] << endl;
-		hess.set(0,0,iterate.penalty_parameter_*2.0 + 0.5*iterate.dual_ieq_values_[0]/iterate.penalty_parameter_);
-		hess.set(1,1,iterate.penalty_parameter_*2.0 + 2.0*iterate.dual_ieq_values_[1]/iterate.penalty_parameter_);
+		if (iterate.penalty_parameter_ > 0) {
+			hess.set(0,0,iterate.penalty_parameter_*2.0 + 0.5*iterate.dual_ieq_values_[0]); //   /iterate.penalty_parameter_
+			hess.set(1,1,iterate.penalty_parameter_*2.0 + 2.0*iterate.dual_ieq_values_[0]);	//	/iterate.penalty_parameter_
+		} else {
+			hess.set(0,0,0.5*iterate.dual_ieq_values_[0]);
+			hess.set(1,1,2.0*iterate.dual_ieq_values_[1]);
+		}
 		return hess;
 	}
 protected:
+};
+
+class AmplNlp : public Nlp {
+public:
+	AmplNlp( ) : PRINT(false) {
+		if (PRINT) cout << "Constructing an AmplNlp" << endl;
+		ASL *asl;
+		asl = ASL_alloc(ASL_read_pfgh);
+		char stub[] = "/Users/traviscj/optimization/cute_nl_nopresolve/hs014.nl";
+		FILE *nl = jac0dim(stub, 57);
+		// cout << "nzc: " << nzc << endl;
+		if (PRINT) cout << "ran jac0dim: " << nl << endl;
+	
+		X0 = (real *)Malloc(n_var*sizeof(real));
+	
+		int status = pfgh_read(nl, ASL_return_read_err | ASL_findgroups);
+		if (PRINT) cout << "ran pfgh_read: " << endl;
+		if (PRINT) cout << "status: " << status << endl;	
+		if (PRINT) cout << "n_var: " << n_var << endl;
+		if (PRINT) cout << "n_con: " <<n_con << endl;
+		if (PRINT) if (A_vals != NULL) {
+			cout << "A_vals " << A_rownos << endl;
+			cout << "A_vals " << A_colstarts << endl;
+			cout << "A_vals: " << A_vals[0] << endl;
+			cout << "A_vals: " << A_vals[1] << endl;
+			cout << "A_vals: " << A_vals[2] << endl;
+			cout << "A_vals: " << A_vals[3] << endl;
+		}
+	
+		if (PRINT) cout << "X0: " << X0[0] << ", " << X0[1] << endl;
+		
+		for (size_t ampl_constraint_index=0; ampl_constraint_index<n_con; ++ampl_constraint_index) {
+			if (PRINT) cout << "On constraint ampl_constraint_index=" << ampl_constraint_index << ": ";
+			bool equality_con = LUrhs[2*ampl_constraint_index]==LUrhs[2*ampl_constraint_index+1] && LUrhs[2*ampl_constraint_index]!=INFINITY;
+		
+			if (equality_con) {
+				if (PRINT) cout << "equality";
+				if (PRINT) cout << "(push eq)";
+				equality_constraints_.push_back(ampl_constraint_index);
+			} else if (LUrhs[2*ampl_constraint_index] == -INFINITY && LUrhs[2*ampl_constraint_index+1] > -INFINITY) {
+				if (PRINT) cout << "upper bound";
+				if (PRINT) cout << "(push ineq)";
+				inequality_constraints_.push_back(ampl_constraint_index);
+			} else if (LUrhs[2*ampl_constraint_index] > -INFINITY && LUrhs[2*ampl_constraint_index+1] < INFINITY) {
+				if (PRINT) cout << "double-sided";
+				if (PRINT) cout << "(push ineq)";
+				if (PRINT) cout << "(push -ineq)";
+				inequality_constraints_.push_back(ampl_constraint_index);
+				inequality_constraints_.push_back(-ampl_constraint_index);
+				// this scheme won't work, because if ampl_constraint_index = 0 is a double-sided bound, we just get duplicate zeros
+				//  - could use fortran-style indices.
+				//  - could.... use multiple vectors?
+			} else if (LUrhs[2*ampl_constraint_index] > -INFINITY && LUrhs[2*ampl_constraint_index+1] == INFINITY) {
+				if (PRINT) cout << "lower bound only";
+				if (PRINT) cout << "(push -ineq)";
+				inequality_constraints_.push_back(-ampl_constraint_index);
+			} else {
+				cout << "unsupported";
+			}
+			if (PRINT) cout << endl;
+		}
+		
+		asl_ = asl;
+	}
+	
+	void nonefunc() {
+		ASL *asl = asl_;
+		real *x = (real *)Malloc(n_var*sizeof(real));
+		x[0] = 2.0;
+		x[1] = 2.0;
+	
+		fint *nerror = (fint *) Malloc(1*sizeof(fint));
+		
+	
+		// real *con = (real *)Malloc(n_con*sizeof(real));
+// 		conval(x, con, nerror);
+		// cout << "constraint value(nerror = " << *nerror << "): " << con[0] << endl;
+		// cout << "constraint value(nerror = " << *nerror << "): " << con[1] << endl;
+		// 	
+		// cout << "LUrhs: " << LUrhs[0] << endl;
+		// cout << "LUrhs: " << LUrhs[1] << endl;
+		// cout << "LUrhs: " << LUrhs[2] << endl;
+		// cout << "LUrhs: " << LUrhs[3] << endl;
+	
+		// vector<int> equality_constraints;		// equality_constraints[i] is the index in AMPL jacobian where equality constraint i lies.
+		// vector<int> inequality_constraints;		// inequality_constraints[i] is the index in AMPL jacobian where inequality constraint i lies.
+		// vector<int> inequality_;
+		// equality_constraints_ inequality_constraints_
+		
+		// 	
+		// named_vector_print("EQUALITY: ", equality_constraints_);
+		// named_vector_print("INEQUALITY: ", inequality_constraints_);
+		// // cout << "]" << endl;
+
+	
+		cout << "J(nerror = " << *nerror << "): " << J_[0] << endl;
+		cout << "J(nerror = " << *nerror << "): " << J_[1] << endl;
+		cout << "J(nerror = " << *nerror << "): " << J_[2] << endl;
+		cout << "J(nerror = " << *nerror << "): " << J_[3] << endl;
+	
+		if (false) {
+			real *test = (real *)Malloc(2*sizeof(real));
+			congrd(0, x, test, nerror);
+			cout << "test[0] = " << test[0] << endl;
+			cout << "test[1] = " << test[1] << endl;
+			congrd(1, x, test, nerror);
+			cout << "test[0] = " << test[0] << endl;
+			cout << "test[1] = " << test[1] << endl;
+		}
+	
+		// for (size_t ampl_constraint_index =0 ; ampl_constraint_index < n_con; ++ampl_constraint_index) {
+		// 	cout << "i=" << ampl_constraint_index << ": l=" << LUrhs[2*ampl_constraint_index] << " <= c(x_k)= " << con[ampl_constraint_index] << " <= u=" << LUrhs[2*ampl_constraint_index+1] << endl;
+		// }
+		// 	
+		
+		
+	}
+	
+	// zeroth order NLP quantities:
+	double objective(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		fint *nerror = (fint *)Malloc(sizeof(fint));
+		*nerror = 0;
+		real *x = (real *)Malloc(iterate.num_primal_*sizeof(real));
+		for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
+			x[primal_index] = iterate.primal_values_[primal_index];
+		
+		real obj = objval(0, x, nerror);
+		if (PRINT) cout << "objective value(nerror = " << *nerror << "): " << obj << endl;
+		return obj;
+	}
+	
+	vector<double> constraints_equality(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		fint *nerror = (fint *)Malloc(sizeof(fint));
+		*nerror = 0;
+		real *x = (real *)Malloc(iterate.num_primal_*sizeof(real));
+		for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
+			x[primal_index] = iterate.primal_values_[primal_index];
+		real *con = (real *)Malloc(n_con*sizeof(real));
+		// vector<double> con(n_con);
+		conval(x, &con[0], nerror);
+		if (PRINT) cout << "equality_constraints:" << endl;
+		vector<double> equality_constraint_evaluation(equality_constraints_.size());
+		for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index < equality_constraints_.size(); ++isqo_eq_constraint_index) {
+			equality_constraint_evaluation[isqo_eq_constraint_index] = con[equality_constraints_[isqo_eq_constraint_index]] - LUrhs[2*equality_constraints_[isqo_eq_constraint_index]];
+		}
+		if (PRINT) named_vector_print("eq eval: ", equality_constraint_evaluation);
+		return equality_constraint_evaluation;
+	}
+	vector<double> constraints_inequality(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		fint *nerror = (fint *)Malloc(sizeof(fint));
+		*nerror = 0;
+		real *x = (real *)Malloc(iterate.num_primal_*sizeof(real));
+		for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
+			x[primal_index] = iterate.primal_values_[primal_index];
+		real *con = (real *)Malloc(n_con*sizeof(real));
+		conval(x, con, nerror);
+		if (PRINT) cout << "inequality_constraints:" << endl;
+		vector<double> inequality_constraint_evaluation(inequality_constraints_.size());
+		for (size_t isqo_ineq_constraint_index=0; isqo_ineq_constraint_index < inequality_constraints_.size(); ++isqo_ineq_constraint_index) {
+			if (PRINT) cout << "isqo ineq " << isqo_ineq_constraint_index << "; " << inequality_constraints_[isqo_ineq_constraint_index] << endl;
+			int rhsIndex = 0;
+			if (inequality_constraints_[isqo_ineq_constraint_index] > 0) {
+				rhsIndex += 2*inequality_constraints_[isqo_ineq_constraint_index];
+			} else {
+				rhsIndex += 2*inequality_constraints_[isqo_ineq_constraint_index] + 1;
+			}
+			inequality_constraint_evaluation[isqo_ineq_constraint_index] = con[inequality_constraints_[isqo_ineq_constraint_index]] - LUrhs[rhsIndex];
+		}
+		if (PRINT) named_vector_print("ineq eval", inequality_constraint_evaluation);
+		return inequality_constraint_evaluation;
+	}
+	
+	// first order NLP quantities:
+	vector<double> objective_gradient(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		fint *nerror = (fint *)Malloc(sizeof(fint));
+		*nerror = 0;
+		// real *gradient = (real *)Malloc(n_var*sizeof(real));
+		vector<double> return_gradient(n_var);
+		
+		real *x = (real *)Malloc(iterate.num_primal_*sizeof(real));
+		for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
+			x[primal_index] = iterate.primal_values_[primal_index];
+		
+		objgrd(0, x, &return_gradient[0], nerror);
+		if (PRINT) cout << "objective gradient(nerror = " << *nerror << "): " << return_gradient[0] << endl;
+		if (PRINT) cout << "objective gradient(nerror = " << *nerror << "): " << return_gradient[1] << endl;
+		
+		return return_gradient;
+	}
+	matrix constraints_equality_jacobian(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		fint *nerror = (fint *)Malloc(sizeof(fint));
+		real *x = (real *)Malloc(iterate.num_primal_*sizeof(real));
+		for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
+			x[primal_index] = iterate.primal_values_[primal_index];
+		
+		J_ = (real *)Malloc(n_var*n_con*sizeof(real));
+		jacval(x,J_,nerror);
+		
+		
+		matrix equality_constraint_jacobian(equality_constraints_.size(), n_var);
+		for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index<equality_constraints_.size(); ++isqo_eq_constraint_index){
+			if (PRINT) cout << " - " << isqo_eq_constraint_index << ordinal(isqo_eq_constraint_index) << " equality_constraint maps to AMPL's "<< equality_constraints_[isqo_eq_constraint_index] << ordinal(equality_constraints_[isqo_eq_constraint_index])<< " constraint";
+			if (PRINT) cout << ": " << "[";
+			for (size_t var_index=0; var_index < n_var; ++var_index) {
+				if (PRINT) if (var_index != 0) cout << ", ";
+				if (PRINT) cout << J_[n_con*var_index + equality_constraints_[isqo_eq_constraint_index]];
+				// equality_constraint_jacobian.set(isqo_eq_constraint_index, var_index, J_[n_var*equality_constraints[isqo_eq_constraint_index] + var_index]);
+				equality_constraint_jacobian.set(isqo_eq_constraint_index, var_index, J_[n_con*var_index + equality_constraints_[isqo_eq_constraint_index]]);
+				// TODO get around this copy.
+			}
+			if (PRINT) cout << "]";
+			if (PRINT) cout << endl;
+		}
+		if (PRINT) cout << "equality jacobian: [" << endl;
+		if (PRINT) equality_constraint_jacobian.print();
+		if (PRINT) cout << "]" << endl;
+		return equality_constraint_jacobian;
+	}
+	matrix constraints_inequality_jacobian(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		fint *nerror = (fint *)Malloc(sizeof(fint));
+		
+		matrix inequality_constraint_jacobian(inequality_constraints_.size(), n_var);
+		for (size_t ampl_ineq_constraint_index=0; ampl_ineq_constraint_index<inequality_constraints_.size(); ++ampl_ineq_constraint_index){
+			if (PRINT) cout << " - " << ampl_ineq_constraint_index << ordinal(ampl_ineq_constraint_index) << " inequality_constraint maps to AMPL's "<< inequality_constraints_[ampl_ineq_constraint_index] << ordinal(inequality_constraints_[ampl_ineq_constraint_index])<< " constraint";
+		
+			if (PRINT) cout << ": " << "[";
+			for (size_t var_index=0; var_index < n_var; ++var_index) {
+				if (PRINT) if (var_index != 0) cout << ", ";
+				if (PRINT) cout << J_[n_con*var_index + inequality_constraints_[ampl_ineq_constraint_index]];
+				inequality_constraint_jacobian.set(ampl_ineq_constraint_index, var_index, J_[n_con*var_index + inequality_constraints_[ampl_ineq_constraint_index]]);
+				// TODO get around this copy and weird array access...
+			}
+			if (PRINT) cout << "]";
+			if (PRINT) cout << endl;
+		}
+		if (PRINT) cout << "inequality: [" << endl;
+		if (PRINT) inequality_constraint_jacobian.print();
+		if (PRINT) cout << "]" << endl;
+		return inequality_constraint_jacobian;
+	}
+	
+	// second order NLP quantities:
+	matrix lagrangian_hessian(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		fint *nerror = (fint *)Malloc(sizeof(fint));
+		*nerror = 0;
+		
+		real *H = (real *)Malloc(n_var*n_var*sizeof(real));
+		real *OW = (real *)Malloc(sizeof(real));
+		OW[0] = iterate.penalty_parameter_;
+		real *Y = (real *)Malloc(n_con*sizeof(real));
+		
+		// funnel dual_{,i}eq_values_ into Y to pass to AMPL.
+		for (size_t dual_eq_index=0; dual_eq_index < iterate.dual_eq_values_.size(); ++dual_eq_index) {
+			Y[equality_constraints_[dual_eq_index]] = iterate.dual_eq_values_[dual_eq_index];
+		}
+		for (size_t dual_ineq_index=0; dual_ineq_index < iterate.dual_ieq_values_.size(); ++dual_ineq_index) {
+			Y[inequality_constraints_[dual_ineq_index]] = iterate.dual_ieq_values_[dual_ineq_index];
+		}
+	
+		// In this call:
+		//	 - H : OUTPUT : vector holding entries of full hessian.
+		//	 - n_var : INPUT : # of variables or something about the stride, maybe.
+		//	 - 0 : INPUT : index of the desired objective.
+		//	 - OW : INPUT : multipliers for objective function ("objective weights")
+		//	 - Y : INPUT : lagrange multipliers for constraints.
+		fullhes(H, n_var, 0, OW, Y);
+		
+		if (PRINT) cout << "H(nerror = " << *nerror << "): " << H[0] << endl;
+		if (PRINT) cout << "H(nerror = " << *nerror << "): " << H[1] << endl;
+		if (PRINT) cout << "H(nerror = " << *nerror << "): " << H[2] << endl;
+		if (PRINT) cout << "H(nerror = " << *nerror << "): " << H[3] << endl;
+		
+		matrix return_hessian(n_var, n_var);
+		for (size_t row_index=0; row_index < n_var; ++row_index) {
+			for (size_t col_index=0; col_index < n_var; ++col_index) {
+				return_hessian.set(row_index, col_index, H[row_index*n_var + col_index]);
+			}
+		}
+		return return_hessian;
+	}
+private:
+protected:
+	bool PRINT;
+	ASL *asl_;
+	real *J_;
+	
+	vector<int> equality_constraints_;
+	vector<int> inequality_constraints_;
 };
 
 class FunctionWithNLPState {
@@ -275,13 +632,13 @@ public:
 	ConstraintViolationFunction(Nlp &nlp) : FunctionWithNLPState(nlp){
 		// cout << "-- Initializing l1 violation function." << endl;
 	}
-	double operator()(const iSQOIterate &iterate) {
+	double operator()(const iSQOIterate &iterate) const {
 		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
 		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
 		
 		return two_vectors(con_values_eq, con_values_ieq);
 	}
-	double operator()(const iSQOIterate &iterate, const iSQOStep &step) {
+	double operator()(const iSQOIterate &iterate, const iSQOStep &step) const {
 		bool PRINT = false;
 		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
 		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
@@ -311,7 +668,7 @@ public:
 		return two_vectors(con_values_eq, con_values_ieq);
 	}
 	
-	double two_vectors(const vector<double> &eq_items, const vector<double> &ieq_items) {
+	double two_vectors(const vector<double> &eq_items, const vector<double> &ieq_items) const {
 		double eq_violation = 0.0;
 		for (size_t i=0; i<eq_items.size(); ++i) {
 			eq_violation += abs(eq_items[i]);
@@ -335,7 +692,7 @@ public:
 			{
 		// cout << "-- Initializing penalty function." << endl;
 	}
-	double operator()(const iSQOIterate &iterate) {
+	double operator()(const iSQOIterate &iterate) const {
 		// cout << "--- Calling the PenaltyFunction Functor..." << endl;
 		double f = nlp_->objective(iterate);
 		// cout << "--- objective: " << f << endl;
@@ -469,7 +826,7 @@ public:
 			{
 		// cout << "-- Initializing nlp residual function." << endl;
 	}
-	double operator()(const iSQOIterate &iterate) {
+	double operator()(const iSQOIterate &iterate) const {
 		// first entry of rho(x,y,bary,mu):
 		vector<double> grad_obj = nlp_->objective_gradient(iterate);
 		matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
@@ -521,7 +878,7 @@ public:
 		}
 		return sqrt(total);
 	}
-	double operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) {
+	double operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const {
 		// first entry of rho(x,y,bary,mu):
 		bool PRINT=false;
 		vector<double> grad_obj = nlp_->objective_gradient(iterate);
@@ -697,7 +1054,7 @@ public:
 	LinearDecreaseFunction(Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp) {
 		
 	}
-	double operator()(const iSQOIterate &iterate, const iSQOStep &step) {
+	double operator()(const iSQOIterate &iterate, const iSQOStep &step) const {
 		bool PRINT=false;
 		double f = nlp_->objective(iterate);
 		vector<double> gradient = nlp_->objective_gradient(iterate);
@@ -750,8 +1107,160 @@ protected:
 	LinearDecreaseFunction linear_decrease_func_;
 };
 
+class TextOutput : public FunctionWithNLPState {
+public:
+	TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp),linear_decrease_func_(nlp), pen_func_(nlp), residual_func_(nlp) {
+		
+	}
+	
+	void start() {
+		printf("-----|");
+		printf("----------------------|");
+		printf("----------------------|");
+		printf("----------------------&");
+		printf("-----------------[ FEASIBILITY ]-----------------|");
+		printf("-------------------[ PENALTY ]-------------------|");
+		printf("----------------------------------|");
+		printf("----------\n");
+		printf("%s",output_desc_pre_);
+		printf("%s",output_desc_subprob_);
+		printf("%s",output_desc_subprob_);
+		printf("%s",output_desc_post_);
+		printf("-----|");
+		printf("----------------------|");
+		printf("----------------------|");
+		printf("----------------------&");
+		printf("-------------------------------------------------|");
+		printf("-------------------------------------------------|");
+		printf("----------------------------------|");
+		printf("----------\n");
+	}
+	void pre(size_t iter, const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate) const {
+		// iter, problem, feas iterate, pen iterate, constraintviolation, iterate, penfunc, residual_func
+		//  -> params: iter, feas iter, pen iter
+		//	-> state: nlp_, constraint_violation_func_, pen_func_, residual_func_
+		printf(output_format_pre_, 
+				iter, 
+				nlp_->objective(penalty_iterate), constraint_violation_func_(penalty_iterate),
+				penalty_iterate.penalty_parameter_, pen_func_(penalty_iterate),
+				residual_func_(penalty_iterate), residual_func_(penalty_iterate)
+				);
+	}
+	void subproblem(double shift, const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const {
+		// shift, step, linear_decrease_func, residual_func
+		//  -> params: shift, step
+		//	-> state: linear_decrease_func, residual_func_
+		printf(output_format_subprob_,
+				0.0, step.status_, step.x_norm(),
+				linear_decrease_func_(iterate, step), residual_func_(iterate, subproblem, step)
+					);
+	}
+	void post(const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate, const iSQOStep &combination_step, double alpha) {
+		// step, feas_iter, penalty_iter, alpha
+		//  -> params: step, feas_iter, penalty_iter, alpha
+		printf(output_format_post_,
+				combination_step.x_norm(), constraint_violation_func_(penalty_iterate) - constraint_violation_func_(penalty_iterate,combination_step), linear_decrease_func_(penalty_iterate, combination_step),
+				alpha
+					);
+	}
+protected:
+	// Nlp *nlp_;
+	ConstraintViolationFunction constraint_violation_func_;
+	LinearDecreaseFunction linear_decrease_func_;
+	PenaltyFunction pen_func_;
+	ResidualFunction residual_func_;
+	
+	static const char output_desc_pre_[];
+	static const char output_desc_subprob_[];
+	static const char output_desc_post_[];
+	static const char output_format_pre_[];
+	static const char output_format_subprob_[];
+	static const char output_format_post_[];
+};
+const char TextOutput::output_desc_pre_[] = " it  |       obj     infeas |       pen      merit |   feaskkt     penkkt &";
+const char TextOutput::output_desc_subprob_[] = "     shift  msg     ||d||     penred        res  |";
+const char TextOutput::output_desc_post_[] = " TT    ||d||   FeasRed     PenRed |    alpha\n";
+const char TextOutput::output_format_pre_[] = " %3d | %9.2e  %9.2e | %9.2e  %+9.2e | %9.2e  %9.2e &";
+const char TextOutput::output_format_subprob_[] = " %9.2e  %3d  %9.2e  %9.2e  %9.2e |";
+const char TextOutput::output_format_post_[] = " 4a %9.2e %9.2e %9.2e |%9.2e\n";
 
 
+int main2() {
+	cout << "okay, so..." << endl;
+	
+	// tests for constraint conversation:
+	// equality constrained problems: (to c(x) = 0)
+	//	* 0 <= c_1(x) <= 0  ---> A_1d = 0 - c_1(x_k)
+	//	* 1 <= c_2(x) <= 1  ---> A_2d = 1 - c_2(x_k)
+	// inequality constrained problems: (to barc(x) <= 0)
+	//  * double constrained: 	-1 <= c_3(x) <= 5  --> A_3d <= 5 - c_3(x_k) AND -A_3d <= -(-1) - (-c_3(x_k))
+	//			c_3(x) <= 5  ==> 
+	//			-1 <= c_3(x) ==> -c_3(x) <= -(-1) ==> -A_3d - c_3(x_k) <= -(-1) ==> -A_3d  <= -(-1) - (-c_3(x_k))
+	//	* double constrained: 	0 <= c_4(x) <= 5 --> A_4d <= 5 - c_4(x_k) AND -A_4d <= -(0) - (-c_4(x_k))
+	//	* double constrained: 	-1 <= c_5(x) <= 0 --> A_5d <= 0 - c_5(x_k) AND -A_5d <= -(-1) - (-c_5(x_k))
+	//	* only upper: -INF <= c_6(x) <= 0 --> A_6d <= 0 - c_6(x_k)
+	//	* only upper: -INF <= c_7(x) <= 5 --> A_7d <= 5 - c_7(x_k)
+	//	* only lower: 0 <= c_8(x) <= INF --> -A_8d <= -(0) - c_8(x_k)
+	//	* only lower: 5 <= c_9(x) <= INF --> -A_9d <= -(5) - c_9(x_k)
+	
+	// 
+	// tests for variable conversion:
+	// 
+	
+	return 0;
+}
+int main1() {
+	AmplNlp ampl_nlp_object;
+	
+	
+	Hs014 problem;
+	iSQOIterate iterate(2,1,1);
+	iterate.penalty_parameter_ = 1.0e-1;
+	iterate.primal_values_[0] = 2.0;
+	iterate.primal_values_[1] = 2.0;
+	iterate.dual_eq_values_[0] = -1.0;
+	iterate.dual_ieq_values_[0] = 1000;
+	// iterate.dual_ieq_values_[0] = ;
+	// iterate.dual_ieq_values_[0] = 0;
+	// iterate.penalty_parameter_ = 1.0e-1;
+	// iterate.primal_values_[0] = .822875656;
+	// iterate.primal_values_[1] = .911437828;
+	// iterate.dual_eq_values_[0] = 1.846589027861980e+00;
+	// iterate.dual_ieq_values_[0] = 1.594493103554523e+00;
+
+	cout << "Zeroth Order:" << endl;
+	cout << "===[Objective]==============" << endl;
+	cout << "  AMPL : " << ampl_nlp_object.objective(iterate) << endl;
+	cout << "Custom : " << problem.objective(iterate) << endl;
+	
+	cout << "===[Equality Constraints]==============" << endl;
+	cout << "  AMPL : " << ampl_nlp_object.constraints_equality(iterate) << endl;
+	cout << "Custom : " << problem.constraints_equality(iterate) << endl;
+	
+	cout << "===[Inequality Constraints]==============" << endl;
+	cout << "  AMPL : " << ampl_nlp_object.constraints_inequality(iterate) << endl;
+	cout << "Custom : " << problem.constraints_inequality(iterate) << endl;
+	
+	cout << "First Order:" << endl;
+	cout << "===[Objective Gradient]==============" << endl;
+	cout << "  AMPL : " << ampl_nlp_object.objective_gradient(iterate) << endl;
+	cout << "Custom : " << problem.objective_gradient(iterate) << endl;
+	
+	cout << "===[Equality Jacobian]==============" << endl;
+	cout << "  AMPL : " << ampl_nlp_object.constraints_equality_jacobian(iterate) << endl;
+	cout << "Custom : " << problem.constraints_equality_jacobian(iterate) << endl;
+	
+	
+	cout << "===[Inequality Jacobian]==============" << endl;
+	cout << "  AMPL : " << ampl_nlp_object.constraints_inequality_jacobian(iterate) << endl;
+	cout << "Custom : " << problem.constraints_inequality_jacobian(iterate) << endl;
+	
+	cout << "Second Order:" << endl;
+	cout << "===[Lagrangian Hessian]==============" << endl;
+	cout << "  AMPL : " << ampl_nlp_object.lagrangian_hessian(iterate) << endl;
+	cout << "Custom : " << problem.lagrangian_hessian(iterate) << endl;
+		
+}
 int main() {
 	// double x[2];
 	
@@ -765,11 +1274,11 @@ int main() {
 	penalty_iterate.dual_ieq_values_[0] = 0;
 	
 	iSQOIterate feasibility_iterate(2,1,1);
-	penalty_iterate.penalty_parameter_ = 1.0e-1;
-	penalty_iterate.primal_values_[0] = 2.0;
-	penalty_iterate.primal_values_[1] = 2.0;
-	penalty_iterate.dual_eq_values_[0] = -1;
-	penalty_iterate.dual_ieq_values_[0] = 0;
+	feasibility_iterate.penalty_parameter_ = 0.0;
+	feasibility_iterate.primal_values_[0] = 2.0;
+	feasibility_iterate.primal_values_[1] = 2.0;
+	feasibility_iterate.dual_eq_values_[0] = -1;
+	feasibility_iterate.dual_ieq_values_[0] = 0;
 	
 	iSQOIterate final(2,1,1);
 	final.penalty_parameter_ = 1.0e-1;
@@ -779,118 +1288,83 @@ int main() {
 	final.dual_ieq_values_[0] = 1.594493103554523e+00;
 	
 	// NLP object:
-	Hs014 problem;
+	// Hs014 problem;
+	AmplNlp problem;
 	// Utilities for NLP:
 	PenaltyFunction penfunc(problem);
 	ResidualFunction residual_func(problem);
 	SolveQuadraticProgram solve_qp(problem);
-	ConstraintViolationFunction constraintviolation(problem);
+	ConstraintViolationFunction constraint_violation(problem);
 	LineSearchFunction linesearch(problem);
 	LinearDecreaseFunction linear_decrease_func(problem);
+	// Other
+	TextOutput text_output(problem);
 	
 	iSQOStep penalty_step(2,1,1);
 	iSQOStep feasibility_step(2,1,1);
 	iSQOStep combination_step(2,1,1);
-	char output_desc_pre[] = " it  |       obj     infeas |       pen      merit |   feaskkt     penkkt &";
-	char output_desc_subprob[] = "     shift  msg     ||d||     penred        res  |";
-	char output_desc_post[] = " TT    ||d||   FeasRed     PenRed |    alpha\n";
-	char output_format_pre[] = " %3d | %9.2e  %9.2e | %9.2e  %+9.2e | %9.2e  %9.2e &";
-	char output_format_subprob[]=" %9.2e  %3d  %9.2e  %9.2e  %9.2e | ";
-	char output_format_post[] = "4a %9.2e %9.2e %9.2e |%9.2e\n";
+	
 	
 	double epsilon = 1e-1;
 
-	printf("%s",output_desc_pre);
-	printf("%s",output_desc_subprob);
-	// printf("%s",output_desc_subprob);
-	printf("%s",output_desc_post);
-	printf("-------------------------------------------------------------------------------------");
-	printf("----------------------------------");
-	// printf("-------------------------------------------------------------");
-	printf("--------------------------------------------------\n");
+
+	text_output.start();
 	int iter=-1;
 	// ALGORITHM A // Step 1
 	for (iter = 0; iter < 15; iter ++ ) {
-		printf(output_format_pre, 
-				iter, 
-				problem.objective(penalty_iterate), constraintviolation(penalty_iterate),
-				penalty_iterate.penalty_parameter_, penfunc(penalty_iterate),
-				residual_func(penalty_iterate), residual_func(penalty_iterate)
-				);
-		
-		//////////////////////////
-		// ALGORITHM A // Step 2 
-		//////////////////////////
-		// ALGORITHM A // Step 2 // Part A
-		////////////////////////////////////
-		if (residual_func(penalty_iterate) < 1e-6) {
+		text_output.pre(iter, feasibility_iterate, penalty_iterate);
+		if ((residual_func(penalty_iterate) < 1e-6) && (constraint_violation(penalty_iterate) < 1e-6)) {
+			cout << endl << "Termination 2a" << endl;
 			break;
 		}
 
-		//////////////////////////
-		// ALGORITHM A // Step 3
-		//////////////////////////
 		iSQOQuadraticSubproblem penalty_subproblem(problem, penalty_iterate);
+		penalty_step.status_ = 99;
+		penalty_step.primal_values_[0]=0.0;
+		penalty_step.primal_values_[1]=0.0;
 		penalty_step = solve_qp(penalty_subproblem);
-		// iSQOQuadraticSubproblem feasibility_subproblem(problem, feasibility_iterate);
 		
-		// test scenarios...
-		// TEST SCENARIO A
-		/////////////////////////////////
+		iSQOQuadraticSubproblem feasibility_subproblem(problem, feasibility_iterate);
+		feasibility_step.status_ = 99;
+		feasibility_step.primal_values_[0]=0.0;
+		feasibility_step.primal_values_[1]=0.0;
+		
 		double linear_reduction_penalty = linear_decrease_func(penalty_iterate,penalty_step);
-		double violation = constraintviolation(penalty_iterate);
+		double violation = constraint_violation(penalty_iterate);
+		double step_mix = -1.0;
 		bool PRINT=false;
 		if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_reduction_penalty << " >= epsilon*" << violation << " = " << epsilon*violation<< ": ";
 		if (linear_reduction_penalty >= epsilon*violation) {
 			if (PRINT) cout << "PASSES!";
-			combination_step = penalty_step;
+			// combination_step = penalty_step;
+			step_mix = 1.0;
 		} else {
 			if (PRINT) cout << "FAILS!";
-			//////////////////////////
-			// ALGORITHM A // Step 4
-			//////////////////////////
-			
-			// feasibility_step = solve_qp(feasibility_subproblem);
-			// double linear_reduction_feasibility = linear_decrease_func(feasibility_iterate,feasibility_step);
-			// // TEST SCENARIO B
-			// /////////////////////////////////
-			// if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_reduction_penalty << " >= epsilon*" << violation << " = " << epsilon*violation<< ": ";
-			// if (linear_reduction_penalty >= epsilon*linear_reduction_feasibility) {
-			// 	if (PRINT) cout << "PASSES!";
-			// 	combination_step = penalty_step;
-			// } else {
-			// 	if (PRINT) cout << "FAILS!";
-			// }
-			// if (PRINT) cout << endl;
-			// // TODO somehow the above code leaks state if we let it run outside the else clause... oops!
-			// // TEST SCENARIO C
-			// /////////////////////////////////
 		}
-		if (PRINT) cout << endl;
+		for (size_t i=0; i<2; i++) {
+			combination_step.primal_values_[i] = step_mix*penalty_step.primal_values_[i] + (1.0-step_mix)*feasibility_step.primal_values_[i];
+		}
+		combination_step.dual_eq_values_[0] = penalty_step.dual_eq_values_[0];
+		combination_step.dual_ieq_values_[0] = penalty_step.dual_ieq_values_[0];
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 5
 		//////////////////////////
 		double alpha = linesearch(penalty_iterate, combination_step);
 		
-		// printf(output_format_subprob,
-		// 		0.0, feasibility_step.status_, feasibility_step.x_norm(),
-		// 		linear_decrease_func(feasibility_iterate, feasibility_step),residual_func(feasibility_iterate, feasibility_subproblem, feasibility_step)
-		// 			);
-		printf(output_format_subprob,
-				0.0, penalty_step.status_, penalty_step.x_norm(),
-				linear_decrease_func(penalty_iterate, penalty_step),residual_func(penalty_iterate, penalty_subproblem, penalty_step)
-					);
-		printf(output_format_post,
-				combination_step.x_norm(), linear_decrease_func(feasibility_iterate, combination_step), linear_decrease_func(penalty_iterate, combination_step),
-				alpha
-					);
+		text_output.subproblem(0.0, feasibility_iterate, feasibility_subproblem, feasibility_step);
+		text_output.subproblem(0.0, penalty_iterate, penalty_subproblem, penalty_step);
+		text_output.post(feasibility_iterate, penalty_iterate, combination_step, alpha);
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 6
 		//////////////////////////
 		penalty_iterate.update(penalty_iterate, alpha, combination_step);
+		penalty_iterate.dual_eq_values_[0] = penalty_step.dual_eq_values_[0];
+		penalty_iterate.dual_ieq_values_[0] = penalty_step.dual_ieq_values_[0];
 		feasibility_iterate.update(penalty_iterate, alpha, combination_step);
+		feasibility_iterate.dual_eq_values_[0] = feasibility_step.dual_eq_values_[0];
+		feasibility_iterate.dual_ieq_values_[0] = feasibility_step.dual_ieq_values_[0];
 	}
 	cout << endl << endl;
 	

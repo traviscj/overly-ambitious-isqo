@@ -1,7 +1,9 @@
+// overly-ambitious-iSQO
+//  - Travis C. Johnson (traviscj@traviscj.com)
+//  - August 2013
+
 #include <iostream>
 #include <vector>
-// #include <boost/array.hpp>
-// #include <array>
 #include <cmath>
 #include <qpOASES.hpp>
 #include "asl.h"
@@ -9,36 +11,18 @@
 
 using namespace std;
 
-// template < double >
-// just for convenience.
-// stolen from http://stackoverflow.com/questions/4077609/overloading-output-stream-operator-for-vectort
-inline std::ostream& operator << (std::ostream& os, const std::vector<double >& v) 
+template < class T >
+inline std::ostream& operator << (std::ostream& os, const std::vector< T >& vec) 
 {
     os << "[";
-    for (std::vector<double>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
-    {
-        os << " " << *ii;
-    }
+	for (size_t vector_index = 0; vector_index < vec.size(); ++vector_index) {
+		if (vector_index != 0) os << ", ";
+		os << vec[vector_index];
+	}
     os << " ]";
     return os;
 }
 
-void named_vector_print(string str, vector< double > vec) {
-	cout << str << ": [";
-	for (size_t vector_index = 0; vector_index < vec.size(); ++vector_index) {
-		if (vector_index != 0) cout << ", ";
-		cout << vec[vector_index];
-	}
-	cout << "]" << endl;
-}
-void named_vector_print(string str, vector< int > vec) {
-	cout << str << ": [";
-	for (size_t vector_index = 0; vector_index < vec.size(); ++vector_index) {
-		if (vector_index != 0) cout << ", ";
-		cout << vec[vector_index];
-	}
-	cout << "]" << endl;
-}
 string ordinal(int n) {
 	if (n%10==1)
 		return string("st");
@@ -239,7 +223,7 @@ inline std::ostream& operator << (std::ostream& os, const matrix& m)
 class Nlp {
 	// this class implements 
 public:
-	Nlp() {
+	Nlp(int num_primal, int num_dual_eq, int num_dual_ieq) : num_primal_(num_primal), num_dual_eq_(num_dual_eq), num_dual_ieq_(num_dual_ieq) {
 		// cout << "-- initializing Nlp" << endl; 
 	}
 	
@@ -255,14 +239,21 @@ public:
 	
 	// second order NLP quantities:
 	virtual matrix lagrangian_hessian(const iSQOIterate &iterate) = 0;
+	
+	int num_primal() { return num_primal_; }
+	int num_dual_eq() { return num_dual_eq_; }
+	int num_dual_ieq() { return num_dual_ieq_; }
 protected:
+	int num_primal_;
+	int num_dual_eq_;
+	int num_dual_ieq_;
 };
 
 // TODO: implement this using AMPL instead.
 // TODO: Then, implement it using sparse AMPL instead...
 class Hs014 : public Nlp {
 public:
-	Hs014() {
+	Hs014() : Nlp(2,1,1) {
 		// cout << "-- initializing Hs" << endl;
 	}
 	double objective(const iSQOIterate &iterate) {
@@ -325,7 +316,7 @@ protected:
 
 class AmplNlp : public Nlp {
 public:
-	AmplNlp( ) : PRINT(false) {
+	AmplNlp( ) : Nlp(-1,-1,-1), PRINT(false) {
 		if (PRINT) cout << "Constructing an AmplNlp" << endl;
 		ASL *asl;
 		asl = ASL_alloc(ASL_read_pfgh);
@@ -339,6 +330,7 @@ public:
 		int status = pfgh_read(nl, ASL_return_read_err | ASL_findgroups);
 		if (PRINT) cout << "ran pfgh_read: " << endl;
 		if (PRINT) cout << "status: " << status << endl;	
+		num_primal_ = n_var;
 		if (PRINT) cout << "n_var: " << n_var << endl;
 		if (PRINT) cout << "n_con: " <<n_con << endl;
 		if (PRINT) if (A_vals != NULL) {
@@ -383,6 +375,8 @@ public:
 			if (PRINT) cout << endl;
 		}
 		
+		num_dual_eq_ = equality_constraints_.size();
+		num_dual_ieq_ = inequality_constraints_.size();
 		asl_ = asl;
 	}
 	
@@ -468,7 +462,7 @@ public:
 		for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index < equality_constraints_.size(); ++isqo_eq_constraint_index) {
 			equality_constraint_evaluation[isqo_eq_constraint_index] = con[equality_constraints_[isqo_eq_constraint_index]] - LUrhs[2*equality_constraints_[isqo_eq_constraint_index]];
 		}
-		if (PRINT) named_vector_print("eq eval: ", equality_constraint_evaluation);
+		if (PRINT) cout << "eq eval: " << equality_constraint_evaluation;
 		return equality_constraint_evaluation;
 	}
 	vector<double> constraints_inequality(const iSQOIterate &iterate) {
@@ -492,7 +486,7 @@ public:
 			}
 			inequality_constraint_evaluation[isqo_ineq_constraint_index] = con[inequality_constraints_[isqo_ineq_constraint_index]] - LUrhs[rhsIndex];
 		}
-		if (PRINT) named_vector_print("ineq eval", inequality_constraint_evaluation);
+		if (PRINT) cout <<"ineq eval" << inequality_constraint_evaluation;
 		return inequality_constraint_evaluation;
 	}
 	
@@ -1341,11 +1335,15 @@ int main() {
 		} else {
 			if (PRINT) cout << "FAILS!";
 		}
-		for (size_t i=0; i<2; i++) {
-			combination_step.primal_values_[i] = step_mix*penalty_step.primal_values_[i] + (1.0-step_mix)*feasibility_step.primal_values_[i];
+		for (size_t primal_index=0; primal_index<problem.num_primal(); ++primal_index) {
+			combination_step.primal_values_[primal_index] = step_mix*penalty_step.primal_values_[primal_index] + (1.0-step_mix)*feasibility_step.primal_values_[primal_index];
 		}
-		combination_step.dual_eq_values_[0] = penalty_step.dual_eq_values_[0];
-		combination_step.dual_ieq_values_[0] = penalty_step.dual_ieq_values_[0];
+		for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
+			combination_step.dual_eq_values_[dual_eq_index] = penalty_step.dual_eq_values_[dual_eq_index];
+		}
+		for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
+			combination_step.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
+		}
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 5

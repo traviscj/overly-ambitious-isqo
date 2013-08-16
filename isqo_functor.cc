@@ -757,19 +757,19 @@ int main() {
 	
 	// x[0]=2.78;
 	// x[1]=4.66;
-	iSQOIterate sillystart(2,1,1);
-	sillystart.penalty_parameter_ = 1.0e-1;
-	sillystart.primal_values_[0] = 2.78;
-	sillystart.primal_values_[1] = 4.66;
-	sillystart.dual_eq_values_[0] = 137.1354;
-	sillystart.dual_ieq_values_[0] = 484.418;
+	iSQOIterate penalty_iterate(2,1,1);
+	penalty_iterate.penalty_parameter_ = 1.0e-1;
+	penalty_iterate.primal_values_[0] = 2.0;
+	penalty_iterate.primal_values_[1] = 2.0;
+	penalty_iterate.dual_eq_values_[0] = -1;
+	penalty_iterate.dual_ieq_values_[0] = 0;
 	
-	iSQOIterate iterate(2,1,1);
-	iterate.penalty_parameter_ = 1.0e-1;
-	iterate.primal_values_[0] = 2.0;
-	iterate.primal_values_[1] = 2.0;
-	iterate.dual_eq_values_[0] = -1;
-	iterate.dual_ieq_values_[0] = 0;
+	iSQOIterate feasibility_iterate(2,1,1);
+	penalty_iterate.penalty_parameter_ = 1.0e-1;
+	penalty_iterate.primal_values_[0] = 2.0;
+	penalty_iterate.primal_values_[1] = 2.0;
+	penalty_iterate.dual_eq_values_[0] = -1;
+	penalty_iterate.dual_ieq_values_[0] = 0;
 	
 	iSQOIterate final(2,1,1);
 	final.penalty_parameter_ = 1.0e-1;
@@ -788,70 +788,109 @@ int main() {
 	LineSearchFunction linesearch(problem);
 	LinearDecreaseFunction linear_decrease_func(problem);
 	
-	// cout << "current penalty is: " << penfunc(sillystart) << endl;
-	// cout << "current penalty is: " << penfunc(iterate) << endl;
-	// cout << "current penalty is: " << penfunc(final) << endl;
-	// cout << "residual @ final: " << residual_func(final) << endl;
+	iSQOStep penalty_step(2,1,1);
+	iSQOStep feasibility_step(2,1,1);
+	iSQOStep combination_step(2,1,1);
+	char output_desc_pre[] = " it  |       obj     infeas |       pen      merit |   feaskkt     penkkt &";
+	char output_desc_subprob[] = "     shift  msg     ||d||     penred        res  |";
+	char output_desc_post[] = " TT    ||d||   FeasRed     PenRed |    alpha\n";
+	char output_format_pre[] = " %3d | %9.2e  %9.2e | %9.2e  %+9.2e | %9.2e  %9.2e &";
+	char output_format_subprob[]=" %9.2e  %3d  %9.2e  %9.2e  %9.2e | ";
+	char output_format_post[] = "4a %9.2e %9.2e %9.2e |%9.2e\n";
 	
-	iSQOStep step(2,1,1);
-	char output_desc_pre[] = " it  |      obj     infeas |       pen      merit |   feaskkt     penkkt &";
-	char output_desc_post[] = "     shift  msg     ||d||     penred        res  | isqo | alpha\n";
-	char output_format_pre[] = "%3d | %9.2e  %9.2e | %9.2e  %+9.2e | %9.2e  %9.2e &";
-	char output_format_post[] = " %9.2e  %3d  %9.2e  %9.2e  %9.2e |      | %9.2e\n";
-	
+	double epsilon = 1e-1;
+
 	printf("%s",output_desc_pre);
+	printf("%s",output_desc_subprob);
+	// printf("%s",output_desc_subprob);
 	printf("%s",output_desc_post);
+	printf("-------------------------------------------------------------------------------------");
+	printf("----------------------------------");
+	// printf("-------------------------------------------------------------");
+	printf("--------------------------------------------------\n");
 	int iter=-1;
+	// ALGORITHM A // Step 1
 	for (iter = 0; iter < 15; iter ++ ) {
 		printf(output_format_pre, 
 				iter, 
-				problem.objective(iterate), constraintviolation(iterate),
-				iterate.penalty_parameter_, penfunc(iterate),
-				-residual_func(iterate), residual_func(iterate)
+				problem.objective(penalty_iterate), constraintviolation(penalty_iterate),
+				penalty_iterate.penalty_parameter_, penfunc(penalty_iterate),
+				residual_func(penalty_iterate), residual_func(penalty_iterate)
 				);
-		if (residual_func(iterate) < 1e-6) {
+		
+		//////////////////////////
+		// ALGORITHM A // Step 2 
+		//////////////////////////
+		// ALGORITHM A // Step 2 // Part A
+		////////////////////////////////////
+		if (residual_func(penalty_iterate) < 1e-6) {
 			break;
 		}
 
-		// step = qp.generateQP(iterate);
-		iSQOQuadraticSubproblem penalty_subproblem(problem, iterate);
-		step = solve_qp(penalty_subproblem);
+		//////////////////////////
+		// ALGORITHM A // Step 3
+		//////////////////////////
+		iSQOQuadraticSubproblem penalty_subproblem(problem, penalty_iterate);
+		penalty_step = solve_qp(penalty_subproblem);
+		// iSQOQuadraticSubproblem feasibility_subproblem(problem, feasibility_iterate);
 		
 		// test scenarios...
-		double epsilon = 1e-1;
-		
 		// TEST SCENARIO A
 		/////////////////////////////////
-		double linear_reduction = linear_decrease_func(iterate,step);
-		double violation = constraintviolation(iterate);
+		double linear_reduction_penalty = linear_decrease_func(penalty_iterate,penalty_step);
+		double violation = constraintviolation(penalty_iterate);
 		bool PRINT=false;
-		if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_reduction << " >= epsilon*" << violation << " = " << epsilon*violation<< ": ";
-		if (linear_reduction >= epsilon*violation) {
+		if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_reduction_penalty << " >= epsilon*" << violation << " = " << epsilon*violation<< ": ";
+		if (linear_reduction_penalty >= epsilon*violation) {
 			if (PRINT) cout << "PASSES!";
+			combination_step = penalty_step;
 		} else {
 			if (PRINT) cout << "FAILS!";
+			//////////////////////////
+			// ALGORITHM A // Step 4
+			//////////////////////////
+			
+			// feasibility_step = solve_qp(feasibility_subproblem);
+			// double linear_reduction_feasibility = linear_decrease_func(feasibility_iterate,feasibility_step);
+			// // TEST SCENARIO B
+			// /////////////////////////////////
+			// if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_reduction_penalty << " >= epsilon*" << violation << " = " << epsilon*violation<< ": ";
+			// if (linear_reduction_penalty >= epsilon*linear_reduction_feasibility) {
+			// 	if (PRINT) cout << "PASSES!";
+			// 	combination_step = penalty_step;
+			// } else {
+			// 	if (PRINT) cout << "FAILS!";
+			// }
+			// if (PRINT) cout << endl;
+			// // TODO somehow the above code leaks state if we let it run outside the else clause... oops!
+			// // TEST SCENARIO C
+			// /////////////////////////////////
 		}
 		if (PRINT) cout << endl;
 		
-		// TEST SCENARIO B
-		/////////////////////////////////
+		//////////////////////////
+		// ALGORITHM A // STEP 5
+		//////////////////////////
+		double alpha = linesearch(penalty_iterate, combination_step);
 		
-		// TEST SCENARIO C
-		/////////////////////////////////
-		
-		double alpha = linesearch(iterate, step);
-		
-		// cout << endl << "Testing residual: " <<  << endl;
-		
+		// printf(output_format_subprob,
+		// 		0.0, feasibility_step.status_, feasibility_step.x_norm(),
+		// 		linear_decrease_func(feasibility_iterate, feasibility_step),residual_func(feasibility_iterate, feasibility_subproblem, feasibility_step)
+		// 			);
+		printf(output_format_subprob,
+				0.0, penalty_step.status_, penalty_step.x_norm(),
+				linear_decrease_func(penalty_iterate, penalty_step),residual_func(penalty_iterate, penalty_subproblem, penalty_step)
+					);
 		printf(output_format_post,
-				0.0, step.status_, step.x_norm(),
-				linear_decrease_func(iterate, step),residual_func(iterate, penalty_subproblem, step),
+				combination_step.x_norm(), linear_decrease_func(feasibility_iterate, combination_step), linear_decrease_func(penalty_iterate, combination_step),
 				alpha
 					);
 		
-		// NOW update the iterate:
-		iterate.update(iterate, alpha, step);
-		
+		//////////////////////////
+		// ALGORITHM A // STEP 6
+		//////////////////////////
+		penalty_iterate.update(penalty_iterate, alpha, combination_step);
+		feasibility_iterate.update(penalty_iterate, alpha, combination_step);
 	}
 	cout << endl << endl;
 	

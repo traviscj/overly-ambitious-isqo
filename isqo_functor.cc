@@ -5,9 +5,11 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <qpOASES.hpp>
-#include "asl.h"
+#include <cassert>
 
+#include <qpOASES.hpp>
+
+#include "asl.h"
 
 using namespace std;
 
@@ -317,14 +319,10 @@ public:
 		if (PRINT_) cout << "Constructing an AmplNlp" << endl;
 		ASL *asl;
 		asl = ASL_alloc(ASL_read_pfgh);
-		// char *stub_for_ampl = 
-			//stub_str.c_str();// new char[stub_str.size()];
 		cout << "Filename: " << stub_str << endl;
 		FILE *nl = jac0dim(stub_str, 57);
-		// cout << "nzc: " << nzc << endl;
 		if (PRINT_) cout << "ran jac0dim: " << nl << endl;
 			
-		// X0 = &X0_[0];
 		X0 = (real *)Malloc(n_var*sizeof(real));
 	
 		int status = pfgh_read(nl, ASL_return_read_err | ASL_findgroups);
@@ -335,19 +333,19 @@ public:
 			X0_[primal_index] = X0[primal_index];
 		}
 		
-		if (PRINT_) cout << "ran pfgh_read: " << endl;
-		if (PRINT_) cout << "status: " << status << endl;	
-		
-		if (PRINT_) cout << "n_var: " << n_var << endl;
-		if (PRINT_) cout << "n_con: " <<n_con << endl;
-		if (PRINT_) if (A_vals != NULL) {
-			cout << "A_vals " << A_rownos << endl;
-			cout << "A_vals " << A_colstarts << endl;
-			cout << "A_vals: " << A_vals[0] << endl;
-			cout << "A_vals: " << A_vals[1] << endl;
-			cout << "A_vals: " << A_vals[2] << endl;
-			cout << "A_vals: " << A_vals[3] << endl;
-		}
+		// if (PRINT_) cout << "ran pfgh_read: " << endl;
+		// if (PRINT_) cout << "status: " << status << endl;	
+		// 
+		// if (PRINT_) cout << "n_var: " << n_var << endl;
+		// if (PRINT_) cout << "n_con: " <<n_con << endl;
+		// if (PRINT_) if (A_vals != NULL) {
+		// 	cout << "A_vals " << A_rownos << endl;
+		// 	cout << "A_vals " << A_colstarts << endl;
+		// 	cout << "A_vals: " << A_vals[0] << endl;
+		// 	cout << "A_vals: " << A_vals[1] << endl;
+		// 	cout << "A_vals: " << A_vals[2] << endl;
+		// 	cout << "A_vals: " << A_vals[3] << endl;
+		// }
 	
 		if (PRINT_) cout << "X0: " << X0[0] << ", " << X0[1] << endl;
 		
@@ -388,8 +386,7 @@ public:
 		real *x = (real *)Malloc(num_primal()*sizeof(real));
 		for (size_t primal_index=0; primal_index < num_primal(); ++primal_index)
 			x[primal_index] = X0_[primal_index];
-		// x[0] = 2.0;
-		// x[1] = 2.0;
+
 		real *con = (real *)Malloc(n_con*sizeof(real));
 		conval(x, con, nerror);
 		for (size_t ampl_constraint_index =0 ; ampl_constraint_index < n_con; ++ampl_constraint_index) {
@@ -409,52 +406,52 @@ public:
 		}
 		return initial;
 	}
-	void nonefunc() {
-		ASL *asl = asl_;
-		real *x = (real *)Malloc(n_var*sizeof(real));
-		x[0] = 2.0;
-		x[1] = 2.0;
-	
-		fint *nerror = (fint *) Malloc(1*sizeof(fint));
-		
-	
-		// real *con = (real *)Malloc(n_con*sizeof(real));
-// 		conval(x, con, nerror);
-		// cout << "constraint value(nerror = " << *nerror << "): " << con[0] << endl;
-		// cout << "constraint value(nerror = " << *nerror << "): " << con[1] << endl;
-		// 	
-		// cout << "LUrhs: " << LUrhs[0] << endl;
-		// cout << "LUrhs: " << LUrhs[1] << endl;
-		// cout << "LUrhs: " << LUrhs[2] << endl;
-		// cout << "LUrhs: " << LUrhs[3] << endl;
-	
-		// vector<int> equality_constraints;		// equality_constraints[i] is the index in AMPL jacobian where equality constraint i lies.
-		// vector<int> inequality_constraints;		// inequality_constraints[i] is the index in AMPL jacobian where inequality constraint i lies.
-		// vector<int> inequality_;
-		// equality_constraints_ inequality_constraints_
-		
-		// 	
-		// named_vector_print("EQUALITY: ", equality_constraints_);
-		// named_vector_print("INEQUALITY: ", inequality_constraints_);
-		// // cout << "]" << endl;
-
-	
-		cout << "J(nerror = " << *nerror << "): " << J_[0] << endl;
-		cout << "J(nerror = " << *nerror << "): " << J_[1] << endl;
-		cout << "J(nerror = " << *nerror << "): " << J_[2] << endl;
-		cout << "J(nerror = " << *nerror << "): " << J_[3] << endl;
-	
-		if (false) {
-			real *test = (real *)Malloc(n_var*sizeof(real));
-			congrd(0, x, test, nerror);
-			cout << "test[0] = " << test[0] << endl;
-			cout << "test[1] = " << test[1] << endl;
-			congrd(1, x, test, nerror);
-			cout << "test[0] = " << test[0] << endl;
-			cout << "test[1] = " << test[1] << endl;
-		}
-	}
-	
+// 	void nonefunc() {
+// 		ASL *asl = asl_;
+// 		real *x = (real *)Malloc(n_var*sizeof(real));
+// 		x[0] = 2.0;
+// 		x[1] = 2.0;
+// 	
+// 		fint *nerror = (fint *) Malloc(1*sizeof(fint));
+// 		
+// 	
+// 		// real *con = (real *)Malloc(n_con*sizeof(real));
+// // 		conval(x, con, nerror);
+// 		// cout << "constraint value(nerror = " << *nerror << "): " << con[0] << endl;
+// 		// cout << "constraint value(nerror = " << *nerror << "): " << con[1] << endl;
+// 		// 	
+// 		// cout << "LUrhs: " << LUrhs[0] << endl;
+// 		// cout << "LUrhs: " << LUrhs[1] << endl;
+// 		// cout << "LUrhs: " << LUrhs[2] << endl;
+// 		// cout << "LUrhs: " << LUrhs[3] << endl;
+// 	
+// 		// vector<int> equality_constraints;		// equality_constraints[i] is the index in AMPL jacobian where equality constraint i lies.
+// 		// vector<int> inequality_constraints;		// inequality_constraints[i] is the index in AMPL jacobian where inequality constraint i lies.
+// 		// vector<int> inequality_;
+// 		// equality_constraints_ inequality_constraints_
+// 		
+// 		// 	
+// 		// named_vector_print("EQUALITY: ", equality_constraints_);
+// 		// named_vector_print("INEQUALITY: ", inequality_constraints_);
+// 		// // cout << "]" << endl;
+// 
+// 	
+// 		cout << "J(nerror = " << *nerror << "): " << J_[0] << endl;
+// 		cout << "J(nerror = " << *nerror << "): " << J_[1] << endl;
+// 		cout << "J(nerror = " << *nerror << "): " << J_[2] << endl;
+// 		cout << "J(nerror = " << *nerror << "): " << J_[3] << endl;
+// 	
+// 		if (false) {
+// 			real *test = (real *)Malloc(n_var*sizeof(real));
+// 			congrd(0, x, test, nerror);
+// 			cout << "test[0] = " << test[0] << endl;
+// 			cout << "test[1] = " << test[1] << endl;
+// 			congrd(1, x, test, nerror);
+// 			cout << "test[0] = " << test[0] << endl;
+// 			cout << "test[1] = " << test[1] << endl;
+// 		}
+// 	}
+// 	
 	// zeroth order NLP quantities:
 	double objective(const iSQOIterate &iterate) {
 		ASL *asl = asl_;
@@ -570,7 +567,7 @@ public:
 		// 	if (PRINT_) cout << endl;
 		// }
 		// size_t isqo_eq_constraint_index=0;
-		cout << "equal: " << equality_constraints_ << endl;
+		if (PRINT_) cout << "equal: " << equality_constraints_ << endl;
 		for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index < equality_constraints_.size(); ++isqo_eq_constraint_index) {
 			// cout << ""
 			real *G = (real *)Malloc(n_var*sizeof(real));
@@ -601,8 +598,8 @@ public:
 		
 		matrix inequality_constraint_jacobian(num_dual_ieq(), n_var);
 		size_t isqo_ineq_constraint_index=0;
-		cout << "lower: " << inequality_constraints_lower_ << endl;
-		cout << "upper: " << inequality_constraints_upper_ << endl;
+		if (PRINT_) cout << "lower: " << inequality_constraints_lower_ << endl;
+		if (PRINT_) cout << "upper: " << inequality_constraints_upper_ << endl;
 		for (size_t isqo_ineq_lower_constraint_index=0; isqo_ineq_lower_constraint_index < inequality_constraints_lower_.size(); ++isqo_ineq_lower_constraint_index) {
 			// cout << ""
 			real *G = (real *)Malloc(n_var*sizeof(real));
@@ -622,57 +619,11 @@ public:
 			}
 			++isqo_ineq_constraint_index;
 		}
-		cout << "======" << endl;
-		cout << inequality_constraint_jacobian << endl;
-		cout << "======" << endl;
+		if (PRINT_) cout << "======" << endl;
+		if (PRINT_) cout << inequality_constraint_jacobian << endl;
+		if (PRINT_) cout << "======" << endl;
 		
 		
-		// cout << "inequality lower: " << inequality_constraints_lower_ << endl;
-		// cout << "n_con: " << n_con << endl;
-		// int isqo_ineq_constraint_index = 0;
-		// for (size_t isqo_ineq_lower_constraint_index=0; isqo_ineq_lower_constraint_index < inequality_constraints_lower_.size(); ++isqo_ineq_lower_constraint_index) {
-		// 	int ampl_constraint_index = inequality_constraints_lower_[isqo_ineq_lower_constraint_index];
-		// 	if (PRINT_) cout << "isqo ineq " << isqo_ineq_constraint_index << " is AMPL constraint " << ampl_constraint_index << endl;
-		// 	for (size_t var_index=0; var_index < n_var; ++var_index) {
-		// 		cout << "inner loop, lower, isqo row: " << isqo_ineq_constraint_index << ", ampl row: " << inequality_constraints_lower_[isqo_ineq_lower_constraint_index];
-		// 		cout << ", isqo col: " << var_index << endl;
-		// 		// TODO TODO TODO TODO TODO TODO TODO TODO HERE LIES THE FUCKING STUPID PROBLEM GOD DAMN IT 
-		// 		inequality_constraint_jacobian.set(isqo_ineq_constraint_index, var_index, -J_[n_var*inequality_constraints_lower_[isqo_ineq_lower_constraint_index]+var_index]);
-		// 		// inequality_constraint_jacobian.set(isqo_ineq_constraint_index, var_index, -J_[n_con*var_index + inequality_constraints_lower_[isqo_ineq_lower_constraint_index]]);
-		// 		// inequality_constraints_lower_[isqo_ineq_lower_constraint_index]
-		// 		// inequality_constraint_jacobian.set(isqo_ineq_constraint_index, var_index, -J_[n_var* + var_index ]);
-		// 	}
-		// 	// inequality_constraint_evaluation[isqo_ineq_constraint_index] = con[ampl_constraint_index] - LUrhs[ampl_constraint_value_lower];
-		// 	++isqo_ineq_constraint_index;
-		// }
-		// cout << endl << "asdfasdfadsf=====" << endl;
-		// cout << inequality_constraint_jacobian << endl;
-		// for (size_t isqo_ineq_upper_constraint_index=0; isqo_ineq_upper_constraint_index < inequality_constraints_upper_.size(); ++isqo_ineq_upper_constraint_index) {
-		// 	
-		// 	int ampl_constraint_index = inequality_constraints_upper_[isqo_ineq_upper_constraint_index];
-		// 	if (PRINT_) cout << "isqo ineq " << isqo_ineq_constraint_index << " is AMPL constraint " << ampl_constraint_index << endl;
-		// 				// inequality_constraint_evaluation[isqo_ineq_constraint_index] = con[ampl_constraint_index] - LUrhs[ampl_constraint_value_lower];
-		// 	for (size_t var_index=0; var_index < n_var; ++var_index) {
-		// 		// inequality_constraint_jacobian.set(isqo_ineq_constraint_index, var_index, J_[n_con*var_index + inequality_constraints_upper_[isqo_ineq_constraint_index]]);
-		// 		inequality_constraint_jacobian.set(isqo_ineq_constraint_index, var_index, J_[n_var*inequality_constraints_upper_[isqo_ineq_constraint_index] + var_index]);
-		// 	}
-		// 	++isqo_ineq_constraint_index;
-		// }
-		
-		
-		// for (size_t ampl_ineq_constraint_index=0; ampl_ineq_constraint_index<inequality_constraints_.size(); ++ampl_ineq_constraint_index){
-		// 	if (PRINT_) cout << " - " << ampl_ineq_constraint_index << ordinal(ampl_ineq_constraint_index) << " inequality_constraint maps to AMPL's "<< inequality_constraints_[ampl_ineq_constraint_index] << ordinal(inequality_constraints_[ampl_ineq_constraint_index])<< " constraint";
-		// 
-		// 	if (PRINT_) cout << ": " << "[";
-		// 	for (size_t var_index=0; var_index < n_var; ++var_index) {
-		// 		if (PRINT_) if (var_index != 0) cout << ", ";
-		// 		if (PRINT_) cout << J_[n_con*var_index + inequality_constraints_[ampl_ineq_constraint_index]];
-		// 		
-		// 		// TODO get around this copy and weird array access...
-		// 	}
-		// 	if (PRINT_) cout << "]";
-		// 	if (PRINT_) cout << endl;
-		// }
 		if (PRINT_) cout << "inequality: [" << endl;
 		if (PRINT_) inequality_constraint_jacobian.print();
 		if (PRINT_) cout << "]" << endl;
@@ -698,7 +649,7 @@ public:
 		
 		size_t dual_ineq_value_index = 0;
 		for (size_t dual_ineq_lower_index=0; dual_ineq_lower_index < inequality_constraints_lower_.size(); ++dual_ineq_lower_index) {
-			Y[inequality_constraints_lower_[dual_ineq_lower_index]] = iterate.dual_ieq_values_[dual_ineq_value_index];// / iterate.penalty_parameter_;
+			Y[inequality_constraints_lower_[dual_ineq_lower_index]] = -iterate.dual_ieq_values_[dual_ineq_value_index];// / iterate.penalty_parameter_;
 			dual_ineq_value_index++;
 		}
 		for (size_t dual_ineq_upper_index=0; dual_ineq_upper_index < inequality_constraints_upper_.size(); ++dual_ineq_upper_index) {
@@ -752,7 +703,7 @@ protected:
 	ASL *asl_;
 	real *J_;
 	
-	vector<int> X0_;
+	vector<double> X0_;
 	
 	vector<int> equality_constraints_;
 	vector<int> inequality_constraints_lower_;
@@ -1134,7 +1085,7 @@ public:
 		example_.setPrintLevel(qpOASES::PL_LOW);
 		int nWSR = 2000;
 		qpOASES::returnValue ret;
-		cout << subproblem.hessian_ <<endl;
+		// cout << subproblem.hessian_ <<endl;
 		if (first_) {
 			ret = example_.init( &subproblem.hessian_.data_[0],
 								 &subproblem.gradient_[0],
@@ -1355,6 +1306,12 @@ const char TextOutput::output_format_subprob_[] = " %9.2e  %3d  %9.2e  %9.2e  %9
 const char TextOutput::output_format_post_[] = " 4a %9.2e %9.2e %9.2e |%9.2e\n";
 
 
+bool assert_close(double val1, double val2, double tol) {
+	assert(abs(val1) <= abs(val2) + tol*abs(val1));
+	assert(abs(val2) <= abs(val1) + tol*abs(val2));
+	assert(((val1 > tol) && (val2 > tol)) || ((val1 < -tol) && (val2 < -tol)) || (val1 == 0 && val2 == 0));
+	return (abs(val1) <= abs(val2) + tol*abs(val1)) && (abs(val2) <= abs(val1) + tol*abs(val2));
+}
 int main2() {
 	cout << "okay, so..." << endl;
 	
@@ -1376,22 +1333,89 @@ int main2() {
 	// 
 	// tests for variable conversion:
 	// 
-	AmplNlp ampl_nlp_object("/Users/traviscj/optimization/cute_nl_nopresolve/hs016.nl");
+	// AmplNlp ampl_nlp_object("/Users/traviscj/optimization/cute_nl_nopresolve/hs016.nl");
+	AmplNlp ampl_nlp_object("/Users/traviscj/ampl_bound_reformulation.nl");
 	iSQOIterate iterate = ampl_nlp_object.initial();
+	cout << "initial iterate: " << iterate.primal_values_ << endl;
 	// cout << "Zeroth Order:" << endl;
-	// cout << "===[Objective]==============" << endl;
-	// cout << "  AMPL : " << ampl_nlp_object.objective(iterate) << endl;
-	// cout << "Custom : " << problem.objective(iterate) << endl;
+	cout << "===[Objective]==============" << endl;
+	double ampl_obj = ampl_nlp_object.objective(iterate);
+	assert(ampl_obj == 5.921590000000000e+00);//, "ampl_obj wrong");
+	cout << "  AMPL : " << ampl_nlp_object.objective(iterate) << endl;
+	
+	cout << "===[Objective Gradient]==============" << endl;
+	vector<double> ampl_obj_gradient = ampl_nlp_object.objective_gradient(iterate);
+	assert(ampl_obj_gradient[0] == 1.0e0);
+	assert(ampl_obj_gradient[1] == 1.0e0);
+	cout << "  AMPL : " << ampl_obj_gradient << endl;
+	
+	
+	cout << "===[Equality Constraints]==============" << endl;
+	vector<double> con_eq_values = ampl_nlp_object.constraints_equality(iterate);
+	cout << "  AMPL : " << con_eq_values << endl;
+	assert(con_eq_values[0]==-41.924375456199996); // negative because switches var to left-hand-side.
+	assert(con_eq_values[1]==141.09951409669998);
+	
+	cout << "===[Equality Jacobian]==============" << endl;
+	matrix eq_jacobian = ampl_nlp_object.constraints_equality_jacobian(iterate);
+	cout << "  AMPL : " << eq_jacobian << endl;
+	assert(eq_jacobian.get(0,0) == -1.256636000000000e+01);
+	assert(eq_jacobian.get(0,1) == -1.668000000000000e+01);
+	assert(eq_jacobian.get(1,0) == 4.398226000000000e+01);
+	assert(eq_jacobian.get(1,1) == 6.116000000000000e+01);
+	
+	
+	
 	
 	cout << "===[Inequality Constraints]==============" << endl;
-	cout << "  AMPL : " << ampl_nlp_object.constraints_inequality(iterate) << endl;
+	vector<double> ieq_values = ampl_nlp_object.constraints_inequality(iterate);
+	cout << "  AMPL : " << ieq_values << endl;
+	double ieq_tol = 1e-12;
+	assert(abs(ieq_values[0]) <= (abs(-3.482753668339000e+02) + ieq_tol*abs(ieq_values[0])));
+	assert(abs(ieq_values[1]) <= (abs(-6.820391459396999e+02) + ieq_tol*abs(ieq_values[1])));
+	assert(abs(ieq_values[2]) <= (abs(3.362753668339000e+02) + ieq_tol*abs(ieq_values[2])));
+	assert(abs(ieq_values[3]) <= (abs(7.346270723082998e+02) + ieq_tol*abs(ieq_values[3])));
 	
+	// -6.820391459396999e+02
 	
 	cout << "===[Inequality Jacobian]==============" << endl;
-	cout << "  AMPL : " << ampl_nlp_object.constraints_inequality_jacobian(iterate) << endl;
+	matrix ieq_jacobian = ampl_nlp_object.constraints_inequality_jacobian(iterate);
+	cout << "  AMPL : " << ieq_jacobian << endl;
+	assert_close(ieq_jacobian.get(0,0), -1.193804200000000e+02, 1e-10); // c2 lower
+	assert_close(ieq_jacobian.get(0,1), -1.278800000000000e+02, 1e-10);
+	assert_close(ieq_jacobian.get(1,0), -2.324776600000000e+02, 1e-10); // c3 lower
+	assert_close(ieq_jacobian.get(1,1), -2.279600000000000e+02, 1e-10);
+	assert_close(ieq_jacobian.get(2,0), 1.193804200000000e+02, 1e-10);  // c2 upper
+	assert_close(ieq_jacobian.get(2,1), 1.278800000000000e+02, 1e-10);  
+	assert_close(ieq_jacobian.get(3,0), 2.701767400000000e+02, 1e-10);  // c4 upper
+	assert_close(ieq_jacobian.get(3,1), 2.613200000000000e+02, 1e-10);
+	
+	
+	
+	
+	
+	
+	// assert(ieq_jacobian.get(3,0) == 1.193804200000000e+02); assert(ieq_jacobian.get(3,1) == 1.278800000000000e+02);  // c2 upper
+	
+	cout << endl;
+	cout << "TESTED FRONTIER!" << endl;
+	cout << endl;
+	cout << endl;
 	
 	cout << "===[Lagrangian Hessian]==============" << endl;
-	cout << "  AMPL : " << ampl_nlp_object.lagrangian_hessian(iterate) << endl;
+	matrix lh_f_only = ampl_nlp_object.lagrangian_hessian(iterate);
+	cout << "  AMPL : " << lh_f_only << endl;
+	assert_close(lh_f_only.get(0,0), 0.00e0, 1e-10);  // c2 upper
+	assert_close(lh_f_only.get(0,1), 0.00e0, 1e-10);  
+	assert_close(lh_f_only.get(1,0), 0.00e0, 1e-10);  // c4 upper
+	assert_close(lh_f_only.get(1,1), 0.00e0, 1e-10);
+	
+	iterate.dual_eq_values_[0] = 1.0;
+	matrix lh_c0_only = ampl_nlp_object.lagrangian_hessian(iterate);
+	cout << "  AMPL : " << lh_c0_only << endl;
+	iterate.dual_eq_values_[0] = -1.0;
+	matrix lh_c0_only_flip = ampl_nlp_object.lagrangian_hessian(iterate);
+	cout << "  AMPL : " << lh_c0_only_flip << endl;
 	
 	
 	return 0;
@@ -1454,10 +1478,10 @@ int main() {
 	// x[0]=2.78;
 	// x[1]=4.66;
 	// iSQOIterate penalty_iterate(2,1,1);
-	AmplNlp problem("/Users/traviscj/optimization/cute_nl_nopresolve/hs004.nl");
+	AmplNlp problem("/Users/traviscj/optimization/cute_nl_nopresolve/hs011.nl");
 	iSQOIterate penalty_iterate = problem.initial();
-	penalty_iterate.primal_values_[0] = 1.125;
-	penalty_iterate.primal_values_[1] = .125;
+	// penalty_iterate.primal_values_[0] = 1.125;
+	// penalty_iterate.primal_values_[1] = .125;
 	penalty_iterate.penalty_parameter_ = 1.0e-1;
 	vector<double> eq_values = problem.constraints_equality(penalty_iterate);
 	for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
@@ -1634,6 +1658,5 @@ int main() {
 	penalty_iterate.print();
 	return 0;
 }
-
 
 

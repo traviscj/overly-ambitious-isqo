@@ -22,5 +22,5 @@ default: build run
 run:
 	./isqo_functor
 build:
-	g++ isqo_functor.cc ${CFLAGS} ${LDFLAGS} -o isqo_functor -O0 -g
+	g++-4.8 isqo_functor.cc ${CFLAGS} ${LDFLAGS} -o isqo_functor -O0 -g -std=c++11
 	

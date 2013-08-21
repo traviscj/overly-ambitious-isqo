@@ -2,3 +2,5 @@ isqo_functor
 isqo_functor.dSYM
 tester
 tester.dSYM
+valgrind-*
+.DS_Store

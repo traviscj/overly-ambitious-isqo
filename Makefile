@@ -18,9 +18,11 @@ LDFLAGS+=-L/usr/local/Cellar/gfortran/4.8.1/gfortran/lib -lgfortran  -llapack -l
 # 	./tester
 
 default: build run
-	
+
 run:
 	./isqo_functor
 build:
 	g++-4.8 isqo_functor.cc ${CFLAGS} ${LDFLAGS} -o isqo_functor -O0 -g -std=c++11
-	
+
+valgrind: build
+	valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./isqo_functor >> valgrind-output 2> valgrind-error

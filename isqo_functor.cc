@@ -1373,36 +1373,62 @@ protected:
 };
 class HessianShifter : public FunctionWithNLPState {
 public:
-	HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), solve_qp_(nlp) {
+	HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), solve_qp_(nlp), last_shift_(0.0) {
 		
 	}
 	iSQOStep operator()(const iSQOIterate &iterate, iSQOQuadraticSubproblem &subproblem) {
+		double shift_w0 = 1e-4;
+		double shift_min = 1e-20;
+		double shiftkwbarp = 100;
+		double shiftkwp = 8;
+		double shift_kwm = 1.0/3.0;
+		double shiftmax = 1e40;
 		
+		double current_shift = 0.0;
+		
+		// try to solve without regularization:
+		subproblem.inc_regularization(current_shift);
 		iSQOStep return_step = solve_qp_(subproblem);
-		double current_regularization = 1.0e1;
+		
+		
 		int current_regularization_steps = 0;
 		while ((return_step.status_ != 0) || (return_step.x_norm() > 1e9)) {
-			current_regularization *= 10;
-			// cerr << "--> retrying with " << current_regularization << endl;
-			subproblem.inc_regularization(current_regularization);
-			// cout << "subproblem: " <<endl;
-			// subproblem.print();
+			if (current_regularization_steps == 0) {
+				if (last_shift_ == 0.0) {
+					current_shift = shift_w0;
+				} else {
+					current_shift = max(shift_min, shift_kwm * last_shift_);
+				}
+			} else {
+				if (last_shift_ == 0.0) {
+					current_shift = shiftkwbarp * current_shift;
+				} else {
+					current_shift = shiftkwp*current_shift;
+				}
+			}
+			subproblem.inc_regularization(current_shift);
 			return_step = solve_qp_(subproblem);
 			++current_regularization_steps;
 			
 			if (current_regularization_steps == 20){
 				cout << "FAILURE!" << endl;
+				assert(false);
 				break;
 			}
 		}
-		if (current_regularization_steps == 0) current_regularization = 0.0;
-		// if (current_regularization_steps == 20) 
+		last_shift_ = current_shift;
 		return return_step;
+	}
+	
+	double get_last_shift() const {
+		return last_shift_;
 	}
 private:
 protected:
 	SolveQuadraticProgram solve_qp_;
+	double last_shift_;
 };
+
 class TextOutput : public FunctionWithNLPState {
 public:
 	TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp),linear_decrease_func_(nlp), pen_func_(nlp), residual_func_(nlp) {

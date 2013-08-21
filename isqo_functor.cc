@@ -1413,7 +1413,7 @@ public:
 		//  -> params: step, feas_iter, penalty_iter, alpha
 		printf(output_format_post_,
 				step_type.c_str(),
-				step_mix, combination_step.x_norm(), constraint_violation_func_(penalty_iterate) - constraint_violation_func_(penalty_iterate,combination_step), linear_decrease_func_(penalty_iterate, combination_step),
+				step_mix, combination_step.x_norm(), linear_decrease_func_(feasibility_iterate,combination_step), linear_decrease_func_(penalty_iterate, combination_step),
 				alpha
 					);
 	}
@@ -1729,6 +1729,13 @@ int main(int argc, char **argv) {
 			for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
 				combination_step.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
 			}
+			for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
+				feasibility_iterate.dual_eq_values_[dual_eq_index] = feasibility_step.dual_eq_values_[dual_eq_index];
+			}
+			for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
+				feasibility_iterate.dual_ieq_values_[dual_ieq_index] = feasibility_step.dual_ieq_values_[dual_ieq_index];
+			}
+			
 			text_output.subproblem(hessian_shifter_func.get_last_shift(), feasibility_iterate, feasibility_subproblem, feasibility_step);
 		}
 		
@@ -1753,12 +1760,12 @@ int main(int argc, char **argv) {
 			penalty_iterate.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
 		}
 		feasibility_iterate.update(penalty_iterate, alpha, combination_step);
-		for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
-			feasibility_iterate.dual_eq_values_[dual_eq_index] = penalty_step.dual_eq_values_[dual_eq_index];
-		}
-		for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
-			feasibility_iterate.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
-		}
+		// for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
+		// 	feasibility_iterate.dual_eq_values_[dual_eq_index] = penalty_step.dual_eq_values_[dual_eq_index];
+		// }
+		// for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
+		// 	feasibility_iterate.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
+		// }
 	}
 	// cout << endl << endl;
 	// penalty_iterate.print();

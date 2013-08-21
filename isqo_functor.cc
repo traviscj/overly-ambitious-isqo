@@ -217,9 +217,11 @@ public:
 		num_dual_ieq_(s.num_dual_ieq_),
 		primal_values_(s.num_primal_),
 		dual_eq_values_(s.num_dual_eq_),
-		dual_ieq_values_(s.num_dual_ieq_)
+		dual_ieq_values_(s.num_dual_ieq_),
+		penalty_parameter_(s.penalty_parameter_)
+			// bug found here: forgot to initialize the penalty parameter, which fucked up the linesearch.
 			{
-		cerr << "copy being made!" << endl;
+		// cerr << "copy being made!" << endl;
 		
 	}
 	double x_norm() const {
@@ -1336,19 +1338,28 @@ public:
 		// cout << "initializing a linesearcher!" << endl;
 	}
 	double operator()(const iSQOIterate &iterate, const iSQOStep &step) {
-		iSQOIterate it_and_step(2,1,1);
+		// bugs found here: it_and_step pulled from nlp->initial, which meant it didn't have the right penalty parameter, which caused the linesearch to fail.
+		iSQOIterate it_and_step(iterate);
 		bool PRINT = false;
 		double alpha = 1.0;
 		double penfunc_start = penalty_func_(iterate);
 		double linear_reduction_start = linear_decrease_func_(iterate, step);
 		
 		double eta = 1e-8;
-		
+		if (PRINT) cout << endl;
 		for (int alpha_cuts = 0; alpha_cuts < 20; alpha_cuts++) {
 			it_and_step.update(iterate, alpha, step);
 			double penfunc_step = penalty_func_(it_and_step);
-			if (PRINT) cout << "alpha_cut: " << alpha_cuts << ": original: " << penfunc_start << "; new: " << penfunc_step << "; reduction: " << (penfunc_start-penfunc_step) << endl;
-			if (penfunc_step <= penfunc_start - eta*alpha*linear_reduction_start) {
+			
+			if (PRINT) {
+				cout << "alpha: " << alpha << endl;
+				cout << "f: " << nlp_->objective(it_and_step) << endl;
+				cout << "c: " << nlp_->constraints_equality(it_and_step) << endl;
+				cout << "alpha_cut: " << alpha_cuts << ": original: " << penfunc_start << "; new: " << penfunc_step << "; reduction: " << (penfunc_start-penfunc_step) << endl;
+				cout << "  rhs: " << - eta*alpha*linear_reduction_start  << " + " << 10*1e-16*max(abs(penfunc_step), 1.0) << " = " << (-eta*alpha*linear_reduction_start+10*1e-16*max(abs(penfunc_step), 1.0)) << endl;
+				cout << "mu = " << it_and_step.penalty_parameter_ << endl;
+			}
+			if (penfunc_step - penfunc_start <= - eta*alpha*linear_reduction_start + 10*1e-16*max(abs(penfunc_step), 1.0)) {
 				break;
 			}
 			alpha = 0.5*alpha;

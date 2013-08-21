@@ -2,6 +2,54 @@
 //  - Travis C. Johnson (traviscj@traviscj.com)
 //  - August 2013
 
+// basic philosophy is:
+// - keep main loop as clean and as close to algo in the paper as humanly possible, at the expense of anything else.
+// - don't try to fit functions (e.g. linear reduction) into classes for iterates
+//   - INSTEAD: write functions that stand on their own (but functors, so they can have some persistent state)
+// - don't try to fit multiple types of iterates into one class
+//   - INSTEAD: separate the iterates from steps from subproblems from hessian shifting from...
+// - don't try to fit more functionality than absolutely necessary into classes.
+//   - INSTEAD: have easy-to-debug classes with a single simple point: handling hessian shifts, for instance.
+// - don't try to pass in the kitchen sink simply to be able to evaluate some basic things.
+//   - INSTEAD: Pass the NLP class, which returns f(x), c(x), \bar{c}(x), take it from there.
+// - DO NOT use short (1-2 character) or greek symbols as variable names.
+//   - INSTEAD: spell out exactly what you are iterating over. Primal indices like "i"? Try primal_index. Linesearch step size called "alpha"? Try linesearch_step_size.
+//   - Exception: External class interfaces are a bit messier.
+//   - Gotcha: A bit more consistent naming scheme would improve things even more.
+// - whenever possible, return ONE object by value. 
+//   - INSTEAD: let C++11x worry about RVO. 
+//   - Exception: iSQOStep class... but maybe it doesn't need to be?
+// - whenever possible, pass required objects by const reference.
+// - whenever possible, use vector<double> instead of any other vectors.
+// - for unfinished features, use assert to ensure they are not used.
+
+// future feature list:
+// - !!! variable bounds !!!
+// - constraint/objective scaling
+// - other iSQO features (algo II-features.)
+// - logbook-style reporting/logging, with sql.
+// - more robust shifting strategy and/or Quasi-Newton.
+// - iQP interface!
+// - use qpoases matrices instead of custom matrix code
+// - sparse matrices from ampl/to qpOASES.
+// - rewrite some of the matrix computations into the matrix class.
+// - BQPD interface?
+// - read parameters from files, store in some structure.
+// - second order correction.
+// - use multiple qp objects for getting subproblem solutions.
+// - 
+
+// justification for weirder choices:
+// - I use "functors" for some of the paper-defined functions, to capture program state. They work by overloading operator(), which is a big weird, but they are essentially functions with state. One key thing: State is still minimized in them--most are just wrappers around basic NLP functions. With this I was trying to accomplish clear input-output relations, instead of inventing functions that do incremental changes to a huge block of state. One downside to this, as written, is that many things get re-evaluated(This could be minimized by some caching of )
+
+// future ideas:
+// - would like to extend the FunctionWithNLPState class to cache the contents of the arguments, and return the last value if they haven't changed. I think this could be somewhat straightforward, but maybe I'm underestimating. This is another major "point" to doing 
+// 
+
+// helpful hints:
+// - OSX: for alloc bugs, run with: export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib. On other systems, valgrind.
+// - 
+
 #include <iostream>
 #include <vector>
 #include <cmath>

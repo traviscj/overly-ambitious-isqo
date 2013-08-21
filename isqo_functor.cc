@@ -892,7 +892,7 @@ public:
 				FunctionWithNLPState(nlp),
 				num_variables_(nlp.num_primal() + 2*nlp.num_dual()), num_constraints_(nlp.num_dual()),
 				num_nlp_variables_(nlp.num_primal()), num_nlp_constraints_eq_(nlp.num_dual_eq()), num_nlp_constraints_ieq_(nlp.num_dual_ieq()),
-				hessian_(num_variables_, num_variables_), 
+				hessian_(num_variables_, num_variables_), unshifted_hessian_(num_variables_, num_variables_), first_shift_(false),
 				jacobian_(num_constraints_, num_variables_), 
 				gradient_(num_variables_),lower_bound_(num_variables_), upper_bound_(num_variables_), 
 				jacobian_lower_bound_(num_constraints_), jacobian_upper_bound_(num_constraints_)
@@ -962,9 +962,22 @@ public:
 	}
 	
 	void inc_regularization(double reg) {
+		bool PRINT = false;
+		// make a copy...
+		if (! first_shift_) {
+			if (PRINT) cout << "making the first-time-only copy..." << endl;
+			for (size_t r=0; r<num_variables_; ++r) {
+				for (size_t c=0; c<num_variables_; ++c) {
+					double entry = hessian_.get(r,c);
+					unshifted_hessian_.set(r,c, entry);
+				}
+			}
+			first_shift_ = true;
+		}
+		
 		for (size_t r=0; r<num_variables_; ++r) {
 			for (size_t c=0; c<num_variables_; ++c) {
-				double entry = hessian_.get(r,c);
+				double entry = unshifted_hessian_.get(r,c);
 				if (r == c)
 					entry += reg;
 				hessian_.set(r,c, entry);
@@ -990,6 +1003,8 @@ public:
 	int num_variables_, num_constraints_;
 	int num_nlp_variables_, num_nlp_constraints_eq_, num_nlp_constraints_ieq_;
 	matrix hessian_;
+	bool first_shift_;
+	matrix unshifted_hessian_;
 	matrix jacobian_;
 	vector<double> gradient_;
 	vector<double> lower_bound_;
@@ -1322,6 +1337,7 @@ public:
 		
 	}
 	iSQOStep operator()(const iSQOIterate &iterate, iSQOQuadraticSubproblem &subproblem) {
+		bool PRINT=false;
 		double shift_w0 = 1e-4;
 		double shift_min = 1e-20;
 		double shiftkwbarp = 100;
@@ -1337,7 +1353,22 @@ public:
 		
 		
 		int current_regularization_steps = 0;
-		while ((return_step.status_ != 0) || (return_step.x_norm() > 1e9)) {
+		vector<double> current_step_values(nlp_->num_primal() + 2*nlp_->num_dual());
+		for (size_t primal_index = 0; primal_index < nlp_->num_primal(); ++primal_index) {
+			current_step_values[primal_index] = return_step.primal_values_[primal_index];
+		}
+		
+		// matrix hessian = nlp_->lagrangian_hessian(iterate);
+		vector<double> hessian_step = subproblem.hessian_.multiply(current_step_values);
+		if (PRINT) cout << "hessian step: " << subproblem.hessian_ << endl;
+		double total = 0.0;
+		for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
+			total += hessian_step[primal_index] * return_step.primal_values_[primal_index];
+		}
+		if (PRINT) cout << endl << "total: " << total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << endl;
+		if (PRINT) cout << "required: " << (total < (1e-8*return_step.x_norm()*return_step.x_norm())) << endl;
+		// vector<double> hessian_step = subproblem.hessian_.multiply()
+		while ((return_step.status_ != 0) || (return_step.x_norm() > 1e9) || (total < (1e-8*return_step.x_norm()*return_step.x_norm()))) {
 			if (current_regularization_steps == 0) {
 				if (last_shift_ == 0.0) {
 					current_shift = shift_w0;
@@ -1353,6 +1384,22 @@ public:
 			}
 			subproblem.inc_regularization(current_shift);
 			return_step = solve_qp_(subproblem);
+			
+			for (size_t primal_index = 0; primal_index < nlp_->num_primal(); ++primal_index) {
+				current_step_values[primal_index] = return_step.primal_values_[primal_index];
+			}
+			if (PRINT) cout << "hessian: " << subproblem.hessian_ << endl;
+			if (PRINT) cout << "return step: " << return_step.primal_values_ << endl;
+			hessian_step = subproblem.hessian_.multiply(current_step_values);
+			if (PRINT) cout << "hessian step: " << hessian_step << endl;
+			total = 0.0;
+			for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
+				total += hessian_step[primal_index] * return_step.primal_values_[primal_index];
+			}
+			if (PRINT) cout << "current_shift: " << current_shift << endl;
+			if (PRINT) cout << endl << "total: " << total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << endl;
+			if (PRINT) cout << "required: " << (total < (1e-8*return_step.x_norm()*return_step.x_norm())) << endl;
+			
 			++current_regularization_steps;
 			
 			if (current_regularization_steps == 20){
@@ -1655,7 +1702,8 @@ int main(int argc, char **argv) {
 	ConstraintViolationFunction constraint_violation(problem);
 	LineSearchFunction linesearch(problem);
 	LinearDecreaseFunction linear_decrease_func(problem);
-	HessianShifter hessian_shifter_func(problem);
+	HessianShifter hessian_shifting_penalty_qp_solve(problem);
+	HessianShifter hessian_shifting_feasibility_qp_solve(problem);
 	// Other
 	TextOutput text_output(problem);
 	
@@ -1664,7 +1712,7 @@ int main(int argc, char **argv) {
 	text_output.start();
 	int iter=-1;
 	// ALGORITHM A // Step 1
-	for (iter = 0; iter < 200; iter ++ ) {
+	for (iter = 0; iter < 500; iter ++ ) {
 		iSQOStep combination_step(problem.num_primal(),problem.num_dual_eq(),problem.num_dual_ieq());
 		
 		text_output.pre(iter, feasibility_iterate, penalty_iterate);
@@ -1678,14 +1726,15 @@ int main(int argc, char **argv) {
 			// cout << endl << "Termination 2b" << endl;
 			// break;
 		// }
-
+		
+		string steptype = "4a";
 		iSQOQuadraticSubproblem penalty_subproblem(problem, penalty_iterate);
 		
 		// TODO rename: hessian_shifting_qp_solve
 		// or: hessian_shift_strategy()
-		iSQOStep penalty_step = hessian_shifter_func(penalty_iterate, penalty_subproblem);
+		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_iterate, penalty_subproblem);
 
-		double current_regularization = hessian_shifter_func.get_last_shift();
+		double current_regularization = hessian_shifting_penalty_qp_solve.get_last_shift();
 
 		iSQOQuadraticSubproblem feasibility_subproblem(problem, feasibility_iterate);
 		
@@ -1693,7 +1742,7 @@ int main(int argc, char **argv) {
 		double violation = constraint_violation(penalty_iterate);
 		double step_mix = -1.0;
 		bool PRINT=false;
-		string steptype = "4a";
+		
 		if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_reduction_penalty << " >= epsilon*" << violation << " = " << epsilon*violation<< ": ";
 		if (linear_reduction_penalty >= epsilon*violation + 1e-16*100*linear_reduction_penalty) {
 			if (PRINT) cout << "PASSES!";
@@ -1711,7 +1760,7 @@ int main(int argc, char **argv) {
 				combination_step.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
 			}
 		} else {
-			iSQOStep feasibility_step = hessian_shifter_func(feasibility_iterate, feasibility_subproblem);
+			iSQOStep feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_iterate, feasibility_subproblem);
 			
 			if (linear_reduction_penalty >= epsilon*linear_decrease_func(feasibility_iterate,feasibility_step)) {
 				step_mix = 1.0e0;
@@ -1765,7 +1814,7 @@ int main(int argc, char **argv) {
 				feasibility_iterate.dual_ieq_values_[dual_ieq_index] = feasibility_step.dual_ieq_values_[dual_ieq_index];
 			}
 			
-			text_output.subproblem(hessian_shifter_func.get_last_shift(), feasibility_iterate, feasibility_subproblem, feasibility_step);
+			text_output.subproblem(hessian_shifting_feasibility_qp_solve.get_last_shift(), feasibility_iterate, feasibility_subproblem, feasibility_step);
 		}
 		
 		

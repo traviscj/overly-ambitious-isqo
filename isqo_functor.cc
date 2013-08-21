@@ -24,15 +24,15 @@
 // - for unfinished features, use assert to ensure they are not used.
 
 // future feature list:
-// - !!! variable bounds !!!
-// - constraint/objective scaling
+// - DONE !!! variable bounds !!!
+// - constraint/objective scaling (should fix HS99... )
 // - other iSQO features (algo II-features.)
 // - logbook-style reporting/logging, with sql.
 // - more robust shifting strategy and/or Quasi-Newton.
 // - iQP interface!
 // - use qpoases matrices instead of custom matrix code
 // - sparse matrices from ampl/to qpOASES.
-// - rewrite some of the matrix computations into the matrix class.
+// - DONE... rewrite some of the matrix computations into the matrix class. (But still need to check for stragglers...)
 // - BQPD interface?
 // - read parameters from files, store in some structure.
 // - second order correction.
@@ -48,7 +48,7 @@
 
 // helpful hints:
 // - OSX: for alloc bugs, run with: export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib. On other systems, valgrind.
-// - 
+// - currently, here, the reported KKT is the two-norm... in the matlab implementation, it is the inf norm, scaled by a bunch of things.
 
 #include <iostream>
 #include <vector>
@@ -298,14 +298,27 @@ public:
 			if (r+1 != rows_) cout << "; ";
 		}
 	}
-	// vector<double> multiply(const vector<double> x) {
-	// 	// for (size_t i=0; i<)
-	// 	vector<double> retval(3);
-	// 	retval[0] = 1;
-	// 	retval[1] = 2;
-	// 	retval[2] = 3;
-	// 	return retval;
-	// }
+	vector<double> multiply(const vector<double> &x) const {
+		assert(x.size() == columns_);
+		vector<double> retval(rows_);
+		for (size_t current_row=0; current_row<rows_; ++current_row) {
+			for (size_t current_col=0; current_col<columns_; ++current_col) {
+				retval[current_row] += data_[columns_*current_row + current_col]*x[current_col];
+			}
+		}
+		return retval;
+	}
+	vector<double> multiply_transpose(const vector<double> &y) const {
+		assert(y.size() == rows_);
+		// if (y.size() != rows_) throw 20;
+		vector<double> retval(columns_);
+		for (size_t current_row=0; current_row<rows_; ++current_row) {
+			for (size_t current_col=0; current_col<columns_; ++current_col) {
+				retval[current_col] += data_[columns_*current_row + current_col]*y[current_row];
+			}
+		}
+		return retval;
+	}
 	int rows_, columns_;
 	vector<double> data_;
 private:
@@ -424,10 +437,13 @@ public:
 		if (PRINT_) cout << "Constructing an AmplNlp" << endl;
 		ASL *asl;
 		asl = ASL_alloc(ASL_read_pfgh);
+		nerror_ = new int;
+		*nerror_ = 0;
 		// char * punt = stub_str.data();
-		cout << "Filename: " << stub_str << endl;
-		nl_ = jac0dim(&stub_str[0], (stub_str).length());
 		// if (PRINT_) 
+			cout << "Filename: " << stub_str << endl;
+		nl_ = jac0dim(&stub_str[0], (stub_str).length());
+		if (PRINT_) 
 			cout << "ran jac0dim: " << nl_ << endl;
 			
 		num_primal_ = n_var;
@@ -467,7 +483,7 @@ public:
 		}
 		
 		
-		nerror_ = new int;
+		
 		vector<double> x(num_primal());
 		// double *x = new double[num_primal()];
 		for (size_t primal_index=0; primal_index < num_primal(); ++primal_index)
@@ -475,10 +491,8 @@ public:
 		
 		bool should_abort = false;
 		for (size_t ampl_variable_index =0 ; ampl_variable_index < n_var; ++ampl_variable_index) {
-			// if (PRINT_) 
+			if (PRINT_) 
 				cout << "i=" << ampl_variable_index << ": l=" << LUv[2*ampl_variable_index] << " <= x_i= " << x[ampl_variable_index] << " <= u=" << LUv[2*ampl_variable_index+1] << endl;
-			// TODO add variable bounds here, using similar logic to the above.
-			// for now, though.... just punt.
 			bool lower_finite = (LUv[2*ampl_variable_index] != -INFINITY);
 			bool upper_finite = (LUv[2*ampl_variable_index+1] != INFINITY);
 			bool both_finite = lower_finite && upper_finite;
@@ -495,7 +509,6 @@ public:
 			}			
 		}
 		
-		// double *con = new double[n_con];
 		vector<double> con(n_con);
 		conval(&x[0], &con[0], nerror_);
 		for (size_t ampl_constraint_index =0 ; ampl_constraint_index < n_con; ++ampl_constraint_index) {
@@ -508,8 +521,10 @@ public:
 	}
 	
 	~AmplNlp() {
+		ASL *asl = asl_;
+		
 		delete nerror_;
-		free(asl_); asl_ = NULL;
+		ASL_free(&asl);
 		fclose(nl_);
 	}
 	
@@ -1001,25 +1016,17 @@ public:
 		double eq_signflip = 1;
 		double ieq_signflip = 1;
 		// cout << "sta pre: " << stationarity << endl << endl << endl;
+		vector<double> eq_jacobian_trans_times_mults = jac_ce.multiply_transpose(constraint_eq_dual_values);
+		vector<double> ieq_jacobian_trans_times_mults = jac_ci.multiply_transpose(constraint_ieq_dual_values);
+		
 		for (size_t stationarity_index=0; stationarity_index < stationarity.size(); ++stationarity_index) {
-			// J(x)y
-			for (size_t dual_eq_index=0; dual_eq_index < nlp_->num_dual_eq(); ++dual_eq_index){
-				stationarity[rho_index] += jac_ce.get(dual_eq_index, rho_index)*eq_signflip*constraint_eq_dual_values[dual_eq_index];
-			}
-			
-			// barJ(x)bary:
-			for (size_t dual_ieq_index=0; dual_ieq_index < nlp_->num_dual_ieq(); ++dual_ieq_index){
-				stationarity[rho_index] += jac_ci.get(dual_ieq_index, rho_index)*ieq_signflip*constraint_ieq_dual_values[dual_ieq_index];
-			}
-			
-			rho[rho_index] = stationarity[stationarity_index];
+			rho[rho_index] = stationarity[stationarity_index] + eq_jacobian_trans_times_mults[stationarity_index] + ieq_jacobian_trans_times_mults[stationarity_index];
 			++rho_index;
 		}
-		// cout << "sta post: " << stationarity << endl << endl << endl;
-		// cout << "sta: " << stationarity << endl << endl << endl;
 		for (size_t constraint_eq_index=0; constraint_eq_index < nlp_->num_dual_eq(); ++constraint_eq_index) {
 			rho[rho_index] = min(bracket_plus(constraint_eq_values[constraint_eq_index]), 1.0 - eq_signflip*constraint_eq_dual_values[constraint_eq_index]);
 			++rho_index;
+			
 			rho[rho_index] = min(bracket_minus(constraint_eq_values[constraint_eq_index]), 1.0 + eq_signflip*constraint_eq_dual_values[constraint_eq_index]);
 			++rho_index;
 		}
@@ -1027,8 +1034,7 @@ public:
 		for (size_t constraint_ieq_index=0; constraint_ieq_index < nlp_->num_dual_ieq(); ++constraint_ieq_index) {
 			rho[rho_index] = min(bracket_plus(constraint_ieq_values[constraint_ieq_index]), 1.0 - ieq_signflip*constraint_ieq_dual_values[constraint_ieq_index]);
 			++rho_index;
-			// cout << "constraint_ieq_values[constraint_ieq_index=" << constraint_ieq_index << "]: " << constraint_ieq_values[constraint_ieq_index] << endl;
-			// cout << "constraint_ieq_dual_values[constraint_ieq_index=" << constraint_ieq_index << "]: " << constraint_ieq_dual_values[constraint_ieq_index] << endl;
+
 			rho[rho_index] = min(bracket_minus(constraint_ieq_values[constraint_ieq_index]), 0.0 + ieq_signflip*constraint_ieq_dual_values[constraint_ieq_index]);
 			++rho_index;
 			
@@ -1041,7 +1047,7 @@ public:
 		return sqrt(total);
 	}
 	double operator()(const iSQOIterate &iterate) const {
-		bool PRINT=true;
+		bool PRINT=false;
 		// cout << "OPERATOR FOR RESID FUNC: " << iterate.penalty_parameter_ << endl;
 		
 		vector<double> stationarity = nlp_->objective_gradient(iterate);
@@ -1054,6 +1060,18 @@ public:
 		vector<double> eq_con_values = nlp_->constraints_equality(iterate);
 		vector<double> ieq_con_values = nlp_->constraints_inequality(iterate);
 		
+		if (PRINT) {
+			cout << endl << "mu: " << iterate.penalty_parameter_ << endl;
+			cout << "sta (pre): " << nlp_->objective_gradient(iterate) << endl;
+			cout << "sta: " << stationarity << endl;
+			cout << "constraints  eq: " << eq_con_values << endl;
+			cout << "constraints ieq: " << ieq_con_values << endl;
+		
+			cout << "jac eq: " << nlp_->constraints_equality_jacobian(iterate) << endl;
+		
+			cout << "       dual  eq: " << iterate.dual_eq_values_ << endl;
+			cout << "       dual ieq: " << iterate.dual_ieq_values_ << endl;
+		}
 		return resid_helper(iterate, stationarity, eq_con_values, ieq_con_values, iterate.dual_eq_values_, iterate.dual_ieq_values_);
 	}
 	double operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const {
@@ -1061,35 +1079,33 @@ public:
 		bool PRINT=true;
 		vector<double> stationarity = nlp_->objective_gradient(iterate);
 		
+		matrix hessian = nlp_->lagrangian_hessian(iterate);
+		
+		vector<double> hessian_times_step = hessian.multiply(step.primal_values_);
+		
 		for (size_t stationarity_index=0; stationarity_index < nlp_->num_primal(); ++stationarity_index) {
-			// mu*grad f:
-			stationarity[stationarity_index] *= iterate.penalty_parameter_;
+			// mu*grad f + H*d:
+			stationarity[stationarity_index] = iterate.penalty_parameter_*stationarity[stationarity_index] + hessian_times_step[stationarity_index];
 			
-			// H*d:
-			for (size_t primal_index=0; primal_index < nlp_->num_primal(); ++primal_index) {
-				stationarity[stationarity_index] += subproblem.hessian_.get(stationarity_index, primal_index)*step.primal_values_[primal_index];
-			}
 		}
 		
-		vector<double> eq_con_values = nlp_->constraints_equality(iterate);
 		matrix jacobian_eq = nlp_->constraints_equality_jacobian(iterate);
-		for (size_t eq_con_index=0; eq_con_index< nlp_->num_dual_eq(); ++eq_con_index) {
-			// c_k + J_k^Td:
-			for (size_t primal_index=0; primal_index < nlp_->num_primal(); ++primal_index) {
-				eq_con_values[eq_con_index] += jacobian_eq.get(eq_con_index, primal_index)*step.primal_values_[primal_index];
-			}
-		}
+		vector<double> con_values_eq = nlp_->constraints_equality(iterate);
+		// cout << "about to do j eq" << endl;
+		vector<double> linear_step_eq = jacobian_eq.multiply(step.primal_values_);
 		
-		vector<double> ieq_con_values = nlp_->constraints_inequality(iterate);
+		// cout << "about to do j ieq" << endl;
 		matrix jacobian_ieq = nlp_->constraints_inequality_jacobian(iterate);
-		for (size_t ieq_con_index=0; ieq_con_index< nlp_->num_dual_ieq(); ++ieq_con_index) {
-			// barc_k + barJ_k^Td:
-			for (size_t primal_index=0; primal_index < nlp_->num_primal(); ++primal_index) {
-				ieq_con_values[ieq_con_index] += jacobian_ieq.get(ieq_con_index, primal_index)*step.primal_values_[primal_index];
-			}
+		vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
+		vector<double> linear_step_ieq = jacobian_ieq.multiply(step.primal_values_);
+
+		for (size_t eq_con_index=0; eq_con_index< nlp_->num_dual_eq(); ++eq_con_index) {
+			con_values_eq[eq_con_index] += linear_step_eq[eq_con_index];
 		}
-		
-		return resid_helper(iterate, stationarity, eq_con_values, ieq_con_values, step.dual_eq_values_, step.dual_ieq_values_);
+		for (size_t ieq_con_index=0; ieq_con_index< nlp_->num_dual_ieq(); ++ieq_con_index) {
+			con_values_ieq[ieq_con_index] += linear_step_ieq[ieq_con_index];
+		}		
+		return resid_helper(iterate, stationarity, con_values_eq, con_values_ieq, step.dual_eq_values_, step.dual_ieq_values_);
 	}
 protected:
 };
@@ -1116,9 +1132,9 @@ public:
 		// opt.setToReliable();
 		// opt.enableRegularisation = qpOASES::BooleanType(true);
 
+		opt.terminationTolerance = 1e-6;
 		example_.setOptions(opt);
 		example_.setPrintLevel(qpOASES::PL_NONE);
-		
 		// cout.flush();
 		// cerr.flush();
 		if (first_) {
@@ -1159,22 +1175,20 @@ public:
 		// getGlobalMessageHandler()->listAllMessages();
 		if( ret != qpOASES::SUCCESSFUL_RETURN ){
 			// subproblem.print();
-		        // printf( "%s\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
-				first_ = true;
-				example_.reset();
+	        // printf( "%s\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
+			first_ = true;
+			example_.reset();
 		} else {
 			if (first_) first_ = false;
 		}
 		iSQOStep step(subproblem.num_nlp_variables_,subproblem.num_nlp_constraints_eq_,subproblem.num_nlp_constraints_ieq_);
 		// cout << "address of step: " << &step << endl;
 		
-		// real_t xOpt[6];
-		vector<double> full_primal(nlp_->num_primal() + 2*nlp_->num_dual());
-		example_.getPrimalSolution( &full_primal[0] );
+		// full_primal needs to hold primal variables and all slack variables
+		vector<double> primal_and_slack_values(nlp_->num_primal() + 2*nlp_->num_dual());
+		example_.getPrimalSolution( &primal_and_slack_values[0] );
 		for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index)
-			step.primal_values_[primal_index] = full_primal[primal_index];
-		// cout << "got primal" << endl;
-		
+			step.primal_values_[primal_index] = primal_and_slack_values[primal_index];
 		
 		// cout << "primal: " << step.primal_values_ << endl;
 		// 	- every QP variable has a multiplier:
@@ -1445,6 +1459,21 @@ bool assert_close(double val1, double val2, double tol) {
 	assert(((val1 > tol) && (val2 > tol)) || ((val1 < -tol) && (val2 < -tol)) || (val1 == 0 && val2 == 0));
 	return (abs(val1) <= abs(val2) + tol*abs(val1)) && (abs(val2) <= abs(val1) + tol*abs(val2));
 }
+int main3() {
+	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs009.nl");
+	AmplNlp problem(problem_file);
+	iSQOIterate penalty_iterate = problem.initial();
+	matrix je = problem.constraints_equality_jacobian(penalty_iterate);
+	vector<double> x(penalty_iterate.primal_values_);
+	vector<double> y(penalty_iterate.dual_eq_values_);
+	cout << "jac: "<< je << endl;
+	cout << "x: " << x << endl;
+	cout << je.multiply(x) << endl;
+	
+	cout << "y: " << y << endl;
+	cout << je.multiply_transpose(y) << endl;
+	
+}
 int main2() {
 	cout << "okay, so..." << endl;
 	
@@ -1608,7 +1637,7 @@ int main1() {
 }
 int main(int argc, char **argv) {
 	
-	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs009.nl");
+	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs013.nl");
 	if (argc>1) {
 		problem_file = string(argv[1]);
 	}
@@ -1769,6 +1798,10 @@ int main(int argc, char **argv) {
 	}
 	// cout << endl << endl;
 	// penalty_iterate.print();
+	
+	if (iter == 200) {
+		cout << "Failure - Did not converge" << endl;
+	}
 	return 0;
 }
 

@@ -25,18 +25,20 @@
 
 // future feature list:
 // - DONE !!! variable bounds !!!
+// - DONE !!! more robust shifting strategy and/or Quasi-Newton. (Quasi-Newton might still be an interesting experiment)
 // - constraint/objective scaling (should fix HS99... )
 // - other iSQO features (algo II-features.)
+// - iQP interface! -- but how to do fallback/etc?
+// - integrate DJ/CK/AW/et al's work on sparse qpOASES.
 // - logbook-style reporting/logging, with sql.
-// - more robust shifting strategy and/or Quasi-Newton.
-// - iQP interface!
 // - use qpoases matrices instead of custom matrix code
 // - sparse matrices from ampl/to qpOASES.
 // - DONE... rewrite some of the matrix computations into the matrix class. (But still need to check for stragglers...)
 // - BQPD interface?
 // - read parameters from files, store in some structure.
-// - second order correction.
+// - second order correction (might fix HS067...)
 // - use multiple qp objects for getting subproblem solutions.
+// - const all applicable functions.
 // - 
 
 // justification for weirder choices:
@@ -49,6 +51,18 @@
 // helpful hints:
 // - OSX: for alloc bugs, run with: export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib. On other systems, valgrind.
 // - currently, here, the reported KKT is the two-norm... in the matlab implementation, it is the inf norm, scaled by a bunch of things.
+
+// remaining potential bugs:
+// hs067.out:Failure - Did not converge - tiny step length... maybe bad step from QP solver? -- might be best fixed by a second-order correction.
+// hs099.out:Failure - Did not converge - this *should* be fixed with problem rescaling - should add problem rescaling.
+// other HS failures:
+// hs087.out:Failure - Did not converge - was also iter limit in MATLAB implmentation.
+// hs098.out:Failure - Did not converge - subproblem failure in MATLAB implementation.
+// hs106.out:Failure - Did not converge - iteration limit in MATLAB implementation.
+// hs109.out:Failure - Did not converge - iteration limit in MATLAB implementation.
+// hs114.out:Failure - Did not converge - iteration limit in MATLAB implementation.
+// hs117.out:Failure - Did not converge - iteration limit in MATLAB implementation.
+// hs99exp.out:Failure - Did not converge - iteration limit in MATLAB implementation.
 
 #include <iostream>
 #include <vector>
@@ -1684,7 +1698,7 @@ int main1() {
 }
 int main(int argc, char **argv) {
 	
-	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs013.nl");
+	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs067.nl");
 	if (argc>1) {
 		problem_file = string(argv[1]);
 	}

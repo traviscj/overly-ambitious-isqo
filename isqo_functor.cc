@@ -1741,42 +1741,31 @@ int main(int argc, char **argv) {
 			// break;
 		// }
 		
-		string steptype = "4a";
 		iSQOQuadraticSubproblem penalty_subproblem(problem, penalty_iterate);
-		
-		// TODO rename: hessian_shifting_qp_solve
-		// or: hessian_shift_strategy()
 		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_iterate, penalty_subproblem);
-
-		double current_regularization = hessian_shifting_penalty_qp_solve.get_last_shift();
-
-		iSQOQuadraticSubproblem feasibility_subproblem(problem, feasibility_iterate);
 		
-		double linear_reduction_penalty = linear_decrease_func(penalty_iterate,penalty_step);
-		double violation = constraint_violation(penalty_iterate);
+		iSQOQuadraticSubproblem feasibility_subproblem(problem, feasibility_iterate);
+		iSQOStep feasibility_step(problem.num_primal(), problem.num_dual_eq(), problem.num_dual_ieq());
+
+		// save this for printing later
+		string steptype = "4a";
 		double step_mix = -1.0;
 		bool PRINT=false;
 		
-		if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_reduction_penalty << " >= epsilon*" << violation << " = " << epsilon*violation<< ": ";
-		if (linear_reduction_penalty >= epsilon*violation + 1e-16*100*linear_reduction_penalty) {
-			if (PRINT) cout << "PASSES!";
+		// if (PRINT) cout << endl << "SCENARIO A CHECK: " << linear_decrease_func(penalty_iterate,penalty_step) << " >= epsilon*" << constraint_violation(penalty_iterate) << " = " << epsilon*constraint_violation(penalty_iterate)<< ": ";
+		if (linear_decrease_func(penalty_iterate,penalty_step) >= epsilon*constraint_violation(penalty_iterate) + 1e-16*100*linear_decrease_func(penalty_iterate,penalty_step)) {
+			// if (PRINT) cout << "PASSES!";
 			
 			step_mix = 1.0;
 			text_output.subproblem(0.0, feasibility_iterate, feasibility_subproblem, combination_step);
-			// TODO convex combination function:
+
 			for (size_t primal_index=0; primal_index<problem.num_primal(); ++primal_index) {
 				combination_step.primal_values_[primal_index] = penalty_step.primal_values_[primal_index];
 			}
-			for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
-				combination_step.dual_eq_values_[dual_eq_index] = penalty_step.dual_eq_values_[dual_eq_index];
-			}
-			for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
-				combination_step.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
-			}
 		} else {
-			iSQOStep feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_iterate, feasibility_subproblem);
+			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_iterate, feasibility_subproblem);
 			
-			if (linear_reduction_penalty >= epsilon*linear_decrease_func(feasibility_iterate,feasibility_step)) {
+			if (linear_decrease_func(penalty_iterate,penalty_step) >= epsilon*linear_decrease_func(feasibility_iterate,feasibility_step)) {
 				step_mix = 1.0e0;
 				steptype = "5a";
 			} else {
@@ -1811,22 +1800,12 @@ int main(int argc, char **argv) {
 					penalty_iterate.penalty_parameter_ = penalty_parameter_reduction*penalty_iterate.penalty_parameter_;
 				}
 			}
-			// TODO convex combination function:
+
+			// combination gets the convex combination of penalty and feasibility:
 			for (size_t primal_index=0; primal_index<problem.num_primal(); ++primal_index) {
 				combination_step.primal_values_[primal_index] = step_mix*penalty_step.primal_values_[primal_index] + (1.0-step_mix)*feasibility_step.primal_values_[primal_index];
 			}
-			for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
-				combination_step.dual_eq_values_[dual_eq_index] = penalty_step.dual_eq_values_[dual_eq_index];
-			}
-			for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
-				combination_step.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
-			}
-			for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
-				feasibility_iterate.dual_eq_values_[dual_eq_index] = feasibility_step.dual_eq_values_[dual_eq_index];
-			}
-			for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
-				feasibility_iterate.dual_ieq_values_[dual_ieq_index] = feasibility_step.dual_ieq_values_[dual_ieq_index];
-			}
+			
 			
 			text_output.subproblem(hessian_shifting_feasibility_qp_solve.get_last_shift(), feasibility_iterate, feasibility_subproblem, feasibility_step);
 		}
@@ -1838,12 +1817,13 @@ int main(int argc, char **argv) {
 		//////////////////////////
 		double alpha = linesearch(penalty_iterate, combination_step);
 		
-		text_output.subproblem(current_regularization, penalty_iterate, penalty_subproblem, penalty_step);
+		text_output.subproblem(hessian_shifting_penalty_qp_solve.get_last_shift(), penalty_iterate, penalty_subproblem, penalty_step);
 		text_output.post(feasibility_iterate, penalty_iterate, combination_step, steptype, step_mix, alpha);
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 6
 		//////////////////////////
+		// update penalty iterate & dual values:
 		penalty_iterate.update(penalty_iterate, alpha, combination_step);
 		for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
 			penalty_iterate.dual_eq_values_[dual_eq_index] = penalty_step.dual_eq_values_[dual_eq_index];
@@ -1851,16 +1831,16 @@ int main(int argc, char **argv) {
 		for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
 			penalty_iterate.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
 		}
+		
 		feasibility_iterate.update(penalty_iterate, alpha, combination_step);
-		// for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
-		// 	feasibility_iterate.dual_eq_values_[dual_eq_index] = penalty_step.dual_eq_values_[dual_eq_index];
-		// }
-		// for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
-		// 	feasibility_iterate.dual_ieq_values_[dual_ieq_index] = penalty_step.dual_ieq_values_[dual_ieq_index];
-		// }
+		// update feasibility dual values:
+		for (size_t dual_eq_index=0; dual_eq_index<problem.num_dual_eq(); ++dual_eq_index) {
+			feasibility_iterate.dual_eq_values_[dual_eq_index] = feasibility_step.dual_eq_values_[dual_eq_index];
+		}
+		for (size_t dual_ieq_index=0; dual_ieq_index<problem.num_dual_ieq(); ++dual_ieq_index) {
+			feasibility_iterate.dual_ieq_values_[dual_ieq_index] = feasibility_step.dual_ieq_values_[dual_ieq_index];
+		}
 	}
-	// cout << endl << endl;
-	// penalty_iterate.print();
 	
 	if (iter == 200) {
 		cout << "Failure - Did not converge" << endl;

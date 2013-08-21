@@ -485,13 +485,27 @@ public:
 		// double *x = new double[num_primal()];
 		for (size_t primal_index=0; primal_index < num_primal(); ++primal_index)
 			x[primal_index] = X0_[primal_index];
+		
+		bool should_abort = false;
 		for (size_t ampl_variable_index =0 ; ampl_variable_index < n_var; ++ampl_variable_index) {
-			if (PRINT_) 
+			// if (PRINT_) 
 				cout << "i=" << ampl_variable_index << ": l=" << LUv[2*ampl_variable_index] << " <= x_i= " << x[ampl_variable_index] << " <= u=" << LUv[2*ampl_variable_index+1] << endl;
 			// TODO add variable bounds here, using similar logic to the above.
 			// for now, though.... just punt.
-			assert(LUv[2*ampl_variable_index] == -INFINITY);
-			assert(LUv[2*ampl_variable_index+1] == INFINITY);
+			bool lower_finite = (LUv[2*ampl_variable_index] != -INFINITY);
+			bool upper_finite = (LUv[2*ampl_variable_index+1] != INFINITY);
+			bool both_finite = lower_finite && upper_finite;
+			bool equal = (LUv[2*ampl_variable_index] == LUv[2*ampl_variable_index+1]);
+			if (both_finite && equal) {
+				variable_equality_.push_back(ampl_variable_index);
+			} else if (both_finite) {
+				variable_bound_lower_.push_back(ampl_variable_index);
+				variable_bound_upper_.push_back(ampl_variable_index);
+			} else if (lower_finite) {
+				variable_bound_lower_.push_back(ampl_variable_index);
+			} else if (upper_finite) {
+				variable_bound_upper_.push_back(ampl_variable_index);
+			}			
 		}
 		
 		// double *con = new double[n_con];
@@ -502,14 +516,13 @@ public:
 		}
 		
 		num_dual_eq_ = equality_constraints_.size();
-		num_dual_ieq_ = inequality_constraints_lower_.size() + inequality_constraints_upper_.size();
+		num_dual_ieq_ = inequality_constraints_lower_.size() + inequality_constraints_upper_.size() + variable_bound_lower_.size() + variable_bound_upper_.size();
 		asl_ = asl;
 	}
 	
 	~AmplNlp() {
 		delete nerror_;
 		free(asl_); asl_ = NULL;
-		// free(nl_); nl_ = NULL;
 		fclose(nl_);
 	}
 	
@@ -605,10 +618,25 @@ public:
 			inequality_constraint_evaluation[isqo_ineq_constraint_index] = con[ampl_constraint_index] - LUrhs[ampl_constraint_value_upper];
 			++isqo_ineq_constraint_index;
 		}
+		for (size_t isqo_ineq_lower_variable_index=0; isqo_ineq_lower_variable_index < variable_bound_lower_.size(); ++isqo_ineq_lower_variable_index) {
+			inequality_constraint_evaluation[isqo_ineq_constraint_index] = LUv[2*variable_bound_lower_[isqo_ineq_lower_variable_index]] - x[variable_bound_lower_[isqo_ineq_lower_variable_index]];
+			// cout 
+			// 	<< "variable lower bound " << isqo_ineq_lower_variable_index 
+			// 	<< "; ampl bound: " <<  variable_bound_lower_[isqo_ineq_lower_variable_index]
+			// 	<< "; with value: " << LUv[2*variable_bound_lower_[isqo_ineq_lower_variable_index]]
+			// 	<< "; @x_k: " << LUv[2*variable_bound_lower_[isqo_ineq_lower_variable_index]] - x[variable_bound_lower_[isqo_ineq_lower_variable_index]]
+			// 	<< endl;
+			++isqo_ineq_constraint_index;
+		}
+		for (size_t isqo_ineq_upper_variable_index=0; isqo_ineq_upper_variable_index < variable_bound_upper_.size(); ++isqo_ineq_upper_variable_index) {
+			// cout << "variable upper bound " << isqo_ineq_upper_variable_index << "" << endl;
+			inequality_constraint_evaluation[isqo_ineq_constraint_index] = -LUv[2*variable_bound_lower_[isqo_ineq_upper_variable_index]+1] + x[variable_bound_lower_[isqo_ineq_upper_variable_index]];
+			++isqo_ineq_constraint_index;
+		}
+		assert(isqo_ineq_constraint_index == num_dual_ieq());
+		
 		
 		if (PRINT_) cout <<"ineq eval" << inequality_constraint_evaluation;
-		// delete[] x;
-		// delete[] con;
 		return inequality_constraint_evaluation;
 	}
 	
@@ -688,6 +716,14 @@ public:
 			++isqo_ineq_constraint_index;
 		}
 		
+		for (size_t isqo_ineq_lower_variable_index=0; isqo_ineq_lower_variable_index < variable_bound_lower_.size(); ++isqo_ineq_lower_variable_index) {
+			inequality_constraint_jacobian.set(isqo_ineq_constraint_index, variable_bound_lower_[isqo_ineq_lower_variable_index], -1.0);
+			++isqo_ineq_constraint_index;
+		}
+		for (size_t isqo_ineq_upper_variable_index=0; isqo_ineq_upper_variable_index < variable_bound_upper_.size(); ++isqo_ineq_upper_variable_index) {
+			inequality_constraint_jacobian.set(isqo_ineq_constraint_index, variable_bound_upper_[isqo_ineq_upper_variable_index], +1.0);
+			++isqo_ineq_constraint_index;
+		}
 		if (PRINT_) 
 		{
 			cout << "======" << endl;
@@ -794,6 +830,10 @@ protected:
 	vector<int> equality_constraints_;
 	vector<int> inequality_constraints_lower_;
 	vector<int> inequality_constraints_upper_;
+	
+	vector<int> variable_equality_;
+	vector<int> variable_bound_lower_;
+	vector<int> variable_bound_upper_;
 };
 
 class FunctionWithNLPState {

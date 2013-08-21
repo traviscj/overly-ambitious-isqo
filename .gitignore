@@ -4,3 +4,5 @@ tester
 tester.dSYM
 valgrind-*
 .DS_Store
+output/*
+hs*.out

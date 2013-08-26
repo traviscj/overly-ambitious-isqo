@@ -1,4 +1,6 @@
+#include <iostream>
 #include <string>
+#include <vector>
 #include <cmath>
 
 double bracket_plus(double val) {
@@ -17,3 +19,4 @@ std::string ordinal(int n) {
 	else
 		return std::string("th");
 }
+

@@ -23,8 +23,8 @@ default: build run
 
 run:
 	./isqo_functor
-build: utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o
-	g++-4.8 utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
+build: utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o
+	g++-4.8 utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
 
 utilities.o: utilities.cc utilities.hh
 	g++-4.8 -c utilities.cc ${CFLAGS}
@@ -44,7 +44,8 @@ constraint_violation.o: constraint_violation.cc constraint_violation.hh
 	g++-4.8 -c constraint_violation.cc ${CFLAGS}
 penalty_function.o: penalty_function.cc penalty_function.hh
 	g++-4.8 -c penalty_function.cc ${CFLAGS}
-
+subproblem.o: subproblem.cc subproblem.hh
+	g++-4.8 -c subproblem.cc ${CFLAGS}
 
 valgrind: build
 	valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./isqo_functor >> valgrind-output 2> valgrind-error

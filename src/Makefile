@@ -8,7 +8,7 @@ AMPL_INC=-I/Users/traviscj/LocalPrograms/ampl/solvers/
 
 UNITTEST_LIB=-L/usr/local/lib -lUnitTest++
 
-CFLAGS_INC=-I${QPOASES_PATH}/include ${AMPL_INC}
+CFLAGS_INC=-I${QPOASES_PATH}/include ${AMPL_INC} -I../include/
 CFLAGS=-O0 -g -std=c++11 ${CFLAGS_INC}
 LDFLAGS=-L${QPOASES_PATH}/bin -lqpOASES ${UNITTEST_LIB}
 # -lqpOASESextras

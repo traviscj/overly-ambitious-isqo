@@ -81,24 +81,11 @@
 #include "nlp.hh"
 #include "nlp_hs014.hh"
 #include "nlp_ampl.hh"
+#include "nlp_state.hh"
 
 using namespace std;
 
 
-
-// TODO: Then, implement it using sparse AMPL instead...
-
-
-
-
-class FunctionWithNLPState {
-public:
-	FunctionWithNLPState(Nlp &nlp) {
-		nlp_ = &nlp;
-	}
-protected:
-	Nlp *nlp_;
-};
 
 class ConstraintViolationFunction : public FunctionWithNLPState{
 public:

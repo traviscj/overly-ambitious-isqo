@@ -8,7 +8,8 @@ AMPL_INC=-I/Users/traviscj/LocalPrograms/ampl/solvers/
 
 UNITTEST_LIB=-L/usr/local/lib -lUnitTest++
 
-CFLAGS=-I${QPOASES_PATH}/include ${AMPL_INC}
+CFLAGS_INC=-I${QPOASES_PATH}/include ${AMPL_INC}
+CFLAGS=-O0 -g -std=c++11 ${CFLAGS_INC}
 LDFLAGS=-L${QPOASES_PATH}/bin -lqpOASES ${UNITTEST_LIB}
 # -lqpOASESextras
 # ${QPOASES_PATH}/src/libqpOASES.a ${QPOASES_PATH}/src/libqpOASESextras.a
@@ -22,8 +23,11 @@ default: build run
 
 run:
 	./isqo_functor
-build:
-	g++-4.8 isqo_functor.cc ${CFLAGS} ${LDFLAGS} -o isqo_functor -O0 -g -std=c++11
+build: utilities.o
+	g++-4.8 isqo_functor.cc -o isqo_functor utilities.o ${CFLAGS} ${LDFLAGS}
+
+utilities.o: utilities.cc utilities.hh
+	g++-4.8 -c utilities.cc ${CFLAGS} 
 
 valgrind: build
 	valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./isqo_functor >> valgrind-output 2> valgrind-error

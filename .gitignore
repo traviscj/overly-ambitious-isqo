@@ -6,3 +6,4 @@ valgrind-*
 .DS_Store
 output/*
 hs*.out
+*.o

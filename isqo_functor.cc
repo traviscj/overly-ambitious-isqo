@@ -64,18 +64,23 @@
 // hs117.out:Failure - Did not converge - iteration limit in MATLAB implementation.
 // hs99exp.out:Failure - Did not converge - iteration limit in MATLAB implementation.
 
+// standard libraries:
 #include <iostream>
 #include <vector>
 #include <limits>
 #include <cmath>
 #include <cassert>
 
+// 
 #include <qpOASES.hpp>
-
 #include "asl.h"
+
+// iSQO headers:
+#include "utilities.hh"
 
 using namespace std;
 
+// want to print vector<int> and vector<double>...
 template < class T >
 inline std::ostream& operator << (std::ostream& os, const std::vector< T >& vec) {
     os << "[";
@@ -87,22 +92,6 @@ inline std::ostream& operator << (std::ostream& os, const std::vector< T >& vec)
     return os;
 }
 
-double bracket_plus(double val) {
-	return max(val, 0.0);
-}
-double bracket_minus(double val) {
-	return max(-val, 0.0);
-}
-string ordinal(int n) {
-	if (n%10==1)
-		return string("st");
-	if (n%10==2)
-		return string("nd");
-	if (n%10==3)
-		return string("rd");
-	else
-		return string("th");
-}
 
 int isqostep_serial = 0;
 class iSQOStep {

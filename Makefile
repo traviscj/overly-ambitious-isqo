@@ -21,31 +21,13 @@ LDFLAGS+=-L/usr/local/Cellar/gfortran/4.8.1/gfortran/lib -lgfortran  -llapack -l
 
 default: build run
 
-run:
+run: build
 	./isqo_functor
-build: utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o
-	g++-4.8 utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
+build: utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o residual_function.o solve_subproblem.o
+	g++-4.8 utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o residual_function.o solve_subproblem.o isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
 
-utilities.o: utilities.cc utilities.hh
-	g++-4.8 -c utilities.cc ${CFLAGS}
-step.o: step.cc step.hh
-	g++-4.8 -c step.cc ${CFLAGS} 
-iterate.o: iterate.cc iterate.hh
-	g++-4.8 -c iterate.cc ${CFLAGS} 
-matrix.o: matrix.cc matrix.hh
-	g++-4.8 -c matrix.cc ${CFLAGS} 
-nlp.o: nlp.cc nlp.hh
-	g++-4.8 -c nlp.cc ${CFLAGS}
-nlp_hs014.o: nlp_hs014.cc nlp_hs014.hh
-	g++-4.8 -c nlp_hs014.cc ${CFLAGS}
-nlp_ampl.o: nlp_ampl.cc nlp_ampl.hh
-	g++-4.8 -c nlp_ampl.cc ${CFLAGS}
-constraint_violation.o: constraint_violation.cc constraint_violation.hh
-	g++-4.8 -c constraint_violation.cc ${CFLAGS}
-penalty_function.o: penalty_function.cc penalty_function.hh
-	g++-4.8 -c penalty_function.cc ${CFLAGS}
-subproblem.o: subproblem.cc subproblem.hh
-	g++-4.8 -c subproblem.cc ${CFLAGS}
+%.o: %.cc %.hh
+	g++-4.8 -c $< ${CFLAGS}
 
 valgrind: build
 	valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./isqo_functor >> valgrind-output 2> valgrind-error
@@ -71,3 +53,8 @@ test:
 	./isqo_functor ~/optimization/cute_nl_nopresolve/hs018.nl > output/isqo_hs018.nl
 	./isqo_functor ~/optimization/cute_nl_nopresolve/hs019.nl > output/isqo_hs019.nl
 	./isqo_functor ~/optimization/cute_nl_nopresolve/hs020.nl > output/isqo_hs020.nl
+
+clean:
+	@rm *.o
+	@rm isqo_functor
+	@rm -rf isqo_functor.dSYM

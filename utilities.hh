@@ -1,6 +1,8 @@
 
 #ifndef __GUARD_UTILITIES_HH
 #define __GUARD_UTILITIES_HH
+
+#include <iostream>
 #include <string>
 #include <vector>
 

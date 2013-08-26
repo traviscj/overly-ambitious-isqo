@@ -2,6 +2,7 @@
 #ifndef __GUARD_STEP_HH
 #define __GUARD_STEP_HH
 
+#include <iostream>
 #include <vector>
 
 class iSQOStep {

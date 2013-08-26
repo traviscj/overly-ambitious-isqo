@@ -572,12 +572,6 @@ const char TextOutput::output_format_subprob_[] = " %9.2e  %3d  %9.2e  %9.2e  %9
 const char TextOutput::output_format_post_[] = " %s %9.2e %9.2e %9.2e %9.2e |%9.2e\n";
 
 
-bool assert_close(double val1, double val2, double tol) {
-	assert(abs(val1) <= abs(val2) + tol*abs(val1));
-	assert(abs(val2) <= abs(val1) + tol*abs(val2));
-	assert(((val1 > tol) && (val2 > tol)) || ((val1 < -tol) && (val2 < -tol)) || (val1 == 0 && val2 == 0));
-	return (abs(val1) <= abs(val2) + tol*abs(val1)) && (abs(val2) <= abs(val1) + tol*abs(val2));
-}
 int main(int argc, char **argv) {
 	std::string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs067.nl");
 	if (argc>1) {

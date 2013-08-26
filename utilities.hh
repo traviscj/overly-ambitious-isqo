@@ -7,6 +7,7 @@
 double bracket_plus(double val);
 double bracket_minus(double val);
 std::string ordinal(int n);
+bool assert_close(double val1, double val2, double tol);
 
 // want to print vector<int> and vector<double>...
 template < class T >

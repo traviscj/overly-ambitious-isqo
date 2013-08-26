@@ -15,6 +15,7 @@ LDFLAGS=-L${QPOASES_PATH}/bin -lqpOASES ${UNITTEST_LIB}
 # ${QPOASES_PATH}/src/libqpOASES.a ${QPOASES_PATH}/src/libqpOASESextras.a
 LDFLAGS+=-L/usr/local/Cellar/gfortran/4.8.1/gfortran/lib -lgfortran  -llapack -lblas ${AMPL_LIB}
 
+OBJECTS=utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o residual_function.o solve_subproblem.o linear_model.o
 # test:
 # 	g++ tester.cc ${CFLAGS} ${LDFLAGS} -o tester -O0 -g
 # 	./tester
@@ -23,8 +24,8 @@ default: build run
 
 run: build
 	./isqo_functor
-build: utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o residual_function.o solve_subproblem.o
-	g++-4.8 utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o constraint_violation.o penalty_function.o subproblem.o residual_function.o solve_subproblem.o isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
+build: ${OBJECTS}
+	g++-4.8 ${OBJECTS} isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
 
 %.o: %.cc %.hh
 	g++-4.8 -c $< ${CFLAGS}

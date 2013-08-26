@@ -83,27 +83,7 @@
 #include "nlp_ampl.hh"
 #include "nlp_state.hh"
 #include "constraint_violation.hh"
-
-// using namespace std;std::std::vector
-
-class PenaltyFunction : public FunctionWithNLPState{
-public:
-	PenaltyFunction(Nlp &nlp) : 
-			FunctionWithNLPState(nlp), 
-			constraint_violation_func_(nlp)
-			{
-		// std::cout << "-- Initializing penalty function." << std::endl;
-	}
-	double operator()(const iSQOIterate &iterate) const {
-		// std::cout << "--- Calling the PenaltyFunction Functor..." << std::endl;
-		double f = nlp_->objective(iterate);
-		// std::cout << "--- objective: " << f << std::endl;
-		return iterate.penalty_parameter_*f + constraint_violation_func_(iterate);
-	}
-protected:
-	ConstraintViolationFunction constraint_violation_func_;
-	// double penalty_parameter_;
-};
+#include "penalty_function.hh"
 
 class iSQOQuadraticSubproblem : public FunctionWithNLPState{
 public:

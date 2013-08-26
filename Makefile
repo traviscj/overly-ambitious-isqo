@@ -23,8 +23,8 @@ default: build run
 
 run:
 	./isqo_functor
-build: utilities.o step.o iterate.o matrix.o nlp.o
-	g++-4.8 utilities.o step.o iterate.o matrix.o nlp.o isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
+build: utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o
+	g++-4.8 utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
 
 utilities.o: utilities.cc utilities.hh
 	g++-4.8 -c utilities.cc ${CFLAGS}
@@ -36,6 +36,8 @@ matrix.o: matrix.cc matrix.hh
 	g++-4.8 -c matrix.cc ${CFLAGS} 
 nlp.o: nlp.cc nlp.hh
 	g++-4.8 -c nlp.cc ${CFLAGS}
+nlp_hs014.o: nlp_hs014.cc nlp_hs014.hh
+	g++-4.8 -c nlp_hs014.cc ${CFLAGS}
 
 
 valgrind: build

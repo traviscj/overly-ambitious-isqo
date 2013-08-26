@@ -80,71 +80,14 @@
 #include "step.hh"
 #include "iterate.hh"
 #include "nlp.hh"
+#include "nlp_hs014.hh"
 
 using namespace std;
 
 
 
 // TODO: Then, implement it using sparse AMPL instead...
-class Hs014 : public Nlp {
-public:
-	Hs014() : Nlp(2,1,1) {
-	}
-	
-	iSQOIterate initial() {
-		iSQOIterate tmp(2,1,1);
-		tmp.primal_values_[0] = 2.0;
-		tmp.primal_values_[1] = 1.0;
-		tmp.dual_eq_values_[0] = -1.0;
-		tmp.dual_ieq_values_[0] = 1.0;
-		return tmp;
-	}
-	double objective(const iSQOIterate &iterate) {
-		return (iterate.primal_values_[0] - 2)*(iterate.primal_values_[0] - 2) + (iterate.primal_values_[1]-1)*(iterate.primal_values_[1]-1);
-	}
-	vector<double> constraints_equality(const iSQOIterate &iterate) {
-		vector<double> retval(iterate.num_dual_eq_);
-		retval[0] = iterate.primal_values_[0] - 2*iterate.primal_values_[1] + 1;
-		return retval;
-	}
-	vector<double> constraints_inequality(const iSQOIterate &iterate) {
-		vector<double> retval(iterate.num_dual_ieq_);
-		retval[0] = .25*iterate.primal_values_[0]*iterate.primal_values_[0] + iterate.primal_values_[1]*iterate.primal_values_[1] - 1;
-		return retval;
-	}
-	
-	vector<double> objective_gradient(const iSQOIterate &iterate) {
-		vector<double> ret_gradient(iterate.num_primal_);
-		ret_gradient[0] = 2*(iterate.primal_values_[0] - 2);
-		ret_gradient[1] = 2*(iterate.primal_values_[1] - 1);
-		return ret_gradient;
-	}
-	matrix constraints_equality_jacobian(const iSQOIterate &iterate){
-		matrix ret_jacobian(iterate.num_dual_ieq_, iterate.num_primal_);
-		ret_jacobian.set(0,0, 1.0);
-		ret_jacobian.set(0,1,-2.0);
-		return ret_jacobian;
-	}
-	matrix constraints_inequality_jacobian(const iSQOIterate &iterate){
-		matrix ret_jacobian(iterate.num_dual_ieq_, iterate.num_primal_);
-		ret_jacobian.set(0,0,0.5*iterate.primal_values_[0]);
-		ret_jacobian.set(0,1,2.0*iterate.primal_values_[1]);
-		return ret_jacobian;
-	}
-	
-	matrix lagrangian_hessian(const iSQOIterate &iterate) {
-		matrix hess(iterate.num_primal_, iterate.num_primal_);
-		if (iterate.penalty_parameter_ > 0) {
-			hess.set(0,0,iterate.penalty_parameter_*2.0 + 0.5*iterate.dual_ieq_values_[0]); //   /iterate.penalty_parameter_
-			hess.set(1,1,iterate.penalty_parameter_*2.0 + 2.0*iterate.dual_ieq_values_[0]);	//	/iterate.penalty_parameter_
-		} else {
-			hess.set(0,0,0.5*iterate.dual_ieq_values_[0]);
-			hess.set(1,1,2.0*iterate.dual_ieq_values_[1]);
-		}
-		return hess;
-	}
-protected:
-};
+
 
 class AmplNlp : public Nlp {
 public:

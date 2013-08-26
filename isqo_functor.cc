@@ -79,98 +79,11 @@
 #include "utilities.hh"
 #include "step.hh"
 #include "iterate.hh"
+#include "nlp.hh"
 
 using namespace std;
 
 
-class matrix {
-public:
-	matrix(size_t rows, size_t columns) : rows_(rows), columns_(columns), data_(rows*columns) {
-		// cout << "initializing a matrix..." << endl;
-	}
-	void set(size_t r, size_t c, double val) {
-		data_[columns_*r + c] = val;
-	}
-	double get(size_t r, size_t c) const {
-		return data_[columns_*r + c];
-	}
-	// double
-	std::ostream &print(std::ostream& os) const {
-		for (size_t r=0; r<rows_; r++) {
-			for (size_t c=0; c<columns_; c++) {
-				if (c!=0) cout << ", ";
-				os << data_[columns_*r + c];
-			}
-			if (r+1 != rows_) os << "; ";
-		}
-        
-	}
-	vector<double> multiply(const vector<double> &x) const {
-		assert(x.size() == columns_);
-		vector<double> retval(rows_);
-		for (size_t current_row=0; current_row<rows_; ++current_row) {
-			for (size_t current_col=0; current_col<columns_; ++current_col) {
-				retval[current_row] += data_[columns_*current_row + current_col]*x[current_col];
-			}
-		}
-		return retval;
-	}
-	vector<double> multiply_transpose(const vector<double> &y) const {
-		assert(y.size() == rows_);
-		// if (y.size() != rows_) throw 20;
-		vector<double> retval(columns_);
-		for (size_t current_row=0; current_row<rows_; ++current_row) {
-			for (size_t current_col=0; current_col<columns_; ++current_col) {
-				retval[current_col] += data_[columns_*current_row + current_col]*y[current_row];
-			}
-		}
-		return retval;
-	}
-	size_t rows_, columns_;
-	vector<double> data_;
-private:
-protected:
-	
-};
-inline std::ostream& operator<< (std::ostream& os, const matrix& m) {
-    os << "[";
-	m.print(os);
-    os << " ]";
-    return os;
-}
-
-class Nlp {
-	// this class implements 
-public:
-	Nlp(int num_primal, int num_dual_eq, int num_dual_ieq) : num_primal_(num_primal), num_dual_eq_(num_dual_eq), num_dual_ieq_(num_dual_ieq) {
-		// cout << "-- initializing Nlp" << endl; 
-	}
-	
-	// starting point:
-	virtual iSQOIterate initial() = 0;
-	
-	// zeroth order NLP quantities:
-	virtual double objective(const iSQOIterate &iterate) = 0;
-	virtual vector<double> constraints_equality(const iSQOIterate &iterate) = 0;
-	virtual vector<double> constraints_inequality(const iSQOIterate &iterate) = 0;
-	
-	// first order NLP quantities:
-	virtual vector<double> objective_gradient(const iSQOIterate &iterate) = 0;
-	virtual matrix constraints_equality_jacobian(const iSQOIterate &iterate) = 0;
-	virtual matrix constraints_inequality_jacobian(const iSQOIterate &iterate) = 0;
-	
-	// second order NLP quantities:
-	virtual matrix lagrangian_hessian(const iSQOIterate &iterate) = 0;
-	
-	int num_primal() { return num_primal_; }
-	int num_dual() {return num_dual_eq_+num_dual_ieq_; }
-	int num_dual_eq() { return num_dual_eq_; }
-	int num_dual_ieq() { return num_dual_ieq_; }
-protected:
-	int num_primal_;
-	int num_dual_eq_;
-	int num_dual_ieq_;
-};
 
 // TODO: Then, implement it using sparse AMPL instead...
 class Hs014 : public Nlp {

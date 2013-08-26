@@ -2,7 +2,10 @@
 #ifndef __GUARD_ITERATE_HH
 #define __GUARD_ITERATE_HH
 
+#include <iostream>
 #include <vector>
+
+#include "step.hh"
 
 class iSQOIterate {
 public:

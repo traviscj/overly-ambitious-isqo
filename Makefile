@@ -2,7 +2,8 @@
 # QPOASES_PATH=/Users/traviscj/optimization/qpOASES
 QPOASES_PATH=/Users/traviscj/LocalPrograms/qpOASES-3.0beta
 
-AMPL_LIB=/Users/traviscj/LocalPrograms/ampl/solvers/amplsolver.a
+# AMPL_LIB=/Users/traviscj/LocalPrograms/ampl/solvers/amplsolver.a
+AMPL_LIB=/Users/traviscj/LocalPrograms/ampl/solvers/amplsolver-debug.a
 AMPL_INC=-I/Users/traviscj/LocalPrograms/ampl/solvers/
 
 UNITTEST_LIB=-L/usr/local/lib -lUnitTest++

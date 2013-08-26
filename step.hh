@@ -6,23 +6,14 @@
 
 class iSQOStep {
 public:
-	// #define X(s) (std::cout << s << ": " << isqostep_serial << "\n")
 	iSQOStep(int number_primal, int number_dual_eq, int number_dual_ieq);
 	iSQOStep(const iSQOStep& other);
-	// ~iSQOStep() {
-	//     X("iSQOStep::~iSQOStep()");
-	// 	cout << "destructing an isqo step..." << endl;
-	// }
-	// 
 	const iSQOStep *operator=(const iSQOStep& other);
 	
 	double x_dot_product(std::vector<double> other_vector);
 	double x_norm() const;
-	
 	std::ostream &print(std::ostream&) const;
-	
 	void convex_combination(const iSQOStep &penalty_step, const iSQOStep &feasibility_step, double combination_step_contribution_from_penalty_step);
-	
 	void set_primal(const iSQOStep &step);
     
 // private:

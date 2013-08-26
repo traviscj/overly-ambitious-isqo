@@ -491,6 +491,10 @@ public:
 		num_primal_ = n_var;
 		X0_.resize(num_primal());
 		X0 = &X0_[0];
+		// A_vals = new double[nzc];
+		// A_rownos = new int[nzc];
+		// A_colstarts = new int[nzc];
+		// ideally, we would use these....
 	
 		int status = pfgh_read(nl_, ASL_return_read_err | ASL_findgroups);
 	
@@ -716,6 +720,191 @@ public:
 		if (PRINT_) cout << "]" << endl;
 
 		return equality_constraint_jacobian;
+	}
+	qpOASES::SparseMatrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate) {
+		ASL *asl = asl_;
+		vector<double> x(num_primal());
+		
+		for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
+			x[primal_index] = iterate.primal_values_[primal_index];
+		
+        asl->i.congrd_mode = 0;
+        double J[nzc];
+        jacval(&x[0], &J[0], nerror_);
+        cout << "J: " << endl;
+        // for (size_t current_nz=0; current_nz < nzc; ++current_nz) {
+            // cout << "current_nz=" << current_nz << ", val=" << J[current_nz] << endl;
+        // }
+        
+        // c = new double[n_var];
+        
+        // cout << "Cgrad[0]: " << Cgrad[0] << endl;
+        // cout << "Cgrad[0]: " << Cgrad[20] << endl;
+        cgrad *cg;
+        size_t my_count_nz =0;
+        
+        cout << "equ: " << equality_constraints_ << endl;
+        cout << "ineq lower: " << inequality_constraints_lower_ << endl;
+        cout << "ineq upper: " << inequality_constraints_upper_ << endl;
+        
+        vector<int> row_coordinate(nzc);
+        vector<int> col_coordinate(nzc);
+        vector<double> value(nzc);
+        vector<int> ordering(nzc);
+        // for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index< equality_constraints_.size(); ++isqo_eq_constraint_index) {
+        cout << "FULL TABLE: " << endl;
+        for (size_t ampl_constraint_index=0; ampl_constraint_index<n_con; ++ampl_constraint_index) {
+            for (cg = Cgrad[ampl_constraint_index]; cg; cg = cg->next){
+                printf("index: %3d: conindex: %3d: varno: %3d, coef: %9.2e, goff: %3d, val: %9.2e\n", my_count_nz, ampl_constraint_index, cg->varno, cg->coef, cg->goff, J[cg->goff]);
+                row_coordinate[cg->goff] = ampl_constraint_index;
+                col_coordinate[cg->goff] = cg->varno;
+                value[cg->goff] = J[cg->goff];
+                // ++col_lengths_eq[cg->varno];
+                // ++current_eq_index;
+                ++my_count_nz;
+            }
+        }
+        typedef enum {EQUALITY, LOWER, UPPER} constraint_type;
+        vector<constraint_type> constraint_types(n_con);
+        vector<size_t> constraint_indices(n_con);
+        for (size_t current_eq_index=0; current_eq_index < equality_constraints_.size(); ++current_eq_index) {
+            constraint_types[equality_constraints_[current_eq_index]] = EQUALITY;
+            constraint_indices[equality_constraints_[current_eq_index]] = current_eq_index;
+        }
+        for (size_t current_ieq_lower_index=0; current_ieq_lower_index < inequality_constraints_lower_.size(); ++current_ieq_lower_index) {
+            constraint_types[inequality_constraints_lower_[current_ieq_lower_index]] = LOWER;
+            constraint_indices[inequality_constraints_lower_[current_ieq_lower_index]] = current_ieq_lower_index;
+        }
+        for (size_t current_ieq_upper_index=0; current_ieq_upper_index < inequality_constraints_upper_.size(); ++current_ieq_upper_index) {
+            constraint_types[inequality_constraints_upper_[current_ieq_upper_index]] = UPPER;
+            constraint_indices[inequality_constraints_upper_[current_ieq_upper_index]] = current_ieq_upper_index;
+        }
+        
+        cout << "contype: " << constraint_types << endl;
+        cout << "con ind: " << constraint_indices << endl;
+        
+        vector<double> values_eq;
+        vector<int> row_indices_eq;
+        vector<int> col_lengths_eq(n_var);
+        vector<int> col_starts_eq(n_var+1);
+        int current_eq_index = 0;
+        
+        vector<double> values_ieq_lower;
+        vector<int> row_indices_ieq_lower;
+        vector<int> col_lengths_ieq_lower(n_var);
+        vector<int> col_starts_ieq_lower(n_var+1);
+        int current_ieq_lower_index = 0;
+        
+        vector<double> values_ieq_upper;
+        vector<int> row_indices_ieq_upper;
+        vector<int> col_lengths_ieq_upper(n_var);
+        vector<int> col_starts_ieq_upper(n_var+1);
+        int current_ieq_upper_index = 0;
+        
+        cout << "row_coordinate: " << row_coordinate << endl;
+        cout << "col_coordinate: " << col_coordinate << endl;
+        cout << "value: " << value << endl;
+        
+        for (size_t current_nonzero=0; current_nonzero < nzc; ++current_nonzero) {
+            cout << "current_nonzero: " << current_nonzero << "; " << row_coordinate[current_nonzero] << ", " << col_coordinate[current_nonzero] << "; value: " << value[current_nonzero];
+            if (constraint_types[row_coordinate[current_nonzero]] == EQUALITY) {
+                cout << " - eq";
+                values_eq.push_back(value[current_nonzero]);
+                row_indices_eq.push_back(constraint_indices[row_coordinate[current_nonzero]]);
+                ++col_lengths_eq[col_coordinate[current_nonzero]];
+                ++current_eq_index;
+            }
+            if (constraint_types[row_coordinate[current_nonzero]] == LOWER) {
+                cout << " - ieq lower";
+                values_ieq_lower.push_back(value[current_nonzero]);
+                row_indices_ieq_lower.push_back(constraint_indices[row_coordinate[current_nonzero]]);
+                // cout << "current nonzero: " << current_nonzero << endl;
+                // cout << "col_coordinate [current nonzero]: " << col_coordinate[current_nonzero] << endl;
+                // cout << "col_lengths_ieq_lower[col_coordinate[current_nonzero]]: " << col_lengths_ieq_lower[col_coordinate[current_nonzero]] << endl;
+                ++col_lengths_ieq_lower[col_coordinate[current_nonzero]];
+                ++current_ieq_lower_index;
+            }
+            if (constraint_types[row_coordinate[current_nonzero]] == UPPER) {
+                cout << " - ieq upper";
+                values_ieq_upper.push_back(value[current_nonzero]);
+                row_indices_ieq_upper.push_back(constraint_indices[row_coordinate[current_nonzero]]);
+                ++col_lengths_ieq_upper[col_coordinate[current_nonzero]];
+                ++current_ieq_upper_index;
+            }
+            cout << ".done" << endl;
+        }
+        cout << "check: " << current_eq_index << ", " << current_ieq_lower_index << ", " << current_ieq_upper_index << endl;
+        // int nnz_eq=0;
+        // cout << "EQUALITY CONSTRAINTS:" << endl;
+        // for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index<equality_constraints_.size(); ++isqo_eq_constraint_index) {
+        //     for (cg = Cgrad[equality_constraints_[isqo_eq_constraint_index]]; cg; cg = cg->next){
+        //         printf("index: %3d: conindex: %3d: varno: %3d, coef: %9.2e, goff: %3d, val: %9.2e\n", my_count_nz, isqo_eq_constraint_index, cg->varno, cg->coef, cg->goff, J[cg->goff]);
+        //         int ampl_row_number = equality_constraints_[isqo_eq_constraint_index];
+        //         row_indices_eq[cg->goff] = equality_constraints_[isqo_eq_constraint_index];
+        //         values_eq[cg->goff] = J[cg->goff];
+        //         ++col_lengths_eq[cg->varno];
+        //         ++current_eq_index;
+        //         ++nnz_eq;
+        //     }
+        // }
+        // cout << "nnz_eq: " << nnz_eq << endl;
+        cout << "col_lengths: " << col_lengths_eq << endl;
+        size_t current_entry = 0;
+        col_starts_eq[0] = 0;
+        for (size_t variable_index=0; variable_index<col_lengths_eq.size(); ++variable_index) {
+            current_entry += col_lengths_eq[variable_index];
+            col_starts_eq[variable_index+1] = current_entry;
+        }
+        
+        cout << "equality ------------";
+        cout << "nzc: " << nzc << "; my: " << my_count_nz << endl;
+        cout << "values: " << values_eq << endl;
+        cout << "row_indices: " << row_indices_eq << endl;
+        cout << "col_starts: " << col_starts_eq << endl;
+
+        cout << "inequality (lower) ------------";
+        cout << "nzc: " << nzc << "; my: " << my_count_nz << endl;
+        cout << "values: " << values_ieq_lower << endl;
+        cout << "row_indices: " << row_indices_ieq_lower << endl;
+        cout << "col_starts: " << col_starts_ieq_lower << endl;
+
+        cout << "inequality (lower) ------------";
+        cout << "nzc: " << nzc << "; my: " << my_count_nz << endl;
+        cout << "values: " << values_ieq_upper << endl;
+        cout << "row_indices: " << row_indices_ieq_upper << endl;
+        cout << "col_starts: " << col_starts_ieq_upper << endl;
+        
+        
+        qpOASES::SparseMatrix testmat(n_con, n_var, &row_indices_eq[0], &col_starts_eq[0], &values_eq[0]);
+        // qpOASES::DenseMatrix testmat_dense(testmat);
+        // testmat_dense.print();
+        
+        
+        matrix equality_constraint_jacobian(equality_constraints_.size(), n_var);
+        // if (PRINT_) cout << "equal: " << equality_constraints_ << endl;
+        vector<double> G(num_primal());
+        for (size_t full_constraint_list=0; full_constraint_list < equality_constraints_.size() + inequality_constraints_upper_.size() + inequality_constraints_lower_.size(); ++full_constraint_list) {
+            congrd(full_constraint_list, &x[0], &G[0], nerror_);
+                    cout << "c_" << full_constraint_list << ": ";
+            for (size_t primal_index=0; primal_index < num_primal(); ++primal_index) {
+                if (primal_index != 0) cout <<", " ;
+                        cout <<  G[primal_index];
+            }    
+                    cout << endl;
+        }
+        PRINT_ = true;
+        for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index < equality_constraints_.size(); ++isqo_eq_constraint_index) {
+            congrd(equality_constraints_[isqo_eq_constraint_index], &x[0], &G[0], nerror_);
+            for (size_t primal_index=0; primal_index < num_primal(); ++primal_index) {
+                equality_constraint_jacobian.set(isqo_eq_constraint_index, primal_index, G[primal_index]);
+            }
+            
+        }
+        if (PRINT_) cout << "equality jacobian: [" << endl;
+        if (PRINT_) equality_constraint_jacobian.print();
+        if (PRINT_) cout << "]" << endl;
+
+		return testmat;
 	}
 	matrix constraints_inequality_jacobian(const iSQOIterate &iterate) {
 		ASL *asl = asl_;
@@ -1556,6 +1745,31 @@ bool assert_close(double val1, double val2, double tol) {
 	assert(((val1 > tol) && (val2 > tol)) || ((val1 < -tol) && (val2 < -tol)) || (val1 == 0 && val2 == 0));
 	return (abs(val1) <= abs(val2) + tol*abs(val1)) && (abs(val2) <= abs(val1) + tol*abs(val2));
 }
+int main(int argc, char **argv) {
+	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs067.nl");
+	if (argc>1) {
+		problem_file = string(argv[1]);
+	}
+	AmplNlp problem(problem_file);
+	iSQOIterate penalty_iterate = problem.initial();
+    // penalty_iterate.primal_values_[0] = 1.25*3;
+    // penalty_iterate.primal_values_[1] = 1.25*3;
+    // penalty_iterate.primal_values_[2] = 1.25*3;
+    // penalty_iterate.primal_values_[3] = 1.25*3;
+    // penalty_iterate.primal_values_[4] = 1.25*3;
+    // penalty_iterate.primal_values_[5] = 1.25*3;
+    // penalty_iterate.primal_values_[7] = 1.25*3;
+    // penalty_iterate.primal_values_[8] = 1.25*3;
+    // penalty_iterate.primal_values_[9] = 1.25*3;
+    
+	
+    cout << "objective: " << problem.objective(penalty_iterate) << endl;
+	cout << "constraints: "<< problem.constraints_equality(penalty_iterate) << endl;
+	
+    qpOASES::SparseMatrix sparse_jacobian = problem.constraints_equality_jacobian_sparse(penalty_iterate);
+    // cout << "eq jacobian: " << ) << endl;
+    
+}
 int main3() {
 	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs009.nl");
 	AmplNlp problem(problem_file);
@@ -1732,9 +1946,9 @@ int main1() {
 		
 	return 0;
 }
-int main(int argc, char **argv) {
+int main0(int argc, char **argv) {
 	
-	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/airport.nl");
+	string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs067.nl");
 	if (argc>1) {
 		problem_file = string(argv[1]);
 	}

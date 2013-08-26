@@ -331,14 +331,15 @@ public:
 		return data_[columns_*r + c];
 	}
 	// double
-	void print() const {
+	std::ostream &print(std::ostream& os) const {
 		for (size_t r=0; r<rows_; r++) {
 			for (size_t c=0; c<columns_; c++) {
 				if (c!=0) cout << ", ";
-				cout << data_[columns_*r + c];
+				os << data_[columns_*r + c];
 			}
-			if (r+1 != rows_) cout << "; ";
+			if (r+1 != rows_) os << "; ";
 		}
+        
 	}
 	vector<double> multiply(const vector<double> &x) const {
 		assert(x.size() == columns_);
@@ -367,13 +368,9 @@ private:
 protected:
 	
 };
-inline std::ostream& operator << (std::ostream& os, const matrix& m) {
+inline std::ostream& operator<< (std::ostream& os, const matrix& m) {
     os << "[";
-    // for (std::vector<double>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
-    // {
-        // os << " " << *ii;
-    // }
-	m.print();
+	m.print(os);
     os << " ]";
     return os;
 }
@@ -716,7 +713,7 @@ public:
 			
 		}
 		if (PRINT_) cout << "equality jacobian: [" << endl;
-		if (PRINT_) equality_constraint_jacobian.print();
+		if (PRINT_) cout << equality_constraint_jacobian;
 		if (PRINT_) cout << "]" << endl;
 
 		return equality_constraint_jacobian;
@@ -901,7 +898,7 @@ public:
             
         }
         if (PRINT_) cout << "equality jacobian: [" << endl;
-        if (PRINT_) equality_constraint_jacobian.print();
+        if (PRINT_) cout << equality_constraint_jacobian;
         if (PRINT_) cout << "]" << endl;
 
 		return testmat;
@@ -1059,7 +1056,7 @@ public:
 		if (PRINT) cout << "constraintviolationfunction e 0: " << con_values_eq << endl;
 		// J(x)*d
 		matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
-		if (PRINT) jac_ce.print();
+		if (PRINT) cout << jac_ce;
 		for (size_t row=0; row<iterate.num_dual_eq_; ++row) {
 			for (size_t col=0; col<iterate.num_primal_; ++col) {
 				con_values_eq[row] += jac_ce.get(row,col)*step.primal_values_[col];
@@ -1222,10 +1219,10 @@ public:
 	void print() const {
 		cout << endl;
 		cout << "H = [";
-		hessian_.print();
+		cout << hessian_;
 		cout << "];" << endl;
 		cout << "A = [";
-		jacobian_.print();
+		cout << jacobian_;
 		cout << "];" << endl;
 		
 		cout << "g = " << gradient_ << "';" << endl;

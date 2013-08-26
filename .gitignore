@@ -7,3 +7,9 @@ valgrind-*
 output/*
 hs*.out
 *.o
+*.dSYM
+test_sparse
+isqo
+test_ampl_interface
+test_display_all
+test_jacobian_mult

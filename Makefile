@@ -18,7 +18,8 @@ LDFLAGS+=-L/usr/local/Cellar/gfortran/4.8.1/gfortran/lib -lgfortran  -llapack -l
 OBJECTS=utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o \
 		constraint_violation.o penalty_function.o subproblem.o \
 		residual_function.o solve_subproblem.o linear_model.o \
-		linear_model_reduction.o line_search.o hessian_shifter.o
+		linear_model_reduction.o line_search.o hessian_shifter.o \
+		text_output.o
 # test:
 # 	g++ tester.cc ${CFLAGS} ${LDFLAGS} -o tester -O0 -g
 # 	./tester

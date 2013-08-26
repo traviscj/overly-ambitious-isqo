@@ -20,18 +20,22 @@ OBJECTS=utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o \
 		residual_function.o solve_subproblem.o linear_model.o \
 		linear_model_reduction.o line_search.o hessian_shifter.o \
 		text_output.o
-# test:
-# 	g++ tester.cc ${CFLAGS} ${LDFLAGS} -o tester -O0 -g
-# 	./tester
+		
+tests_src=$(wildcard test*.cc)
+tests_bin=$(subst .cc,,${tests_src})
 
-default: build run
+default: isqo run
 
-run: build
-	./isqo_functor
-build: ${OBJECTS}
-	g++-4.8 ${OBJECTS} isqo_functor.cc -o isqo_functor  ${CFLAGS} ${LDFLAGS}
+run: isqo
+	./isqo
+isqo: ${OBJECTS}
+	g++-4.8 ${OBJECTS} isqo_functor.cc -o isqo  ${CFLAGS} ${LDFLAGS}
+tests: ${tests_bin}
 
-%.o: %.cc %.hh
+test_%: test_%.cc
+	g++-4.8 -o $@ $< ${OBJECTS} ${CFLAGS} ${LDFLAGS}
+
+%.o: %.cc
 	g++-4.8 -c $< ${CFLAGS}
 
 valgrind: build
@@ -60,6 +64,6 @@ test:
 	./isqo_functor ~/optimization/cute_nl_nopresolve/hs020.nl > output/isqo_hs020.nl
 
 clean:
-	@rm *.o
-	@rm isqo_functor
-	@rm -rf isqo_functor.dSYM
+	@rm -f *.o
+	@rm -f isqo ${tests_bin}
+	@rm -rf *.dSYM

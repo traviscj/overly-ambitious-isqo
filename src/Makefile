@@ -32,7 +32,7 @@ isqo: ${OBJECTS}
 	g++-4.8 ${OBJECTS} isqo_functor.cc -o isqo  ${CFLAGS} ${LDFLAGS}
 tests: ${tests_bin}
 
-test_%: test_%.cc
+test_%: test_%.cc ${OBJECTS}
 	g++-4.8 -o $@ $< ${OBJECTS} ${CFLAGS} ${LDFLAGS}
 
 %.o: %.cc

@@ -87,11 +87,13 @@ AmplNlp::AmplNlp(std::string stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
 		}			
 	}
 	
+    PRINT_ = true;
 	std::vector<double> con(n_con);
 	conval(&x[0], &con[0], nerror_);
 	for (size_t ampl_constraint_index =0 ; ampl_constraint_index < n_con; ++ampl_constraint_index) {
-		if (PRINT_) std::cout << "ampl_variable_index=" << ampl_constraint_index << ": l=" << LUrhs[2*ampl_constraint_index] << " <= c(x_k)= " << con[ampl_constraint_index] << " <= u=" << LUrhs[2*ampl_constraint_index+1] << std::endl;
+		if (PRINT_) std::cout << "ampl_constraint_index=" << ampl_constraint_index << ": l=" << LUrhs[2*ampl_constraint_index] << " <= c(x_k)= " << con[ampl_constraint_index] << " <= u=" << LUrhs[2*ampl_constraint_index+1] << std::endl;
 	}
+    PRINT_ = false;
 	
 	num_dual_eq_ = equality_constraints_.size();
 	num_dual_ieq_ = inequality_constraints_lower_.size() + inequality_constraints_upper_.size() + variable_bound_lower_.size() + variable_bound_upper_.size();
@@ -264,14 +266,10 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
     double J[nzc];
     jacval(&x[0], &J[0], nerror_);
     std::cout << "J: " << std::endl;
-    // for (size_t current_nz=0; current_nz < nzc; ++current_nz) {
-        // std::cout << "current_nz=" << current_nz << ", val=" << J[current_nz] << std::endl;
-    // }
+    for (size_t current_nz=0; current_nz < nzc; ++current_nz) {
+        std::cout << "current_nz=" << current_nz << ", val=" << J[current_nz] << std::endl;
+    }
     
-    // c = new double[n_var];
-    
-    // std::cout << "Cgrad[0]: " << Cgrad[0] << std::endl;
-    // std::cout << "Cgrad[0]: " << Cgrad[20] << std::endl;
     cgrad *cg;
     size_t my_count_nz =0;
     
@@ -282,12 +280,33 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
     std::vector<int> row_coordinate(nzc);
     std::vector<int> col_coordinate(nzc);
     std::vector<double> value(nzc);
-    std::vector<int> ordering(nzc);
-    // for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index< equality_constraints_.size(); ++isqo_eq_constraint_index) {
+
     std::cout << "FULL TABLE: " << std::endl;
+    // the number of nonzero entries in each type:
+    size_t num_eq_nnz=0, num_ieq_lower_nnz=0, num_ieq_upper_nnz=0;
     for (size_t ampl_constraint_index=0; ampl_constraint_index<n_con; ++ampl_constraint_index) {
         for (cg = Cgrad[ampl_constraint_index]; cg; cg = cg->next){
-            printf("index: %3d: conindex: %3d: varno: %3d, coef: %9.2e, goff: %3d, val: %9.2e\n", my_count_nz, ampl_constraint_index, cg->varno, cg->coef, cg->goff, J[cg->goff]);
+            char constraint_type;
+            if ( LUrhs[2*ampl_constraint_index] == LUrhs[2*ampl_constraint_index+1] ) {
+                constraint_type = 'E';
+                ++num_eq_nnz;
+            } else if ( LUrhs[2*ampl_constraint_index] > -INFINITY && LUrhs[2*ampl_constraint_index+1] < INFINITY ) { 
+                constraint_type = 'B';
+                ++num_ieq_lower_nnz;
+                ++num_ieq_upper_nnz;
+            } else if ( LUrhs[2*ampl_constraint_index] == -INFINITY && LUrhs[2*ampl_constraint_index+1] < INFINITY ) { 
+                constraint_type = 'U';
+                ++num_ieq_upper_nnz;
+            } else if ( LUrhs[2*ampl_constraint_index] > -INFINITY && LUrhs[2*ampl_constraint_index+1] == INFINITY ) { 
+                constraint_type = 'L';
+                ++num_ieq_lower_nnz;
+            } else {
+                assert(false);
+            }
+            
+            printf("index: %3d: conindex: %3d[%9.2e <= c_i <= %9.2e ==> %c]: varno: %3d, coef: %9.2e, goff: %3d, val: %9.2e\n", 
+                    my_count_nz, ampl_constraint_index, LUrhs[2*ampl_constraint_index], LUrhs[2*ampl_constraint_index+1], constraint_type,
+                    cg->varno, cg->coef, cg->goff, J[cg->goff]);
             row_coordinate[cg->goff] = ampl_constraint_index;
             col_coordinate[cg->goff] = cg->varno;
             value[cg->goff] = J[cg->goff];
@@ -296,145 +315,169 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
             ++my_count_nz;
         }
     }
-    typedef enum {EQUALITY, LOWER, UPPER} constraint_type;
-    std::vector<constraint_type> constraint_types(n_con);
+    for (size_t ampl_variable_index=0; ampl_variable_index < n_var; ++ampl_variable_index) {
+        char variable_type;
+        if ( LUv[2*ampl_variable_index] == LUv[2*ampl_variable_index+1] ) {
+            variable_type = 'E';
+        } else if ( LUv[2*ampl_variable_index] > -INFINITY && LUv[2*ampl_variable_index+1] < INFINITY ) {
+            variable_type = 'B';
+        } else if ( LUv[2*ampl_variable_index] == -INFINITY && LUv[2*ampl_variable_index+1] < INFINITY ) {
+            variable_type = 'U';
+        } else if ( LUv[2*ampl_variable_index] > -INFINITY && LUv[2*ampl_variable_index+1] == INFINITY ) {
+            variable_type = 'L';
+        } else {
+            variable_type='F';
+        }
+        printf("variable index: %3d [%9.2e <= x_i <= %9.2e ==> %c]\n", ampl_variable_index, LUv[2*ampl_variable_index],LUv[2*ampl_variable_index+1],variable_type);
+    }
+    typedef enum {EQUALITY=1, LOWER=2, UPPER=4} constraint_type;
+    // constraint_types holds one of the above enums depending on what type.
+    std::vector<size_t> constraint_types(n_con);
+    // constraint_index holds the index of the constraint
     std::vector<size_t> constraint_indices(n_con);
+        
     for (size_t current_eq_index=0; current_eq_index < equality_constraints_.size(); ++current_eq_index) {
-        constraint_types[equality_constraints_[current_eq_index]] = EQUALITY;
+        constraint_types[equality_constraints_[current_eq_index]] |= EQUALITY;
         constraint_indices[equality_constraints_[current_eq_index]] = current_eq_index;
     }
     for (size_t current_ieq_lower_index=0; current_ieq_lower_index < inequality_constraints_lower_.size(); ++current_ieq_lower_index) {
-        constraint_types[inequality_constraints_lower_[current_ieq_lower_index]] = LOWER;
+        constraint_types[inequality_constraints_lower_[current_ieq_lower_index]] |= LOWER;
         constraint_indices[inequality_constraints_lower_[current_ieq_lower_index]] = current_ieq_lower_index;
     }
     for (size_t current_ieq_upper_index=0; current_ieq_upper_index < inequality_constraints_upper_.size(); ++current_ieq_upper_index) {
-        constraint_types[inequality_constraints_upper_[current_ieq_upper_index]] = UPPER;
+        constraint_types[inequality_constraints_upper_[current_ieq_upper_index]] |= UPPER;
         constraint_indices[inequality_constraints_upper_[current_ieq_upper_index]] = current_ieq_upper_index;
     }
-    
+        
     std::cout << "contype: " << constraint_types << std::endl;
     std::cout << "con ind: " << constraint_indices << std::endl;
-    
-    std::vector<double> values_eq;
-    std::vector<int> row_indices_eq;
-    std::vector<int> col_lengths_eq(n_var);
-    std::vector<int> col_starts_eq(n_var+1);
-    int current_eq_index = 0;
-    
-    std::vector<double> values_ieq_lower;
-    std::vector<int> row_indices_ieq_lower;
-    std::vector<int> col_lengths_ieq_lower(n_var);
-    std::vector<int> col_starts_ieq_lower(n_var+1);
-    int current_ieq_lower_index = 0;
-    
-    std::vector<double> values_ieq_upper;
-    std::vector<int> row_indices_ieq_upper;
-    std::vector<int> col_lengths_ieq_upper(n_var);
-    std::vector<int> col_starts_ieq_upper(n_var+1);
-    int current_ieq_upper_index = 0;
-    
+
     std::cout << "row_coordinate: " << row_coordinate << std::endl;
     std::cout << "col_coordinate: " << col_coordinate << std::endl;
     std::cout << "value: " << value << std::endl;
+    
+    std::cout << "ASDF: n_var: " << n_var << std::endl;
+    std::cout << "ASDFGHJ: equality_constraints_.size() = " << equality_constraints_.size() << std::endl;
+    std::cout << "ASDFGHJ: inequality_constraints_lower_.size() = " << inequality_constraints_lower_.size() << std::endl;
+    std::cout << "ASDFGHJ: inequality_constraints_upper_.size() = " << inequality_constraints_upper_.size() << std::endl;
+    
+    sparse_matrix eq_jacobian(equality_constraints_.size(), n_var, num_eq_nnz); 
+    sparse_matrix ieq_lower_jacobian(inequality_constraints_lower_.size(), n_var, num_ieq_lower_nnz);
+    sparse_matrix ieq_upper_jacobian(inequality_constraints_upper_.size(), n_var, num_ieq_upper_nnz);
+    
+    std::vector<int> col_lengths_eq(n_var);
+    std::vector<int> col_lengths_ieq_lower(n_var);
+    std::vector<int> col_lengths_ieq_upper(n_var);
+
+    int current_eq_index = 0, current_ieq_lower_index = 0, current_ieq_upper_index = 0;
     
     for (size_t current_nonzero=0; current_nonzero < nzc; ++current_nonzero) {
         std::cout << "current_nonzero: " << current_nonzero << "; " << row_coordinate[current_nonzero] << ", " << col_coordinate[current_nonzero] << "; value: " << value[current_nonzero];
         if (constraint_types[row_coordinate[current_nonzero]] == EQUALITY) {
             std::cout << " - eq";
-            values_eq.push_back(value[current_nonzero]);
-            row_indices_eq.push_back(constraint_indices[row_coordinate[current_nonzero]]);
+            eq_jacobian.vals_[current_eq_index] = value[current_nonzero];
+            eq_jacobian.row_indices_[current_eq_index] = constraint_indices[row_coordinate[current_nonzero]];
             ++col_lengths_eq[col_coordinate[current_nonzero]];
             ++current_eq_index;
         }
         if (constraint_types[row_coordinate[current_nonzero]] == LOWER) {
             std::cout << " - ieq lower";
-            values_ieq_lower.push_back(value[current_nonzero]);
-            row_indices_ieq_lower.push_back(constraint_indices[row_coordinate[current_nonzero]]);
-            // std::cout << "current nonzero: " << current_nonzero << std::endl;
-            // std::cout << "col_coordinate [current nonzero]: " << col_coordinate[current_nonzero] << std::endl;
-            // std::cout << "col_lengths_ieq_lower[col_coordinate[current_nonzero]]: " << col_lengths_ieq_lower[col_coordinate[current_nonzero]] << std::endl;
+            ieq_lower_jacobian.vals_[current_ieq_lower_index] = -value[current_nonzero];
+            ieq_lower_jacobian.row_indices_[current_ieq_lower_index] = constraint_indices[row_coordinate[current_nonzero]];
             ++col_lengths_ieq_lower[col_coordinate[current_nonzero]];
             ++current_ieq_lower_index;
         }
         if (constraint_types[row_coordinate[current_nonzero]] == UPPER) {
             std::cout << " - ieq upper";
-            values_ieq_upper.push_back(value[current_nonzero]);
-            row_indices_ieq_upper.push_back(constraint_indices[row_coordinate[current_nonzero]]);
+            ieq_upper_jacobian.vals_[current_ieq_upper_index] = value[current_nonzero];
+            ieq_upper_jacobian.row_indices_[current_ieq_upper_index] = constraint_indices[row_coordinate[current_nonzero]];
             ++col_lengths_ieq_upper[col_coordinate[current_nonzero]];
             ++current_ieq_upper_index;
         }
         std::cout << ".done" << std::endl;
     }
     std::cout << "check: " << current_eq_index << ", " << current_ieq_lower_index << ", " << current_ieq_upper_index << std::endl;
-    // int nnz_eq=0;
-    // std::cout << "EQUALITY CONSTRAINTS:" << std::endl;
-    // for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index<equality_constraints_.size(); ++isqo_eq_constraint_index) {
-    //     for (cg = Cgrad[equality_constraints_[isqo_eq_constraint_index]]; cg; cg = cg->next){
-    //         printf("index: %3d: conindex: %3d: varno: %3d, coef: %9.2e, goff: %3d, val: %9.2e\n", my_count_nz, isqo_eq_constraint_index, cg->varno, cg->coef, cg->goff, J[cg->goff]);
-    //         int ampl_row_number = equality_constraints_[isqo_eq_constraint_index];
-    //         row_indices_eq[cg->goff] = equality_constraints_[isqo_eq_constraint_index];
-    //         values_eq[cg->goff] = J[cg->goff];
-    //         ++col_lengths_eq[cg->varno];
-    //         ++current_eq_index;
-    //         ++nnz_eq;
-    //     }
-    // }
-    // std::cout << "nnz_eq: " << nnz_eq << std::endl;
+ 
     std::cout << "col_lengths: " << col_lengths_eq << std::endl;
-    size_t current_entry = 0;
-    col_starts_eq[0] = 0;
+    size_t current_entry_eq = 0, current_entry_ieq_lower = 0, current_entry_ieq_upper = 0;
     for (size_t variable_index=0; variable_index<col_lengths_eq.size(); ++variable_index) {
-        current_entry += col_lengths_eq[variable_index];
-        col_starts_eq[variable_index+1] = current_entry;
-    }
-    
-    std::cout << "equality ------------";
-    std::cout << "nzc: " << nzc << "; my: " << my_count_nz << std::endl;
-    std::cout << "values: " << values_eq << std::endl;
-    std::cout << "row_indices: " << row_indices_eq << std::endl;
-    std::cout << "col_starts: " << col_starts_eq << std::endl;
-
-    std::cout << "inequality (lower) ------------";
-    std::cout << "nzc: " << nzc << "; my: " << my_count_nz << std::endl;
-    std::cout << "values: " << values_ieq_lower << std::endl;
-    std::cout << "row_indices: " << row_indices_ieq_lower << std::endl;
-    std::cout << "col_starts: " << col_starts_ieq_lower << std::endl;
-
-    std::cout << "inequality (lower) ------------";
-    std::cout << "nzc: " << nzc << "; my: " << my_count_nz << std::endl;
-    std::cout << "values: " << values_ieq_upper << std::endl;
-    std::cout << "row_indices: " << row_indices_ieq_upper << std::endl;
-    std::cout << "col_starts: " << col_starts_ieq_upper << std::endl;
-    
-    
-    qpOASES::SparseMatrix testmat(n_con, n_var, &row_indices_eq[0], &col_starts_eq[0], &values_eq[0]);
-    // qpOASES::DenseMatrix testmat_dense(testmat);
-    // testmat_dense.print();
-    
-    
-    matrix equality_constraint_jacobian(equality_constraints_.size(), n_var);
-    // if (PRINT_) std::cout << "equal: " << equality_constraints_ << std::endl;
-    std::vector<double> G(num_primal());
-    for (size_t full_constraint_list=0; full_constraint_list < equality_constraints_.size() + inequality_constraints_upper_.size() + inequality_constraints_lower_.size(); ++full_constraint_list) {
-        congrd(full_constraint_list, &x[0], &G[0], nerror_);
-                std::cout << "c_" << full_constraint_list << ": ";
-        for (size_t primal_index=0; primal_index < num_primal(); ++primal_index) {
-            if (primal_index != 0) std::cout <<", " ;
-                    std::cout <<  G[primal_index];
-        }    
-                std::cout << std::endl;
-    }
-    PRINT_ = true;
-    for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index < equality_constraints_.size(); ++isqo_eq_constraint_index) {
-        congrd(equality_constraints_[isqo_eq_constraint_index], &x[0], &G[0], nerror_);
-        for (size_t primal_index=0; primal_index < num_primal(); ++primal_index) {
-            equality_constraint_jacobian.set(isqo_eq_constraint_index, primal_index, G[primal_index]);
-        }
+        // EQUALITIES
+        current_entry_eq += col_lengths_eq[variable_index];
+        eq_jacobian.col_starts_[variable_index+1] = current_entry_eq;
+        
+        // INEQUALITIES: LOWER
+        current_entry_ieq_lower += col_lengths_ieq_lower[variable_index];
+        ieq_lower_jacobian.col_starts_[variable_index+1] = current_entry_ieq_lower;
+        
+        // INEQUALITIES: UPPER
+        current_entry_ieq_upper += col_lengths_ieq_upper[variable_index];
+        ieq_upper_jacobian.col_starts_[variable_index+1] = current_entry_ieq_upper;
         
     }
+    
+    std::cout << "nzc: " << nzc << "; my: " << my_count_nz << std::endl;
+    std::cout << "equality ------------" << std::endl;
+    std::cout << eq_jacobian << std::endl;
+    
+    matrix equality_constraint_jacobian = constraints_equality_jacobian(iterate);
+    matrix inequality_constraint_jacobian = constraints_inequality_jacobian(iterate);
+    PRINT_ = true;
+    
     if (PRINT_) std::cout << "equality jacobian: [" << std::endl;
     if (PRINT_) std::cout << equality_constraint_jacobian;
     if (PRINT_) std::cout << "]" << std::endl;
+    
+
+    std::cout << "constraint inequality (lower) ------------" << std::endl;
+    std::cout << ieq_lower_jacobian << std::endl;
+
+    std::cout << "constraint inequality (upper) ------------" << std::endl;
+    std::cout << ieq_upper_jacobian << std::endl;
+    
+    std::cout << "constraint inequality ------------" << std::endl;
+    sparse_matrix constraints_ieq = vertical(ieq_lower_jacobian, ieq_upper_jacobian);
+    std::cout << constraints_ieq << std::endl;
+    
+    
+    std::cout << "\n\n\n=========" << std::endl;
+    
+    
+    std::cout << "=========\n\n\n" << std::endl;
+    
+    sparse_matrix lower_var(n_var, variable_bound_lower_, -1.0);
+    sparse_matrix upper_var(n_var, variable_bound_upper_, +1.0);
+    std::cout << "lower_var: " << lower_var << std::endl;
+    std::cout << "upper_var: " << upper_var << std::endl;
+    
+    
+    sparse_matrix variable_bounds_jacobian = vertical(lower_var, upper_var);
+    std::cout << "variable_bounds_jacobian: " << variable_bounds_jacobian << std::endl;
+    
+    std::cout << "=========\n\n\n" << std::endl;
+    
+    
+    sparse_matrix full_ieq = vertical(constraints_ieq, variable_bounds_jacobian);
+    std::cout << "full inequality ------------" << std::endl;
+    std::cout << full_ieq << std::endl;
+    
+    qpOASES::SparseMatrix testmat_ieq(full_ieq.num_rows(), n_var, &full_ieq.row_indices_[0], &full_ieq.col_starts_[0], &full_ieq.vals_[0]);
+    double *testmat_ieq_full = testmat_ieq.full();
+    for (int i=0; i<200; i++) std::cout << ", " << testmat_ieq_full[i];
+    std::cout << std::endl;
+    std::cout << "testmat_ieq.full(): " << std::endl;
+    // qpOASES::DenseMatrix dense_testmat_ieq(full_ieq.num_rows(), n_var, )
+    
+    if (PRINT_) std::cout << "inequality jacobian: [" << std::endl;
+    if (PRINT_) std::cout << inequality_constraint_jacobian;
+    if (PRINT_) std::cout << "]" << std::endl;
+    
+    for (int i=0; i<200; i++) assert(testmat_ieq_full[i] == inequality_constraint_jacobian.data_[i]);
+    
+    qpOASES::SparseMatrix testmat(n_con, n_var, &eq_jacobian.row_indices_[0], &eq_jacobian.col_starts_[0], &eq_jacobian.vals_[0]);
+    // qpOASES::DenseMatrix testmat_dense(testmat);
+    // testmat_dense.print();
+    
+    PRINT_ = false;
 
 	return testmat;
 }
@@ -464,14 +507,18 @@ matrix AmplNlp::constraints_inequality_jacobian(const iSQOIterate &iterate) {
 		}
 		++isqo_ineq_constraint_index;
 	}
+    // set up Jacobian for variable bounds.
+    // LOWER VARIABLE BOUNDS:
 	for (size_t isqo_ineq_lower_variable_index=0; isqo_ineq_lower_variable_index < variable_bound_lower_.size(); ++isqo_ineq_lower_variable_index) {
 		inequality_constraint_jacobian.set(isqo_ineq_constraint_index, variable_bound_lower_[isqo_ineq_lower_variable_index], -1.0);
 		++isqo_ineq_constraint_index;
 	}
+    // UPPER VARIABLE BOUNDS:
 	for (size_t isqo_ineq_upper_variable_index=0; isqo_ineq_upper_variable_index < variable_bound_upper_.size(); ++isqo_ineq_upper_variable_index) {
 		inequality_constraint_jacobian.set(isqo_ineq_constraint_index, variable_bound_upper_[isqo_ineq_upper_variable_index], +1.0);
 		++isqo_ineq_constraint_index;
 	}
+    
 	if (PRINT_) 
 	{
 		std::cout << "======" << std::endl;

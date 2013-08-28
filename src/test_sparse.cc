@@ -50,11 +50,15 @@ int main(int argc, char **argv) {
     std::cout << "================" << std::endl;
     
     qpOASES::SQProblem example_(subproblem.num_qp_variables_, subproblem.num_qp_constraints_, qpOASES::HST_SEMIDEF);
+    qpOASES::SymDenseMat qpOASES_dense_hessian(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.hessian_.data_[0]);
+    qpOASES::DenseMatrix qpOASES_dense_jacobian(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.jacobian_.data_[0]);
+    // qpOASES_dense_hessian.createDiagInfo();
+    qpOASES_dense_hessian.addToDiag(500.0);
     int nWSR=10000;
     // hessian_.data_ --> double* dense
-	int ret = example_.init( &subproblem.hessian_.data_[0],
+	int ret = example_.init( &qpOASES_dense_hessian,
 						 &subproblem.gradient_[0],
-						 &subproblem.jacobian_.data_[0],
+						 &qpOASES_dense_jacobian,
 						 &subproblem.lower_bound_[0],
 						 &subproblem.upper_bound_[0],
 						 &subproblem.jacobian_lower_bound_[0],
@@ -75,16 +79,36 @@ int main(int argc, char **argv) {
          }
      }
      qpOASES::SymSparseMat qpOASES_hessian(subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.hessian_sparse_.row_indices_[0], &subproblem.hessian_sparse_.col_starts_[0], &subproblem.hessian_sparse_.vals_[0]);
-     qpOASES_hessian.createDiagInfo();
+     // int *plain_jd 
+     // 
+     // std::cout << "plain_jd: " << plain_jd[1] << std::endl;
+     // std::cout << "plain_jd: " << plain_jd[2] << std::endl;
+     int *plain_jd = qpOASES_hessian.createDiagInfo();
+     for (size_t plain_jd_index=0; plain_jd_index < subproblem.num_qp_variables_; ++plain_jd_index) {
+         std::cout << "plain_jd" << plain_jd_index << ": " << plain_jd[plain_jd_index] << std::endl;
+     }
+     // std::cout << "qpOASES_hessian_jd: " << qpOASES_hessian_jd << std::endl;
+     qpOASES_hessian.addToDiag(500.0);
  	double* qpOASES_hessian_full = qpOASES_hessian.full();
      for (size_t ind=0; ind < subproblem.num_qp_variables_*subproblem.num_qp_variables_; ++ind) {
-         if (subproblem.hessian_.data_[ind] != qpOASES_hessian_full[ind]) 
+         // if (subproblem.hessian_.data_[ind] != qpOASES_hessian_full[ind]) 
          {
              std::cout  << "qpOASES_hessian_full[" << ind 
                         << "]: dense: " << subproblem.hessian_.data_[ind] 
-                        << "; sparse: " << qpOASES_hessian_full[ind] << std::endl;
+                        << "; full(sparse): " << qpOASES_hessian_full[ind] << std::endl;
          }
      }
+     for (size_t ind=0; ind < subproblem.hessian_sparse_.vals_.size(); ++ind) {
+         std::cout << "; sparse: " << subproblem.hessian_sparse_.vals_[ind] << std::endl;
+     }
+     for (size_t ind=0; ind < subproblem.num_qp_variables_; ++ind) {
+         std::cout << "diag entry i=" << ind 
+                   << ": jd[i]=" << plain_jd[ind] 
+                   << "; ir[jd[i]]=" << subproblem.hessian_sparse_.row_indices_[plain_jd[ind]]
+                   << "; val[jd[i]]=" << subproblem.hessian_sparse_.vals_[plain_jd[ind]]
+                   << std::endl;
+     }
+     
      qpOASES::SQProblem example_sparse(subproblem.num_qp_variables_, subproblem.num_qp_constraints_, qpOASES::HST_SEMIDEF);
      int nWSR2=10000;
  	int ret2 = example_sparse.init( &qpOASES_hessian,

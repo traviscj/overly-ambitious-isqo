@@ -34,7 +34,6 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
 	
     // setup matrix data
     setup_matrix_data(iterate);
-	
     setup_matrix_data_sparse(iterate);
     
 	// NLP gradient copied over
@@ -125,17 +124,29 @@ void iSQOQuadraticSubproblem::setup_matrix_data_sparse(const iSQOIterate &iterat
     
     // LAGRANGIAN PART
     nlp_hessian_sparse_ = nlp_->lagrangian_hessian_sparse(iterate);
-    hessian_sparse_ = sparse_matrix(num_qp_variables_, num_qp_variables_, nlp_hessian_sparse_.num_nnz());
-    for (size_t hessian_nonzero_index=0; hessian_nonzero_index < nlp_hessian_sparse_.num_nnz(); ++hessian_nonzero_index) {
-        hessian_sparse_.vals_[hessian_nonzero_index] = nlp_hessian_sparse_.vals_[hessian_nonzero_index];
-        hessian_sparse_.row_indices_[hessian_nonzero_index] = nlp_hessian_sparse_.row_indices_[hessian_nonzero_index];
-    }
-    for (size_t hessian_column_index=0; hessian_column_index < nlp_hessian_sparse_.num_columns()+1; ++hessian_column_index) {
-        hessian_sparse_.col_starts_[hessian_column_index] = nlp_hessian_sparse_.col_starts_[hessian_column_index];
-    }
-    for (size_t hessian_column_index=nlp_hessian_sparse_.num_columns(); hessian_column_index < num_qp_variables_; ++hessian_column_index) {
-        hessian_sparse_.col_starts_[hessian_column_index+1] = nlp_hessian_sparse_.col_starts_[nlp_hessian_sparse_.num_columns()];
-    }
+    sparse_matrix hess_left_bottom(2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), num_nlp_variables_, 0);    // null matrix for lower left
+    sparse_matrix hess_right_top(num_nlp_variables_, 2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), 0);  // null matrix for upper right.
+    sparse_matrix hess_right_bottom(2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), 0.0);            // 0.0*I_{2*num_qp_con} for lower right. (fixes bug in qpOASES...)
+    std::cout << "hess_right_bottom: " << hess_right_bottom << std::endl;
+    
+    sparse_matrix hess_left = vertical(nlp_hessian_sparse_, hess_left_bottom);
+    std::cout << "hess_left: " << hess_left << std::endl;
+    sparse_matrix hess_right = vertical(hess_right_top, hess_right_bottom);
+    std::cout << "hess_right: " << hess_right << std::endl;
+    hessian_sparse_ = horizontal(hess_left, hess_right);
+    std::cout << "hessian_sparse_: " << hessian_sparse_ << std::endl;
+    
+    // hessian_sparse_ = sparse_matrix(num_qp_variables_, num_qp_variables_, nlp_hessian_sparse_.num_nnz());
+    // for (size_t hessian_nonzero_index=0; hessian_nonzero_index < nlp_hessian_sparse_.num_nnz(); ++hessian_nonzero_index) {
+    //     hessian_sparse_.vals_[hessian_nonzero_index] = nlp_hessian_sparse_.vals_[hessian_nonzero_index];
+    //     hessian_sparse_.row_indices_[hessian_nonzero_index] = nlp_hessian_sparse_.row_indices_[hessian_nonzero_index];
+    // }
+    // for (size_t hessian_column_index=0; hessian_column_index < nlp_hessian_sparse_.num_columns()+1; ++hessian_column_index) {
+    //     hessian_sparse_.col_starts_[hessian_column_index] = nlp_hessian_sparse_.col_starts_[hessian_column_index];
+    // }
+    // for (size_t hessian_column_index=nlp_hessian_sparse_.num_columns(); hessian_column_index < num_qp_variables_; ++hessian_column_index) {
+    //     hessian_sparse_.col_starts_[hessian_column_index+1] = nlp_hessian_sparse_.col_starts_[nlp_hessian_sparse_.num_columns()];
+    // }
     
 }
 

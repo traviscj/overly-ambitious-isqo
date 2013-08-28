@@ -30,27 +30,28 @@ bool assert_close(double val1, double val2, double tol) {
 	return (abs(val1) <= abs(val2) + tol*abs(val1)) && (abs(val2) <= abs(val1) + tol*abs(val2));
 }
 
-sparse_matrix vertical(const sparse_matrix &lower_var, const sparse_matrix &upper_var) {
-    sparse_matrix result(   lower_var.num_rows() + upper_var.num_rows(), 
-                            lower_var.num_columns(), 
-                            lower_var.num_nnz() + upper_var.num_nnz());
+sparse_matrix vertical(const sparse_matrix &top, const sparse_matrix &bottom) {
+    assert(top.num_columns() == bottom.num_columns());
+    sparse_matrix result(   top.num_rows() + bottom.num_rows(), 
+                            top.num_columns(), 
+                            top.num_nnz() + bottom.num_nnz());
     size_t current_a_index=0, current_b_index=0;
 
     size_t current_nnz_index=0;
-    for (size_t col_start_index=0; col_start_index < lower_var.num_columns(); ++col_start_index) {
+    for (size_t col_start_index=0; col_start_index < top.num_columns(); ++col_start_index) {
         // std::cout << "col_start_index: " <<col_start_index << std::endl;
         // std::cout << "              a: " << lower_var.col_starts_[col_start_index] << " -> " << lower_var.col_starts_[col_start_index+1] << std::endl;
         // std::cout << "              b: " << upper_var.col_starts_[col_start_index] << " -> " << upper_var.col_starts_[col_start_index+1] << std::endl;
-        for (std::size_t current_a_index=lower_var.col_starts_[col_start_index]; current_a_index < lower_var.col_starts_[col_start_index+1]; ++current_a_index ) {
+        for (std::size_t current_a_index=top.col_starts_[col_start_index]; current_a_index < top.col_starts_[col_start_index+1]; ++current_a_index ) {
             // std::cout << "reading an A" << std::endl;
-            result.vals_[current_nnz_index] = lower_var.vals_[current_a_index];
-            result.row_indices_[current_nnz_index] = lower_var.row_indices_[current_a_index];
+            result.vals_[current_nnz_index] = top.vals_[current_a_index];
+            result.row_indices_[current_nnz_index] = top.row_indices_[current_a_index];
             ++current_nnz_index;
         }
-        for (std::size_t current_b_index=upper_var.col_starts_[col_start_index]; current_b_index < upper_var.col_starts_[col_start_index+1]; ++current_b_index ) {
+        for (std::size_t current_b_index=bottom.col_starts_[col_start_index]; current_b_index < bottom.col_starts_[col_start_index+1]; ++current_b_index ) {
             // std::cout << "reading a B..." << std::endl;
-            result.vals_[current_nnz_index] = upper_var.vals_[current_b_index];
-            result.row_indices_[current_nnz_index] = lower_var.num_rows() + upper_var.row_indices_[current_b_index];
+            result.vals_[current_nnz_index] = bottom.vals_[current_b_index];
+            result.row_indices_[current_nnz_index] = top.num_rows() + bottom.row_indices_[current_b_index];
             ++current_nnz_index;
         }
         result.col_starts_[col_start_index+1] = current_nnz_index;
@@ -61,6 +62,7 @@ sparse_matrix vertical(const sparse_matrix &lower_var, const sparse_matrix &uppe
 }
 
 sparse_matrix horizontal(const sparse_matrix &left, const sparse_matrix &right) {
+    assert(top.num_rows() == bottom.num_rows());
     sparse_matrix result(   left.num_rows(),
                             left.num_columns() + right.num_columns(), 
                             left.num_nnz() + right.num_nnz());

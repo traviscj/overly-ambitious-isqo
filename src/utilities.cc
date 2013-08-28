@@ -59,3 +59,32 @@ sparse_matrix vertical(const sparse_matrix &lower_var, const sparse_matrix &uppe
     // std::cout << "result:"<< std::endl << result << std::endl;
     return result;
 }
+
+sparse_matrix horizontal(const sparse_matrix &left, const sparse_matrix &right) {
+    sparse_matrix result(   left.num_rows(),
+                            left.num_columns() + right.num_columns(), 
+                            left.num_nnz() + right.num_nnz());
+    size_t result_nonzero_index=0;
+    for (size_t left_nonzeros=0; left_nonzeros < left.num_nnz(); ++left_nonzeros) {
+        result.vals_[result_nonzero_index] = left.vals_[left_nonzeros];
+        result.row_indices_[result_nonzero_index] = left.row_indices_[left_nonzeros];
+        ++result_nonzero_index;
+    }
+    for (size_t right_nonzeros=0; right_nonzeros < right.num_nnz(); ++right_nonzeros) {
+        result.vals_[result_nonzero_index] = right.vals_[right_nonzeros];
+        result.row_indices_[result_nonzero_index] = right.row_indices_[right_nonzeros];
+        ++result_nonzero_index;
+    }
+    
+    size_t result_column_index=0;
+    for (size_t left_cols=0; left_cols < left.num_columns()+1; ++left_cols) {
+        result.col_starts_[result_column_index] = left.col_starts_[left_cols];
+        ++result_column_index;
+    }
+    result_column_index=left.num_columns();
+    for (size_t right_cols=0; right_cols < right.num_columns()+1; ++right_cols) {
+        result.col_starts_[result_column_index] = left.num_nnz() + right.col_starts_[right_cols];
+        ++result_column_index;
+    }
+    return result;
+}

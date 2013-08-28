@@ -3,11 +3,9 @@
 #include <cassert>
 
 #include "nlp_ampl.hh"
-#include "utilities.hh"
-
 
 // AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
-AmplNlp::AmplNlp(std::string stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
+AmplNlp::AmplNlp(std::string stub_str) : Nlp(-1,-1,-1), PRINT_(false), sparse_eq_jacobian_(0,0,0), sparse_ieq_jacobian_(0,0,0), sparse_hessian_(0,0,0) {
 	if (PRINT_) std::cout << "Constructing an AmplNlp" << std::endl;
 	ASL *asl;
 	asl = ASL_alloc(ASL_read_pfgh);
@@ -255,7 +253,7 @@ matrix AmplNlp::constraints_equality_jacobian(const iSQOIterate &iterate) {
 
 	return equality_constraint_jacobian;
 }
-qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIterate &iterate) {
+void AmplNlp::sparse_jacobian_update(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(num_primal());
 	
@@ -265,23 +263,23 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
     asl->i.congrd_mode = 0;
     double J[nzc];
     jacval(&x[0], &J[0], nerror_);
-    std::cout << "J: " << std::endl;
+    if (PRINT_) std::cout << "J: " << std::endl;
     for (size_t current_nz=0; current_nz < nzc; ++current_nz) {
-        std::cout << "current_nz=" << current_nz << ", val=" << J[current_nz] << std::endl;
+        if (PRINT_) std::cout << "current_nz=" << current_nz << ", val=" << J[current_nz] << std::endl;
     }
     
     cgrad *cg;
     size_t my_count_nz =0;
     
-    std::cout << "equ: " << equality_constraints_ << std::endl;
-    std::cout << "ineq lower: " << inequality_constraints_lower_ << std::endl;
-    std::cout << "ineq upper: " << inequality_constraints_upper_ << std::endl;
+    if (PRINT_) std::cout << "equ: " << equality_constraints_ << std::endl;
+    if (PRINT_) std::cout << "ineq lower: " << inequality_constraints_lower_ << std::endl;
+    if (PRINT_) std::cout << "ineq upper: " << inequality_constraints_upper_ << std::endl;
     
     std::vector<int> row_coordinate(nzc);
     std::vector<int> col_coordinate(nzc);
     std::vector<double> value(nzc);
-
-    std::cout << "FULL TABLE: " << std::endl;
+    
+    if (PRINT_) std::cout << "FULL TABLE: " << std::endl;
     // the number of nonzero entries in each type:
     size_t num_eq_nnz=0, num_ieq_lower_nnz=0, num_ieq_upper_nnz=0;
     for (size_t ampl_constraint_index=0; ampl_constraint_index<n_con; ++ampl_constraint_index) {
@@ -304,7 +302,7 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
                 assert(false);
             }
             
-            printf("index: %3d: conindex: %3d[%9.2e <= c_i <= %9.2e ==> %c]: varno: %3d, coef: %9.2e, goff: %3d, val: %9.2e\n", 
+            if (PRINT_) printf("index: %3d: conindex: %3d[%9.2e <= c_i <= %9.2e ==> %c]: varno: %3d, coef: %9.2e, goff: %3d, val: %9.2e\n", 
                     my_count_nz, ampl_constraint_index, LUrhs[2*ampl_constraint_index], LUrhs[2*ampl_constraint_index+1], constraint_type,
                     cg->varno, cg->coef, cg->goff, J[cg->goff]);
             row_coordinate[cg->goff] = ampl_constraint_index;
@@ -328,7 +326,7 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
         } else {
             variable_type='F';
         }
-        printf("variable index: %3d [%9.2e <= x_i <= %9.2e ==> %c]\n", ampl_variable_index, LUv[2*ampl_variable_index],LUv[2*ampl_variable_index+1],variable_type);
+        if (PRINT_) printf("variable index: %3d [%9.2e <= x_i <= %9.2e ==> %c]\n", ampl_variable_index, LUv[2*ampl_variable_index],LUv[2*ampl_variable_index+1],variable_type);
     }
     typedef enum {EQUALITY=1, LOWER=2, UPPER=4} constraint_type;
     // constraint_types holds one of the above enums depending on what type.
@@ -349,19 +347,22 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
         constraint_indices[inequality_constraints_upper_[current_ieq_upper_index]] = current_ieq_upper_index;
     }
         
-    std::cout << "contype: " << constraint_types << std::endl;
-    std::cout << "con ind: " << constraint_indices << std::endl;
+    if (PRINT_) std::cout << "contype: " << constraint_types << std::endl;
+    if (PRINT_) std::cout << "con ind: " << constraint_indices << std::endl;
 
-    std::cout << "row_coordinate: " << row_coordinate << std::endl;
-    std::cout << "col_coordinate: " << col_coordinate << std::endl;
-    std::cout << "value: " << value << std::endl;
+    if (PRINT_) std::cout << "row_coordinate: " << row_coordinate << std::endl;
+    if (PRINT_) std::cout << "col_coordinate: " << col_coordinate << std::endl;
+    if (PRINT_) std::cout << "value: " << value << std::endl;
     
-    std::cout << "ASDF: n_var: " << n_var << std::endl;
-    std::cout << "ASDFGHJ: equality_constraints_.size() = " << equality_constraints_.size() << std::endl;
-    std::cout << "ASDFGHJ: inequality_constraints_lower_.size() = " << inequality_constraints_lower_.size() << std::endl;
-    std::cout << "ASDFGHJ: inequality_constraints_upper_.size() = " << inequality_constraints_upper_.size() << std::endl;
+    if (PRINT_) std::cout << "ASDF: n_var: " << n_var << std::endl;
+    if (PRINT_) std::cout << "ASDFGHJ: equality_constraints_.size() = " << equality_constraints_.size() << std::endl;
+    if (PRINT_) std::cout << "ASDFGHJ: inequality_constraints_lower_.size() = " << inequality_constraints_lower_.size() << std::endl;
+    if (PRINT_) std::cout << "ASDFGHJ: inequality_constraints_upper_.size() = " << inequality_constraints_upper_.size() << std::endl;
     
-    sparse_matrix eq_jacobian(equality_constraints_.size(), n_var, num_eq_nnz); 
+    // sparse_matrix eq_jacobian(equality_constraints_.size(), n_var, num_eq_nnz); 
+    sparse_eq_jacobian_ = sparse_matrix(equality_constraints_.size(), n_var,num_eq_nnz);
+    sparse_ieq_jacobian_ = sparse_matrix(inequality_constraints_lower_.size() + inequality_constraints_upper_.size(), n_var, num_ieq_lower_nnz + num_ieq_upper_nnz);
+    
     sparse_matrix ieq_lower_jacobian(inequality_constraints_lower_.size(), n_var, num_ieq_lower_nnz);
     sparse_matrix ieq_upper_jacobian(inequality_constraints_upper_.size(), n_var, num_ieq_upper_nnz);
     
@@ -372,38 +373,38 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
     int current_eq_index = 0, current_ieq_lower_index = 0, current_ieq_upper_index = 0;
     
     for (size_t current_nonzero=0; current_nonzero < nzc; ++current_nonzero) {
-        std::cout << "current_nonzero: " << current_nonzero << "; " << row_coordinate[current_nonzero] << ", " << col_coordinate[current_nonzero] << "; value: " << value[current_nonzero];
-        if (constraint_types[row_coordinate[current_nonzero]] == EQUALITY) {
-            std::cout << " - eq";
-            eq_jacobian.vals_[current_eq_index] = value[current_nonzero];
-            eq_jacobian.row_indices_[current_eq_index] = constraint_indices[row_coordinate[current_nonzero]];
+        if (PRINT_) std::cout << "current_nonzero: " << current_nonzero << "; row:" << row_coordinate[current_nonzero] << ", col:" << col_coordinate[current_nonzero] << "; value: " << value[current_nonzero] << "; concode: " << constraint_types[row_coordinate[current_nonzero]];
+        if ((constraint_types[row_coordinate[current_nonzero]] & EQUALITY) > 0) {
+            if (PRINT_) std::cout << " - eq";
+            sparse_eq_jacobian_.vals_[current_eq_index] = value[current_nonzero];
+            sparse_eq_jacobian_.row_indices_[current_eq_index] = constraint_indices[row_coordinate[current_nonzero]];
             ++col_lengths_eq[col_coordinate[current_nonzero]];
             ++current_eq_index;
         }
-        if (constraint_types[row_coordinate[current_nonzero]] == LOWER) {
-            std::cout << " - ieq lower";
+        if ((constraint_types[row_coordinate[current_nonzero]] & LOWER) > 0) {
+            if (PRINT_) std::cout << " - ieq lower";
             ieq_lower_jacobian.vals_[current_ieq_lower_index] = -value[current_nonzero];
             ieq_lower_jacobian.row_indices_[current_ieq_lower_index] = constraint_indices[row_coordinate[current_nonzero]];
             ++col_lengths_ieq_lower[col_coordinate[current_nonzero]];
             ++current_ieq_lower_index;
         }
-        if (constraint_types[row_coordinate[current_nonzero]] == UPPER) {
-            std::cout << " - ieq upper";
+        if ((constraint_types[row_coordinate[current_nonzero]] & UPPER) > 0) {
+            if (PRINT_) std::cout << " - ieq upper";
             ieq_upper_jacobian.vals_[current_ieq_upper_index] = value[current_nonzero];
             ieq_upper_jacobian.row_indices_[current_ieq_upper_index] = constraint_indices[row_coordinate[current_nonzero]];
             ++col_lengths_ieq_upper[col_coordinate[current_nonzero]];
             ++current_ieq_upper_index;
         }
-        std::cout << ".done" << std::endl;
+        if (PRINT_) std::cout << ".done" << std::endl;
     }
-    std::cout << "check: " << current_eq_index << ", " << current_ieq_lower_index << ", " << current_ieq_upper_index << std::endl;
+    if (PRINT_) std::cout << "check: " << current_eq_index << ", " << current_ieq_lower_index << ", " << current_ieq_upper_index << std::endl;
  
-    std::cout << "col_lengths: " << col_lengths_eq << std::endl;
+    if (PRINT_) std::cout << "col_lengths: " << col_lengths_eq << std::endl;
     size_t current_entry_eq = 0, current_entry_ieq_lower = 0, current_entry_ieq_upper = 0;
     for (size_t variable_index=0; variable_index<col_lengths_eq.size(); ++variable_index) {
         // EQUALITIES
         current_entry_eq += col_lengths_eq[variable_index];
-        eq_jacobian.col_starts_[variable_index+1] = current_entry_eq;
+        sparse_eq_jacobian_.col_starts_[variable_index+1] = current_entry_eq;
         
         // INEQUALITIES: LOWER
         current_entry_ieq_lower += col_lengths_ieq_lower[variable_index];
@@ -415,71 +416,106 @@ qpOASES::SparseMatrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIt
         
     }
     
-    std::cout << "nzc: " << nzc << "; my: " << my_count_nz << std::endl;
-    std::cout << "equality ------------" << std::endl;
-    std::cout << eq_jacobian << std::endl;
+    if (PRINT_) std::cout << "nzc: " << nzc << "; my: " << my_count_nz << std::endl;
+    if (PRINT_) std::cout << "equality ------------" << std::endl;
+    if (PRINT_) std::cout << sparse_eq_jacobian_ << std::endl;
     
-    matrix equality_constraint_jacobian = constraints_equality_jacobian(iterate);
-    matrix inequality_constraint_jacobian = constraints_inequality_jacobian(iterate);
-    PRINT_ = true;
-    
-    if (PRINT_) std::cout << "equality jacobian: [" << std::endl;
-    if (PRINT_) std::cout << equality_constraint_jacobian;
-    if (PRINT_) std::cout << "]" << std::endl;
-    
+    if (PRINT_) std::cout << "constraint inequality (lower) ------------" << std::endl;
+    if (PRINT_) std::cout << ieq_lower_jacobian << std::endl;
 
-    std::cout << "constraint inequality (lower) ------------" << std::endl;
-    std::cout << ieq_lower_jacobian << std::endl;
-
-    std::cout << "constraint inequality (upper) ------------" << std::endl;
-    std::cout << ieq_upper_jacobian << std::endl;
+    if (PRINT_) std::cout << "constraint inequality (upper) ------------" << std::endl;
+    if (PRINT_) std::cout << ieq_upper_jacobian << std::endl;
     
-    std::cout << "constraint inequality ------------" << std::endl;
+    if (PRINT_) std::cout << "constraint inequality ------------" << std::endl;
     sparse_matrix constraints_ieq = vertical(ieq_lower_jacobian, ieq_upper_jacobian);
-    std::cout << constraints_ieq << std::endl;
+    if (PRINT_) std::cout << constraints_ieq << std::endl;
     
     
-    std::cout << "\n\n\n=========" << std::endl;
+    if (PRINT_) std::cout << "\n\n\n=========" << std::endl;
     
     
-    std::cout << "=========\n\n\n" << std::endl;
+    if (PRINT_) std::cout << "=========\n\n\n" << std::endl;
     
     sparse_matrix lower_var(n_var, variable_bound_lower_, -1.0);
     sparse_matrix upper_var(n_var, variable_bound_upper_, +1.0);
-    std::cout << "lower_var: " << lower_var << std::endl;
-    std::cout << "upper_var: " << upper_var << std::endl;
+    if (PRINT_) std::cout << "lower_var: " << lower_var << std::endl;
+    if (PRINT_) std::cout << "upper_var: " << upper_var << std::endl;
     
     
     sparse_matrix variable_bounds_jacobian = vertical(lower_var, upper_var);
-    std::cout << "variable_bounds_jacobian: " << variable_bounds_jacobian << std::endl;
+    if (PRINT_) std::cout << "variable_bounds_jacobian: " << variable_bounds_jacobian << std::endl;
     
-    std::cout << "=========\n\n\n" << std::endl;
+    if (PRINT_) std::cout << "=========\n\n\n" << std::endl;
     
     
-    sparse_matrix full_ieq = vertical(constraints_ieq, variable_bounds_jacobian);
-    std::cout << "full inequality ------------" << std::endl;
-    std::cout << full_ieq << std::endl;
+    sparse_ieq_jacobian_ = vertical(constraints_ieq, variable_bounds_jacobian);
+    if (PRINT_) std::cout << "full inequality ------------" << std::endl;
+    if (PRINT_) std::cout << sparse_ieq_jacobian_ << std::endl;
     
-    qpOASES::SparseMatrix testmat_ieq(full_ieq.num_rows(), n_var, &full_ieq.row_indices_[0], &full_ieq.col_starts_[0], &full_ieq.vals_[0]);
-    double *testmat_ieq_full = testmat_ieq.full();
-    for (int i=0; i<200; i++) std::cout << ", " << testmat_ieq_full[i];
-    std::cout << std::endl;
-    std::cout << "testmat_ieq.full(): " << std::endl;
-    // qpOASES::DenseMatrix dense_testmat_ieq(full_ieq.num_rows(), n_var, )
+    // qpOASES::SparseMatrix testmat_ieq(full_ieq.num_rows(), n_var, &full_ieq.row_indices_[0], &full_ieq.col_starts_[0], &full_ieq.vals_[0]);
+
+    // will need these later...
+    // qpoases_eq_jacobian_  = qpOASES::SparseMatrix(eq_jacobian.num_rows(), eq_jacobian.num_columns(), &eq_jacobian.row_indices_[0], &eq_jacobian.col_starts_[0], &eq_jacobian.vals_[0]);
+    // qpoases_ieq_jacobian_ = qpOASES::SparseMatrix(full_ieq.num_rows(), full_ieq.num_columns(), &full_ieq.row_indices_[0], &full_ieq.col_starts_[0], &full_ieq.vals_[0]);
+
+    PRINT_ = true;
     
-    if (PRINT_) std::cout << "inequality jacobian: [" << std::endl;
-    if (PRINT_) std::cout << inequality_constraint_jacobian;
-    if (PRINT_) std::cout << "]" << std::endl;
+    // matrix equality_constraint_jacobian = constraints_equality_jacobian(iterate);
+//     double *testmat_eq_full = qpoases_eq_jacobian_.full();
+//     for (int eq_entry_index=0; eq_entry_index < eq_jacobian.num_columns() * eq_jacobian.num_rows(); ++eq_entry_index)
+//         assert(testmat_eq_full[eq_entry_index] == equality_constraint_jacobian.data_[eq_entry_index]);
+// 
+//     matrix inequality_constraint_jacobian = constraints_inequality_jacobian(iterate);
+//     double *testmat_ieq_full = qpoases_ieq_jacobian_.full();
+//     for (int ieq_entry_index=0; ieq_entry_index < full_ieq.num_columns() * full_ieq.num_rows(); ++ieq_entry_index)
+//         assert(testmat_ieq_full[ieq_entry_index] == inequality_constraint_jacobian.data_[ieq_entry_index]);
+//     
+    if (PRINT_) {
+        // std::cout << "testmat_eq_full: " << std::endl << "[";
+//         for (int eq_entry_index=0; eq_entry_index<eq_jacobian.num_columns() * eq_jacobian.num_rows(); ++eq_entry_index) {
+//             if (eq_entry_index!=0) std::cout << ", ";
+//             std::cout << testmat_eq_full[eq_entry_index];
+//         }
+//         std::cout << "]" << std::endl;
+//         
+//         std::cout << "equality jacobian: [" << std::endl;
+//         std::cout << equality_constraint_jacobian;
+//         std::cout << "]" << std::endl;
+//         
+//         std::cout << "testmat_ieq.full(): " << std::endl;
+//         for (int ieq_entry_index=0; ieq_entry_index<full_ieq.num_columns() * full_ieq.num_rows(); ++ieq_entry_index) {
+//             if (ieq_entry_index!=0) std::cout << ", ";
+//             std::cout << testmat_ieq_full[ieq_entry_index];
+//         }
+//         std::cout << std::endl;
+//         
+//         std::cout << "inequality jacobian: [" << std::endl;
+//         std::cout << inequality_constraint_jacobian;
+//         std::cout << "]" << std::endl;
+    }
     
-    for (int i=0; i<200; i++) assert(testmat_ieq_full[i] == inequality_constraint_jacobian.data_[i]);
     
-    qpOASES::SparseMatrix testmat(n_con, n_var, &eq_jacobian.row_indices_[0], &eq_jacobian.col_starts_[0], &eq_jacobian.vals_[0]);
-    // qpOASES::DenseMatrix testmat_dense(testmat);
-    // testmat_dense.print();
     
     PRINT_ = false;
-
-	return testmat;
+    return;
+}
+sparse_matrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIterate &iterate) {
+    sparse_jacobian_update(iterate);
+    // std::cout << "qpoases_eq_jacobian_: " << sparse_eq_jacobian_ << std::endl;
+    // double *testmat_eq_full = qpoases_eq_jacobian_.full();
+    // std::cout << "testmat_eq_full: " << std::endl << "[";
+    // for (int eq_entry_index=0; eq_entry_index<eq_jacobian.num_columns() * eq_jacobian.num_rows(); ++eq_entry_index) {
+    //     if (eq_entry_index!=0) std::cout << ", ";
+    //     std::cout << testmat_eq_full[eq_entry_index];
+    // }
+    // std::cout << "]" << std::endl;
+    // qpOASES::SparseMatrix retval(qpoases_eq_jacobian_);
+	return sparse_eq_jacobian_;
+}
+sparse_matrix AmplNlp::constraints_inequality_jacobian_sparse(const iSQOIterate &iterate) {
+    sparse_jacobian_update(iterate);
+    // qpOASES::SparseMatrix retval(qpoases_ieq_jacobian_);
+	return sparse_ieq_jacobian_;
 }
 matrix AmplNlp::constraints_inequality_jacobian(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
@@ -563,18 +599,22 @@ matrix AmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
 	//	 - OW : INPUT : multipliers for objective function ("objective weights")
 	//	 - Y : INPUT : lagrange multipliers for constraints.
 	fullhes(&H[0], n_var, 0, &OW[0], &Y[0]);
-	if (iterate.penalty_parameter_ == 0) {
-		std::vector<double> H_f_only(num_primal()*num_primal());
-		std::vector<double> OW_f_only(1);
-		OW_f_only[0] = 1.0;
-		std::vector<double> Y_f_only(n_con);
-		for (size_t dual_index=0; dual_index < n_con; ++dual_index) Y[dual_index] = 0.0;
-		fullhes(&H_f_only[0], n_var, 0, &OW_f_only[0], &Y_f_only[0]);
-		
-		for (size_t row_index=0; row_index < n_var; ++row_index)
-			for (size_t col_index=0; col_index < n_var; ++col_index) 
-				H[row_index*n_var + col_index] -= H_f_only[row_index*n_var + col_index];
-	}
+    // the code below is highly suspect.
+    // I think it was necesary in the MATLAB implementation, where we couldn't set
+    // the objective multiplier, but since we can control that with OW[0] now, 
+    // there's no reason not to.
+	// if (iterate.penalty_parameter_ == 0) {
+//         std::vector<double> H_f_only(num_primal()*num_primal());
+//         std::vector<double> OW_f_only(1);
+//         OW_f_only[0] = 1.0;
+//         std::vector<double> Y_f_only(n_con);
+//         for (size_t dual_index=0; dual_index < n_con; ++dual_index) Y[dual_index] = 0.0;
+//         fullhes(&H_f_only[0], n_var, 0, &OW_f_only[0], &Y_f_only[0]);
+//         
+//         for (size_t row_index=0; row_index < n_var; ++row_index)
+//             for (size_t col_index=0; col_index < n_var; ++col_index) 
+//                 H[row_index*n_var + col_index] -= H_f_only[row_index*n_var + col_index];
+//     }
 	
 	matrix return_hessian(n_var, n_var);
 	for (size_t row_index=0; row_index < n_var; ++row_index) {
@@ -583,6 +623,159 @@ matrix AmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
 		}
 	}
 	return return_hessian;
+}
+void AmplNlp::sparse_hessian_update(const iSQOIterate &iterate) {
+	
+}
+
+sparse_matrix AmplNlp::lagrangian_hessian_sparse(const iSQOIterate &iterate) {
+    if (PRINT_) std::cout << "trying to create a sparse hessian." << std::endl;
+    
+    ASL *asl = asl_;
+	std::vector<double> H(num_primal() * num_primal());
+	std::vector<double> OW(1);
+	OW[0] = iterate.penalty_parameter_;
+	std::vector<double> Y(n_con);
+	
+	// funnel dual_{,i}eq_values_ into Y to pass to AMPL.
+	for (size_t dual_eq_index=0; dual_eq_index < iterate.dual_eq_values_.size(); ++dual_eq_index) {
+        Y[equality_constraints_[dual_eq_index]] = iterate.dual_eq_values_[dual_eq_index];
+	}
+	
+	size_t dual_ineq_value_index = 0;
+	for (size_t dual_ineq_lower_index=0; dual_ineq_lower_index < inequality_constraints_lower_.size(); ++dual_ineq_lower_index) {
+        Y[inequality_constraints_lower_[dual_ineq_lower_index]] = -iterate.dual_ieq_values_[dual_ineq_value_index];
+		dual_ineq_value_index++;
+	}
+	for (size_t dual_ineq_upper_index=0; dual_ineq_upper_index < inequality_constraints_upper_.size(); ++dual_ineq_upper_index) {
+        Y[inequality_constraints_upper_[dual_ineq_upper_index]] = iterate.dual_ieq_values_[dual_ineq_value_index];
+		dual_ineq_value_index++;
+	}     
+	
+	// In this call:
+	//	 - H : OUTPUT : vector holding entries of full hessian.
+	//	 - n_var : INPUT : # of variables or something about the stride, maybe.
+	//	 - 0 : INPUT : index of the desired objective.
+	//	 - OW : INPUT : multipliers for objective function ("objective weights")
+	//	 - Y : INPUT : lagrange multipliers for constraints.
+	fullhes(&H[0], n_var, 0, &OW[0], &Y[0]);
+    if (PRINT_) {
+        for (size_t i=0; i<n_var; ++i) {
+            for (size_t j=0; j<n_var; ++j) {
+                std::cout << "H[n_var*i=" << i << ", j=" << j << "]: " << H[n_var*i + j] << std::endl;
+            }
+        }
+    }
+    
+    // fint sphsetup(int nobj, int ow, int y, int uptri)
+    int hessian_nnz = sphsetup(0, 1, 1, 0);
+    
+    if (PRINT_) {
+        std::cout << "nonzeros in hessian: " << hessian_nnz << std::endl;
+    
+        for (size_t current_nonzero=0; current_nonzero<hessian_nnz; ++current_nonzero) {
+            std::cout << "sputinfo->hrownos[current_nonzero = " << current_nonzero << "]: " << sputinfo->hrownos[current_nonzero] << std::endl;
+        }
+        for (size_t current_column=0; current_column<n_var+1; ++current_column) {
+            std::cout << "sputinfo->hcolstarts[current_column = " << current_column<< "]: " << sputinfo->hcolstarts[current_column] << std::endl;
+        }
+    }
+    
+    // void sphes(real *H, int nobj, real *OW, real *Y)
+    std::vector<double> sparse_hessian_values(hessian_nnz);
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCK
+    // FUCKing look at the stupid fucking line: it passes *OW, BUT doesn't seem to take it into effect.
+    // What are the choices here?
+    // Evaluate with zero mult, multiply all of those nonzeros by penalty param, add to eval with real mult?
+    // --> works, but fucking annoying.
+    // Another bug: I think we need to include diagonals into the matrix, lest ye die.
+    // OH... before I pass out: I temporarily added this to the subproblem class. It should be REMOVED!....
+    // Also... currently test_sparse sets all multipliers to zero. Might be important later!
+    sphes(&sparse_hessian_values[0], 0, &OW[0], &Y[0]);
+    if (PRINT_) 
+        for (size_t sparse_hessian_index=0; sparse_hessian_index<hessian_nnz; ++sparse_hessian_index) {
+            std::cout << "sparse_hessian_values[sparse_hessian_index=" << sparse_hessian_index << "]: " << sparse_hessian_values[sparse_hessian_index] << std::endl;
+        }
+    
+    if (PRINT_) std::cout << "===========" << std::endl;
+    sparse_matrix sparse_hessian_(n_var, n_var, hessian_nnz);
+    std::vector<int> sparse_hessian_col_counts(n_var);
+    std::vector<int> sparse_hessian_accumulation_counter(n_var);
+    std::vector<int> sparse_hessian_accumulation(hessian_nnz);
+    std::vector<int> ampl_column_ind(hessian_nnz);
+    for (size_t current_column=0; current_column < n_var; ++current_column) {
+        if (PRINT_) std::cout << "col: " << current_column << ": nonzeros " << sputinfo->hcolstarts[current_column] << " to " << sputinfo->hcolstarts[current_column+1] << std::endl;
+        for (size_t current_nonzero=sputinfo->hcolstarts[current_column]; current_nonzero < sputinfo->hcolstarts[current_column+1]; ++current_nonzero) {
+            int ampl_row = sputinfo->hrownos[current_nonzero];
+            int ampl_col = current_column;
+            int qpOASES_row = ampl_col;
+            int qpOASES_col = ampl_row;
+            
+            if (PRINT_) std::cout << " +-> current_nonzero: " << current_nonzero << "; row: " << ampl_row << std::endl;
+            // std::cout << " ---- new entry: " << 
+            ++sparse_hessian_col_counts[qpOASES_col];
+            sparse_hessian_accumulation[current_nonzero] = sparse_hessian_accumulation_counter[ampl_row]; // technically unnecessary...
+            ampl_column_ind[current_nonzero] = current_column;
+            ++sparse_hessian_accumulation_counter[ampl_row];
+        }
+    }
+    
+    if (PRINT_) std::cout << "sparse_hessian_col_counts  : " << sparse_hessian_col_counts << std::endl;
+    if (PRINT_) std::cout << "sparse_hessian_accumulation_counter: " << sparse_hessian_accumulation_counter << std::endl;
+    if (PRINT_) std::cout << "sparse_hessian_accumulation: " << sparse_hessian_accumulation << std::endl;
+    int current_nonzero_count=0;
+    for (size_t current_column=0; current_column < n_var; ++current_column) {
+        current_nonzero_count += sparse_hessian_col_counts[current_column];
+        sparse_hessian_.col_starts_[current_column+1] = current_nonzero_count;
+    }
+    if (PRINT_) std::cout << "col starts: " << sparse_hessian_.col_starts_ << std::endl;
+    
+    if (PRINT_) std::cout << "===========" << std::endl;
+    std::vector<int> ampl_to_qp_indices(hessian_nnz);
+    for (size_t current_column=0; current_column < n_var; ++current_column) {
+        if (PRINT_) std::cout << "col: " << current_column << ": nonzeros " << sputinfo->hcolstarts[current_column] << " to " << sputinfo->hcolstarts[current_column+1] << std::endl;
+        for (size_t current_nonzero=sputinfo->hcolstarts[current_column]; current_nonzero < sputinfo->hcolstarts[current_column+1]; ++current_nonzero) {
+            int ampl_row = sputinfo->hrownos[current_nonzero];
+            int ampl_col = current_column;
+            int qpOASES_row = ampl_col;
+            int qpOASES_col = ampl_row;
+            
+            ampl_to_qp_indices[current_nonzero] = sparse_hessian_.col_starts_[ampl_row] + sparse_hessian_accumulation[current_nonzero];
+            
+            if (PRINT_) std::cout << " +-> current_nonzero: " << current_nonzero << "; "
+                        << "row: " << ampl_row << "; "
+                        << "qp_col_st[ampl_row]: " << sparse_hessian_.col_starts_[ampl_row] << "; "
+                        << "sparse_hessian_accumulation[current_nonzero]: " << sparse_hessian_accumulation[current_nonzero]
+                        // << std::endl
+                            ;
+            if (PRINT_) std::cout // << " +--> "
+                << "; ampl_to_qp_indices: " << ampl_to_qp_indices[current_nonzero]
+                << "; ampl_cols[<-]: " << ampl_column_ind[ampl_to_qp_indices[current_nonzero]]
+                << std::endl;
+            
+            sparse_hessian_.vals_[current_nonzero] = sparse_hessian_values[ampl_to_qp_indices[current_nonzero]];
+            sparse_hessian_.row_indices_[current_nonzero] = ampl_column_ind[ampl_to_qp_indices[current_nonzero]];
+        }
+    }
+    if (PRINT_) std::cout << "ampl_to_qp_indices: " << ampl_to_qp_indices << std::endl;
+    
+    if (PRINT_) std::cout << "sparse_hessian_: " << sparse_hessian_ << std::endl;
+    return sparse_hessian_;
 }
 
 

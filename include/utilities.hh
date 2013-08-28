@@ -33,6 +33,7 @@ public:
     sparse_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign) : rows_(relevant_variables.size()), columns_(num_cols), vals_(relevant_variables.size()), row_indices_(relevant_variables.size()), col_starts_(num_cols+1) {
         // sparse_matrix retval(relevant_variables.size(),total_variables);
         // double cur_sign = -1.0;
+        if (relevant_variables.size()==0) return;
         std::size_t total_variable_index=0;
         for (std::size_t relevant_variable_index=0; relevant_variable_index < relevant_variables.size(); ++relevant_variable_index) {
             while (total_variable_index < relevant_variables[relevant_variable_index]) {
@@ -48,6 +49,21 @@ public:
         }
     }
     
+    // pure identity:
+    // values_{I_n}: scalar*[1.0, 1.0, 1.0,...] (num_variables entries)
+    // row_indices_{I_n}: [0,1,2,...,num_variables-1] (num_variables entries)
+    // col_starts_{I_n}: [0,1,2,...,num_variables] (num_variables+1 entries)
+    sparse_matrix(std::size_t num_variables, double scalar) : rows_(num_variables), columns_(num_variables), vals_(num_variables), row_indices_(num_variables), col_starts_(num_variables+1) {
+        if (num_variables == 0) return;
+        
+        for (size_t current_nonzero=0; current_nonzero < num_variables; ++current_nonzero) {
+            vals_[current_nonzero] = scalar;
+            row_indices_[current_nonzero] = current_nonzero;
+        }
+        for (size_t current_column=0; current_column < num_variables + 1; ++current_column) {
+            col_starts_[current_column] = current_column;
+        }
+    }
     
     std::size_t num_columns() const { return columns_;}
     std::size_t num_rows() const { return rows_;}
@@ -68,5 +84,7 @@ inline std::ostream& operator<< (std::ostream& os, const sparse_matrix& mat) {
 }
 
 sparse_matrix vertical(const sparse_matrix &lower_var, const sparse_matrix &upper_var);
+sparse_matrix horizontal(const sparse_matrix &left, const sparse_matrix &right);
+
 
 #endif

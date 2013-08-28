@@ -4,6 +4,7 @@
 
 #include "iterate.hh"
 #include "matrix.hh"
+#include "utilities.hh"
 
 class Nlp {
 	// this class implements 
@@ -22,10 +23,13 @@ public:
 	virtual std::vector<double> objective_gradient(const iSQOIterate &iterate) = 0;
 	virtual matrix constraints_equality_jacobian(const iSQOIterate &iterate) = 0;
 	virtual matrix constraints_inequality_jacobian(const iSQOIterate &iterate) = 0;
-	
+	virtual sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate) = 0;
+	virtual sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate) = 0;
+    
 	// second order NLP quantities:
 	virtual matrix lagrangian_hessian(const iSQOIterate &iterate) = 0;
-	
+	virtual sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate) = 0;
+
 	int num_primal();
 	int num_dual();
 	int num_dual_eq();

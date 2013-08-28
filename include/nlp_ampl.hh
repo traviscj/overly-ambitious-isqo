@@ -11,6 +11,7 @@
 
 #include "iterate.hh"
 #include "nlp.hh"
+#include "utilities.hh"
 
 class AmplNlp : public Nlp {
 public:
@@ -30,18 +31,23 @@ public:
 	// first order NLP quantities:
 	std::vector<double> objective_gradient(const iSQOIterate &iterate);
 	matrix constraints_equality_jacobian(const iSQOIterate &iterate);
-	qpOASES::SparseMatrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate);
 	matrix constraints_inequality_jacobian(const iSQOIterate &iterate);
-	
+
+	sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate);
+	sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate);
+    
 	// second order NLP quantities:
 	matrix lagrangian_hessian(const iSQOIterate &iterate);
-	
+	sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate);
 	
 	std::size_t num_lower_ieq();
 	std::size_t num_upper_ieq();
     
 private:
 protected:
+    void sparse_jacobian_update(const iSQOIterate &iterate);
+    void sparse_hessian_update(const iSQOIterate &iterate);
+    
 	bool PRINT_;
 	ASL *asl_;
 	FILE *nl_;
@@ -55,6 +61,10 @@ protected:
 	std::vector<size_t> variable_equality_;
 	std::vector<size_t> variable_bound_lower_;
 	std::vector<size_t> variable_bound_upper_;
+    
+    sparse_matrix sparse_eq_jacobian_;
+    sparse_matrix sparse_ieq_jacobian_;
+    sparse_matrix sparse_hessian_;
 };
 
 #endif

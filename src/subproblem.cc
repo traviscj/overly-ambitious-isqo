@@ -127,7 +127,7 @@ void iSQOQuadraticSubproblem::setup_matrix_data_sparse(const iSQOIterate &iterat
     nlp_hessian_sparse_ = nlp_->lagrangian_hessian_sparse(iterate);
     hessian_sparse_ = sparse_matrix(num_qp_variables_, num_qp_variables_, nlp_hessian_sparse_.num_nnz());
     for (size_t hessian_nonzero_index=0; hessian_nonzero_index < nlp_hessian_sparse_.num_nnz(); ++hessian_nonzero_index) {
-        hessian_sparse_.vals_[hessian_nonzero_index] = iterate.penalty_parameter_ * nlp_hessian_sparse_.vals_[hessian_nonzero_index];
+        hessian_sparse_.vals_[hessian_nonzero_index] = nlp_hessian_sparse_.vals_[hessian_nonzero_index];
         hessian_sparse_.row_indices_[hessian_nonzero_index] = nlp_hessian_sparse_.row_indices_[hessian_nonzero_index];
     }
     for (size_t hessian_column_index=0; hessian_column_index < nlp_hessian_sparse_.num_columns()+1; ++hessian_column_index) {

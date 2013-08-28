@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
     
     qpOASES::SQProblem example_(subproblem.num_qp_variables_, subproblem.num_qp_constraints_, qpOASES::HST_SEMIDEF);
     int nWSR=10000;
+    // hessian_.data_ --> double* dense
 	int ret = example_.init( &subproblem.hessian_.data_[0],
 						 &subproblem.gradient_[0],
 						 &subproblem.jacobian_.data_[0],
@@ -66,8 +67,7 @@ int main(int argc, char **argv) {
      qpOASES::SparseMatrix qpOASES_jacobian(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, &subproblem.jacobian_sparse_.row_indices_[0], &subproblem.jacobian_sparse_.col_starts_[0], &subproblem.jacobian_sparse_.vals_[0]);
  	double* qpOASES_jacobian_full = qpOASES_jacobian.full();
      for (size_t ind=0; ind < subproblem.num_qp_constraints_*subproblem.num_qp_variables_; ++ind) {
-         // std::cout << "qpOASES_jacobian_full[" << ind << "]: " << [ind] << std::endl;
-         // if (subproblem.jacobian_.data_[ind] != qpOASES_jacobian_full[ind])
+         if (subproblem.jacobian_.data_[ind] != qpOASES_jacobian_full[ind])
           {
              std::cout  << "qpOASES_jacobian_full[" << ind 
                         << "]: dense: " << subproblem.jacobian_.data_[ind] 
@@ -75,10 +75,10 @@ int main(int argc, char **argv) {
          }
      }
      qpOASES::SymSparseMat qpOASES_hessian(subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.hessian_sparse_.row_indices_[0], &subproblem.hessian_sparse_.col_starts_[0], &subproblem.hessian_sparse_.vals_[0]);
-     // qpOASES_hessian.createDiagInfo();
+     qpOASES_hessian.createDiagInfo();
  	double* qpOASES_hessian_full = qpOASES_hessian.full();
      for (size_t ind=0; ind < subproblem.num_qp_variables_*subproblem.num_qp_variables_; ++ind) {
-         // if (subproblem.hessian_.data_[ind] != qpOASES_hessian_full[ind]) 
+         if (subproblem.hessian_.data_[ind] != qpOASES_hessian_full[ind]) 
          {
              std::cout  << "qpOASES_hessian_full[" << ind 
                         << "]: dense: " << subproblem.hessian_.data_[ind] 

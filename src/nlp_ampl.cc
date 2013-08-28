@@ -667,8 +667,9 @@ sparse_matrix AmplNlp::lagrangian_hessian_sparse(const iSQOIterate &iterate) {
         }
     }
     
+    assert(n_obj == 1);
     // fint sphsetup(int nobj, int ow, int y, int uptri)
-    int hessian_nnz = sphsetup(0, 1, 1, 0);
+    int hessian_nnz = sphsetup(-1, 1, 1, 0);
     
     if (PRINT_) {
         std::cout << "nonzeros in hessian: " << hessian_nnz << std::endl;
@@ -704,9 +705,13 @@ sparse_matrix AmplNlp::lagrangian_hessian_sparse(const iSQOIterate &iterate) {
     // Evaluate with zero mult, multiply all of those nonzeros by penalty param, add to eval with real mult?
     // --> works, but fucking annoying.
     // Another bug: I think we need to include diagonals into the matrix, lest ye die.
-    // OH... before I pass out: I temporarily added this to the subproblem class. It should be REMOVED!....
     // Also... currently test_sparse sets all multipliers to zero. Might be important later!
-    sphes(&sparse_hessian_values[0], 0, &OW[0], &Y[0]);
+    // sphes arguments:
+    //  - 0: pointer to array to fill nonzero values into.
+    //  - 1: which objective function to use.
+    //  - 2: pointer to array of 'objective weights'
+    //  - 3: pointer to array of lagrange multipliers.
+    sphes(&sparse_hessian_values[0], -1, &OW[0], &Y[0]); // &OW[0], &Y[0]
     if (PRINT_) 
         for (size_t sparse_hessian_index=0; sparse_hessian_index<hessian_nnz; ++sparse_hessian_index) {
             std::cout << "sparse_hessian_values[sparse_hessian_index=" << sparse_hessian_index << "]: " << sparse_hessian_values[sparse_hessian_index] << std::endl;

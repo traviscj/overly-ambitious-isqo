@@ -4,8 +4,13 @@
 
 #include "nlp_ampl.hh"
 
+SparseAmplNlp::SparseAmplNlp(std::string stub_str) : DenseAmplNlp(stub_str), sparse_eq_jacobian_(0,0,0), sparse_ieq_jacobian_(0,0,0), sparse_hessian_(0,0,0) {
+}
+DenseAmplNlp::DenseAmplNlp(std::string stub_str) : AmplNlp(stub_str) {
+}
+
 // AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
-AmplNlp::AmplNlp(std::string stub_str) : Nlp(-1,-1,-1), PRINT_(false), sparse_eq_jacobian_(0,0,0), sparse_ieq_jacobian_(0,0,0), sparse_hessian_(0,0,0) {
+AmplNlp::AmplNlp(std::string stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
 	if (PRINT_) std::cout << "Constructing an AmplNlp" << std::endl;
 	ASL *asl;
 	asl = ASL_alloc(ASL_read_pfgh);
@@ -230,7 +235,7 @@ std::vector<double> AmplNlp::objective_gradient(const iSQOIterate &iterate) {
 	
 	return return_gradient;
 }
-matrix AmplNlp::constraints_equality_jacobian(const iSQOIterate &iterate) {
+matrix DenseAmplNlp::constraints_equality_jacobian(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(num_primal());
 	
@@ -253,7 +258,7 @@ matrix AmplNlp::constraints_equality_jacobian(const iSQOIterate &iterate) {
 
 	return equality_constraint_jacobian;
 }
-void AmplNlp::sparse_jacobian_update(const iSQOIterate &iterate) {
+void SparseAmplNlp::sparse_jacobian_update(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(num_primal());
 	
@@ -499,7 +504,7 @@ void AmplNlp::sparse_jacobian_update(const iSQOIterate &iterate) {
     PRINT_ = false;
     return;
 }
-sparse_matrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIterate &iterate) {
+sparse_matrix SparseAmplNlp::constraints_equality_jacobian_sparse(const iSQOIterate &iterate) {
     sparse_jacobian_update(iterate);
     // std::cout << "qpoases_eq_jacobian_: " << sparse_eq_jacobian_ << std::endl;
     // double *testmat_eq_full = qpoases_eq_jacobian_.full();
@@ -512,12 +517,12 @@ sparse_matrix AmplNlp::constraints_equality_jacobian_sparse(const iSQOIterate &i
     // qpOASES::SparseMatrix retval(qpoases_eq_jacobian_);
 	return sparse_eq_jacobian_;
 }
-sparse_matrix AmplNlp::constraints_inequality_jacobian_sparse(const iSQOIterate &iterate) {
+sparse_matrix SparseAmplNlp::constraints_inequality_jacobian_sparse(const iSQOIterate &iterate) {
     sparse_jacobian_update(iterate);
     // qpOASES::SparseMatrix retval(qpoases_ieq_jacobian_);
 	return sparse_ieq_jacobian_;
 }
-matrix AmplNlp::constraints_inequality_jacobian(const iSQOIterate &iterate) {
+matrix DenseAmplNlp::constraints_inequality_jacobian(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(num_primal());
 	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index){
@@ -566,7 +571,7 @@ matrix AmplNlp::constraints_inequality_jacobian(const iSQOIterate &iterate) {
 }
 
 // second order NLP quantities:
-matrix AmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
+matrix DenseAmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> H(num_primal() * num_primal());
 	std::vector<double> OW(1);
@@ -624,11 +629,11 @@ matrix AmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
 	}
 	return return_hessian;
 }
-void AmplNlp::sparse_hessian_update(const iSQOIterate &iterate) {
+void SparseAmplNlp::sparse_hessian_update(const iSQOIterate &iterate) {
 	
 }
 
-sparse_matrix AmplNlp::lagrangian_hessian_sparse(const iSQOIterate &iterate) {
+sparse_matrix SparseAmplNlp::lagrangian_hessian_sparse(const iSQOIterate &iterate) {
     if (PRINT_) std::cout << "trying to create a sparse hessian." << std::endl;
     
     ASL *asl = asl_;
@@ -682,35 +687,13 @@ sparse_matrix AmplNlp::lagrangian_hessian_sparse(const iSQOIterate &iterate) {
         }
     }
     
-    // void sphes(real *H, int nobj, real *OW, real *Y)
     std::vector<double> sparse_hessian_values(hessian_nnz);
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCK
-    // FUCKing look at the stupid fucking line: it passes *OW, BUT doesn't seem to take it into effect.
-    // What are the choices here?
-    // Evaluate with zero mult, multiply all of those nonzeros by penalty param, add to eval with real mult?
-    // --> works, but fucking annoying.
-    // Another bug: I think we need to include diagonals into the matrix, lest ye die.
-    // Also... currently test_sparse sets all multipliers to zero. Might be important later!
+    // void sphes(real *H, int nobj, real *OW, real *Y)
     // sphes arguments:
-    //  - 0: pointer to array to fill nonzero values into.
-    //  - 1: which objective function to use.
-    //  - 2: pointer to array of 'objective weights'
-    //  - 3: pointer to array of lagrange multipliers.
+    //  - 0: *H: pointer to array to fill nonzero values into.
+    //  - 1: nobj: which objective function to use (-1 specifies 'all', counter to all the documentation & dense syntax.)
+    //  - 2: *OW: pointer to array of 'objective weights'
+    //  - 3: *Y: pointer to array of lagrange multipliers.
     sphes(&sparse_hessian_values[0], -1, &OW[0], &Y[0]); // &OW[0], &Y[0]
     if (PRINT_) 
         for (size_t sparse_hessian_index=0; sparse_hessian_index<hessian_nnz; ++sparse_hessian_index) {

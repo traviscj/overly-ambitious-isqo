@@ -32,6 +32,17 @@ public:
 	matrix nlp_ieq_jacobian_;
 	std::vector<double> nlp_objective_gradient_;
 
+	
+private:
+protected:
+    void setup_matrix_data(const iSQOIterate &);
+    
+};
+
+class iSQOSparseQuadraticSubproblem : public iSQOQuadraticSubproblem {
+public:
+	iSQOSparseQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
+	
     sparse_matrix jacobian_sparse_;
     sparse_matrix hessian_sparse_;
 	sparse_matrix nlp_hessian_sparse_;
@@ -40,9 +51,7 @@ public:
 	
 private:
 protected:
-    void setup_matrix_data(const iSQOIterate &);
     void setup_matrix_data_sparse(const iSQOIterate &);
-    
 };
 
 #endif /* end of include guard: SUBPROBLEM_HH_FOZWW1AF */

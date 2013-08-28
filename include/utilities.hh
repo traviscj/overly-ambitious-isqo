@@ -83,8 +83,12 @@ inline std::ostream& operator<< (std::ostream& os, const sparse_matrix& mat) {
     return os;
 }
 
+// TODO: 'add_to_diag' function for sparse_matrix.
+// TODO: change this to 'append_below' & put into sparse_matrix class.
 sparse_matrix vertical(const sparse_matrix &lower_var, const sparse_matrix &upper_var);
+// TODO: change this to 'append_right' & put into sparse_matrix class.
 sparse_matrix horizontal(const sparse_matrix &left, const sparse_matrix &right);
 
+// TODO: move sparse_matrix class into it's own class.
 
 #endif

@@ -11,9 +11,15 @@
 #include "hessian_shifter.hh"
 
 
-HessianShifter::HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), solve_qp_(nlp), last_shift_(0.0) {
-	
+HessianShifter::HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), last_shift_(0.0) {
+    // TODO: support sparsity here.
+    // .... i think I could just have a HS::HS(SparseNlp &sparse_nlp) going.
+    // but the real question is: does it even matter?
+    // another question: maybe we should just accept a solver? (except currently they do not stick around.)
+    // or could also make the function not virtual void.
+	solve_qp_ = new SolveDenseQuadraticProgram(nlp);
 }
+
 iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSubproblem &subproblem) {
 	bool PRINT=false;
 	double shift_w0 = 1e-4;
@@ -27,7 +33,7 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 	
 	// try to solve without regularization:
 	subproblem.inc_regularization(current_shift);
-	iSQOStep return_step = solve_qp_(subproblem);
+	iSQOStep return_step = (*solve_qp_)(subproblem);
 	
 	
 	int current_regularization_steps = 0;
@@ -37,11 +43,11 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 	}
 	
 	// matrix hessian = nlp_->lagrangian_hessian(iterate);
-	std::vector<double> hessian_step = subproblem.hessian_.multiply(current_step_values);
+	std::vector<double> hessian_times_step = subproblem.hessian_.multiply(current_step_values);
 	if (PRINT) std::cout << "hessian step: " << subproblem.hessian_ << std::endl;
 	double total = 0.0;
 	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
-		total += hessian_step[primal_index] * return_step.primal_values_[primal_index];
+		total += hessian_times_step[primal_index] * return_step.primal_values_[primal_index];
 	}
 	if (PRINT) std::cout << std::endl << "total: " << total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;
 	if (PRINT) std::cout << "required: " << (total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
@@ -61,18 +67,18 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 			}
 		}
 		subproblem.inc_regularization(current_shift);
-		return_step = solve_qp_(subproblem);
+		return_step = (*solve_qp_)(subproblem);
 		
 		for (size_t primal_index = 0; primal_index < nlp_->num_primal(); ++primal_index) {
 			current_step_values[primal_index] = return_step.primal_values_[primal_index];
 		}
 		if (PRINT) std::cout << "hessian: " << subproblem.hessian_ << std::endl;
 		if (PRINT) std::cout << "return step: " << return_step.primal_values_ << std::endl;
-		hessian_step = subproblem.hessian_.multiply(current_step_values);
-		if (PRINT) std::cout << "hessian step: " << hessian_step << std::endl;
+		hessian_times_step = subproblem.hessian_.multiply(current_step_values);
+		if (PRINT) std::cout << "hessian step: " << hessian_times_step << std::endl;
 		total = 0.0;
 		for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
-			total += hessian_step[primal_index] * return_step.primal_values_[primal_index];
+			total += hessian_times_step[primal_index] * return_step.primal_values_[primal_index];
 		}
 		if (PRINT) std::cout << "current_shift: " << current_shift << std::endl;
 		if (PRINT) std::cout << std::endl << "total: " << total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;

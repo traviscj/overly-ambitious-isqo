@@ -23,18 +23,12 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
 			nlp_hessian_(num_nlp_variables_, num_nlp_variables_),
 			nlp_eq_jacobian_(num_nlp_constraints_eq_, num_nlp_variables_),
 			nlp_ieq_jacobian_(num_nlp_constraints_ieq_, num_nlp_variables_),
-			nlp_objective_gradient_(num_nlp_variables_),
-            hessian_sparse_(nlp.num_dual(), nlp.num_primal() + 2*nlp.num_dual(), 0),
-            jacobian_sparse_(nlp.num_dual(), nlp.num_primal() + 2*nlp.num_dual(), 0),
-            nlp_hessian_sparse_(nlp.num_primal() + 2*nlp.num_dual(), nlp.num_primal() + 2*nlp.num_dual(),500),
-            nlp_eq_jacobian_sparse_(nlp.num_dual_eq(), nlp.num_primal() + 2*nlp.num_dual(),500),
-            nlp_ieq_jacobian_sparse_(nlp.num_dual_ieq(), nlp.num_primal() + 2*nlp.num_dual(),500)
+			nlp_objective_gradient_(num_nlp_variables_)
  {
 	nlp_objective_gradient_ = nlp_->objective_gradient(iterate);
 	
     // setup matrix data
     setup_matrix_data(iterate);
-    setup_matrix_data_sparse(iterate);
     
 	// NLP gradient copied over
 	for (size_t primal_index=0; primal_index<iterate.num_primal_; ++primal_index)
@@ -81,15 +75,15 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate) {
 			jacobian_.set(eq_constraint_index,variables, nlp_eq_jacobian_.get(eq_constraint_index,variables));
 		}
 		jacobian_.set(eq_constraint_index,nlp_->num_primal()+eq_constraint_index, -1.0);
-		jacobian_.set(eq_constraint_index,nlp_->num_primal()+iterate.num_dual_eq_+eq_constraint_index, +1.0);
+		jacobian_.set(eq_constraint_index,nlp_->num_primal()+iterate.num_dual_eq_+iterate.num_dual_ieq_+eq_constraint_index, +1.0);
 	}
 			
 	for (size_t ieq_constraint_index=0; ieq_constraint_index < iterate.num_dual_ieq_; ++ieq_constraint_index) {
 		for (size_t variables=0; variables<iterate.num_primal_; ++variables) {
 			jacobian_.set(iterate.num_dual_eq_+ieq_constraint_index,variables, nlp_ieq_jacobian_.get(ieq_constraint_index,variables));
 		}
-		jacobian_.set(iterate.num_dual_eq_+ieq_constraint_index, nlp_->num_primal()+2*iterate.num_dual_eq_+ieq_constraint_index, -1.0);
-		jacobian_.set(iterate.num_dual_eq_+ieq_constraint_index, nlp_->num_primal()+2*iterate.num_dual_eq_+iterate.num_dual_ieq_+ieq_constraint_index, +1.0);
+		jacobian_.set(iterate.num_dual_eq_+ieq_constraint_index, nlp_->num_primal()+iterate.num_dual_eq_+ieq_constraint_index, -1.0);
+		jacobian_.set(iterate.num_dual_eq_+ieq_constraint_index, nlp_->num_primal()+iterate.num_dual_eq_+iterate.num_dual_ieq_+iterate.num_dual_eq_+ieq_constraint_index, +1.0);
 	}
     
 	for (size_t r=0; r<iterate.num_primal_; ++r) {
@@ -99,56 +93,7 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate) {
 	}
 }
 
-void iSQOQuadraticSubproblem::setup_matrix_data_sparse(const iSQOIterate &iterate) {
-	
-    std::cout << "iSQOQuadraticSubproblem::setup_matrix_data_sparse" << std::endl;
-    
-    // JACOBIAN PART
-	nlp_eq_jacobian_sparse_ = nlp_->constraints_equality_jacobian_sparse(iterate);
-    std::cout << "nlp_eq_jacobian_sparse_: " << nlp_eq_jacobian_sparse_ << std::endl;
-	nlp_ieq_jacobian_sparse_ = nlp_->constraints_inequality_jacobian_sparse(iterate);
-    std::cout << "nlp_ieq_jacobian_sparse_: " << nlp_ieq_jacobian_sparse_ << std::endl;
-	
-    sparse_matrix jacobian_eq_ieq = vertical(nlp_eq_jacobian_sparse_, nlp_ieq_jacobian_sparse_);
-    std::cout << "jacobian_eq_ieq: " << jacobian_eq_ieq << std::endl;
-    
-    sparse_matrix jacobian_p_slack(iterate.num_dual_eq_+iterate.num_dual_ieq_, -1.0);
-    std::cout << "jacobian_p_slack: " << jacobian_p_slack << std::endl;
-    sparse_matrix jacobian_n_slack(iterate.num_dual_eq_+iterate.num_dual_ieq_, +1.0);
-    std::cout << "jacobian_n_slack: " << jacobian_n_slack << std::endl;
-    sparse_matrix jacobian_slacks = horizontal(jacobian_p_slack, jacobian_n_slack);
-    std::cout << "jacobian_slacks: " << jacobian_slacks << std::endl;
-    
-    jacobian_sparse_ = horizontal(jacobian_eq_ieq,jacobian_slacks);
-    std::cout << "jacobian_sparse: " << jacobian_sparse_ << std::endl;
-    
-    // LAGRANGIAN PART
-    nlp_hessian_sparse_ = nlp_->lagrangian_hessian_sparse(iterate);
-    sparse_matrix hess_left_bottom(2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), num_nlp_variables_, 0);    // null matrix for lower left
-    sparse_matrix hess_right_top(num_nlp_variables_, 2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), 0);  // null matrix for upper right.
-    sparse_matrix hess_right_bottom(2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), 0.0);            // 0.0*I_{2*num_qp_con} for lower right. (fixes bug in qpOASES...)
-    std::cout << "hess_right_bottom: " << hess_right_bottom << std::endl;
-    
-    sparse_matrix hess_left = vertical(nlp_hessian_sparse_, hess_left_bottom);
-    std::cout << "hess_left: " << hess_left << std::endl;
-    sparse_matrix hess_right = vertical(hess_right_top, hess_right_bottom);
-    std::cout << "hess_right: " << hess_right << std::endl;
-    hessian_sparse_ = horizontal(hess_left, hess_right);
-    std::cout << "hessian_sparse_: " << hessian_sparse_ << std::endl;
-    
-    // hessian_sparse_ = sparse_matrix(num_qp_variables_, num_qp_variables_, nlp_hessian_sparse_.num_nnz());
-    // for (size_t hessian_nonzero_index=0; hessian_nonzero_index < nlp_hessian_sparse_.num_nnz(); ++hessian_nonzero_index) {
-    //     hessian_sparse_.vals_[hessian_nonzero_index] = nlp_hessian_sparse_.vals_[hessian_nonzero_index];
-    //     hessian_sparse_.row_indices_[hessian_nonzero_index] = nlp_hessian_sparse_.row_indices_[hessian_nonzero_index];
-    // }
-    // for (size_t hessian_column_index=0; hessian_column_index < nlp_hessian_sparse_.num_columns()+1; ++hessian_column_index) {
-    //     hessian_sparse_.col_starts_[hessian_column_index] = nlp_hessian_sparse_.col_starts_[hessian_column_index];
-    // }
-    // for (size_t hessian_column_index=nlp_hessian_sparse_.num_columns(); hessian_column_index < num_qp_variables_; ++hessian_column_index) {
-    //     hessian_sparse_.col_starts_[hessian_column_index+1] = nlp_hessian_sparse_.col_starts_[nlp_hessian_sparse_.num_columns()];
-    // }
-    
-}
+
 
 void iSQOQuadraticSubproblem::inc_regularization(double hessian_shift) {
 	bool PRINT = false;
@@ -184,3 +129,55 @@ void iSQOQuadraticSubproblem::print() const {
 	std::cout << "lbA = " << jacobian_lower_bound_ << "';" << std::endl;
 	std::cout << "ubA = " << jacobian_upper_bound_ << "';" << std::endl;
 }
+
+iSQOSparseQuadraticSubproblem::iSQOSparseQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate) :
+    iSQOQuadraticSubproblem(nlp, iterate),
+    hessian_sparse_(nlp.num_dual(), nlp.num_primal() + 2*nlp.num_dual(), 0),
+    jacobian_sparse_(nlp.num_dual(), nlp.num_primal() + 2*nlp.num_dual(), 0),
+    nlp_hessian_sparse_(nlp.num_primal() + 2*nlp.num_dual(), nlp.num_primal() + 2*nlp.num_dual(),500),
+    nlp_eq_jacobian_sparse_(nlp.num_dual_eq(), nlp.num_primal() + 2*nlp.num_dual(),500),
+    nlp_ieq_jacobian_sparse_(nlp.num_dual_ieq(), nlp.num_primal() + 2*nlp.num_dual(),500)
+    {
+        
+        setup_matrix_data_sparse(iterate);
+}
+
+void iSQOSparseQuadraticSubproblem::setup_matrix_data_sparse(const iSQOIterate &iterate) {
+	
+    // std::cout << "iSQOQuadraticSubproblem::setup_matrix_data" << std::endl;
+    
+    // JACOBIAN PART
+	nlp_eq_jacobian_sparse_ = nlp_->constraints_equality_jacobian_sparse(iterate);
+    // std::cout << "nlp_eq_jacobian_sparse_: " << nlp_eq_jacobian_sparse_ << std::endl;
+	nlp_ieq_jacobian_sparse_ = nlp_->constraints_inequality_jacobian_sparse(iterate);
+    // std::cout << "nlp_ieq_jacobian_sparse_: " << nlp_ieq_jacobian_sparse_ << std::endl;
+	
+    sparse_matrix jacobian_eq_ieq = vertical(nlp_eq_jacobian_sparse_, nlp_ieq_jacobian_sparse_);
+    // std::cout << "jacobian_eq_ieq: " << jacobian_eq_ieq << std::endl;
+    
+    sparse_matrix jacobian_p_slack(iterate.num_dual_eq_+iterate.num_dual_ieq_, -1.0);
+    // std::cout << "jacobian_p_slack: " << jacobian_p_slack << std::endl;
+    sparse_matrix jacobian_n_slack(iterate.num_dual_eq_+iterate.num_dual_ieq_, +1.0);
+    // std::cout << "jacobian_n_slack: " << jacobian_n_slack << std::endl;
+    sparse_matrix jacobian_slacks = horizontal(jacobian_p_slack, jacobian_n_slack);
+    // std::cout << "jacobian_slacks: " << jacobian_slacks << std::endl;
+    
+    jacobian_sparse_ = horizontal(jacobian_eq_ieq,jacobian_slacks);
+    // std::cout << "jacobian_sparse: " << jacobian_sparse_ << std::endl;
+    
+    // LAGRANGIAN PART
+    nlp_hessian_sparse_ = nlp_->lagrangian_hessian_sparse(iterate);
+    sparse_matrix hess_left_bottom(2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), num_nlp_variables_, 0);    // null matrix for lower left
+    sparse_matrix hess_right_top(num_nlp_variables_, 2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), 0);  // null matrix for upper right.
+    sparse_matrix hess_right_bottom(2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), 0.0);            // 0.0*I_{2*num_qp_con} for lower right. (fixes bug in qpOASES...)
+    // std::cout << "hess_right_bottom: " << hess_right_bottom << std::endl;
+    
+    sparse_matrix hess_left = vertical(nlp_hessian_sparse_, hess_left_bottom);
+    // std::cout << "hess_left: " << hess_left << std::endl;
+    sparse_matrix hess_right = vertical(hess_right_top, hess_right_bottom);
+    // std::cout << "hess_right: " << hess_right << std::endl;
+    hessian_sparse_ = horizontal(hess_left, hess_right);
+    // std::cout << "hessian_sparse_: " << hessian_sparse_ << std::endl;
+    
+}
+

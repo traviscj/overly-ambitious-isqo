@@ -9,7 +9,7 @@ public:
 	double get_last_shift() const ;
 private:
 protected:
-	SolveQuadraticProgram solve_qp_;
+	SolveQuadraticProgram *solve_qp_;
 	double last_shift_;
 };
 

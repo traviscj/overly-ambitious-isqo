@@ -30,24 +30,11 @@ public:
 	
 	// first order NLP quantities:
 	std::vector<double> objective_gradient(const iSQOIterate &iterate);
-	matrix constraints_equality_jacobian(const iSQOIterate &iterate);
-	matrix constraints_inequality_jacobian(const iSQOIterate &iterate);
-
-	sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate);
-	sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate);
-    
-	// second order NLP quantities:
-	matrix lagrangian_hessian(const iSQOIterate &iterate);
-	sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate);
 	
 	std::size_t num_lower_ieq();
 	std::size_t num_upper_ieq();
-    
 private:
 protected:
-    void sparse_jacobian_update(const iSQOIterate &iterate);
-    void sparse_hessian_update(const iSQOIterate &iterate);
-    
 	bool PRINT_;
 	ASL *asl_;
 	FILE *nl_;
@@ -61,7 +48,56 @@ protected:
 	std::vector<size_t> variable_equality_;
 	std::vector<size_t> variable_bound_lower_;
 	std::vector<size_t> variable_bound_upper_;
+};
+
+class DenseAmplNlp : public AmplNlp {
+public:
+	// AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
+	DenseAmplNlp(std::string stub_str);
+	
+	~DenseAmplNlp() { }
+	    
+	matrix constraints_equality_jacobian(const iSQOIterate &iterate);
+	matrix constraints_inequality_jacobian(const iSQOIterate &iterate);
+	matrix lagrangian_hessian(const iSQOIterate &iterate);
+	
+	std::size_t num_lower_ieq();
+	std::size_t num_upper_ieq();
     
+    
+	sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate) { throw "not implemented"; }
+	sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate) { throw "not implemented"; }
+	sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate) { throw "not implemented"; }
+    
+private:
+protected:
+};
+
+class SparseAmplNlp : public DenseAmplNlp {
+public:
+	// AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
+	SparseAmplNlp(std::string stub_str);
+	
+	~SparseAmplNlp() { }
+	
+	// first order NLP quantities:
+	sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate);
+	sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate);
+	// second order NLP quantities:
+	sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate);
+	
+    
+    // matrix constraints_equality_jacobian(const iSQOIterate &iterate) { throw "not implemented"; } 
+    // matrix constraints_inequality_jacobian(const iSQOIterate &iterate) { throw "not implemented"; }
+    // // second order NLP quantities:
+    // matrix lagrangian_hessian(const iSQOIterate &iterate) { throw "not implemented"; }
+	
+private:
+protected:
+    void sparse_jacobian_update(const iSQOIterate &iterate);
+    void sparse_hessian_update(const iSQOIterate &iterate);
+
+    // TODO make these returned, let a caching class worry about it.
     sparse_matrix sparse_eq_jacobian_;
     sparse_matrix sparse_ieq_jacobian_;
     sparse_matrix sparse_hessian_;

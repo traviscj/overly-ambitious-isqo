@@ -62,7 +62,7 @@ sparse_matrix vertical(const sparse_matrix &top, const sparse_matrix &bottom) {
 }
 
 sparse_matrix horizontal(const sparse_matrix &left, const sparse_matrix &right) {
-    assert(top.num_rows() == bottom.num_rows());
+    assert(left.num_rows() == right.num_rows());
     sparse_matrix result(   left.num_rows(),
                             left.num_columns() + right.num_columns(), 
                             left.num_nnz() + right.num_nnz());

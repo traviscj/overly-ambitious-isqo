@@ -42,13 +42,14 @@ protected:
 class iSQOSparseQuadraticSubproblem : public iSQOQuadraticSubproblem {
 public:
 	iSQOSparseQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
-	
+	void inc_regularization(double hessian_shift);
     sparse_matrix jacobian_sparse_;
     sparse_matrix hessian_sparse_;
 	sparse_matrix nlp_hessian_sparse_;
 	sparse_matrix nlp_eq_jacobian_sparse_;
 	sparse_matrix nlp_ieq_jacobian_sparse_;
 	
+    double hessian_shift_;
 private:
 protected:
     void setup_matrix_data_sparse(const iSQOIterate &);

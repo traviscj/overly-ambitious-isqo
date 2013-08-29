@@ -180,4 +180,21 @@ void iSQOSparseQuadraticSubproblem::setup_matrix_data_sparse(const iSQOIterate &
     // std::cout << "hessian_sparse_: " << hessian_sparse_ << std::endl;
     
 }
-
+void iSQOSparseQuadraticSubproblem::inc_regularization(double hessian_shift) {
+	bool PRINT = false;
+    // make a copy of the diagonal entries, if we haven't already got one...
+    if (! first_shift_) {
+        if (PRINT) std::cout << "making the first-time-only copy..." << std::endl;
+        for (size_t diagonal_entry=0; diagonal_entry<num_nlp_variables_; ++diagonal_entry) {
+                unshifted_hessian_diagonal_[diagonal_entry] = hessian_.get(diagonal_entry,diagonal_entry);
+        }
+        first_shift_ = true;
+    }
+    hessian_shift_ = hessian_shift;
+    for (size_t diagonal_entry=0; diagonal_entry<num_nlp_variables_; ++diagonal_entry) {
+            hessian_.set(diagonal_entry,diagonal_entry, unshifted_hessian_diagonal_[diagonal_entry] + hessian_shift);
+    }
+    for (size_t diagonal_entry=num_nlp_variables_; diagonal_entry < num_qp_variables_; ++diagonal_entry) {
+        hessian_.set(diagonal_entry, diagonal_entry, hessian_shift);
+    }
+}

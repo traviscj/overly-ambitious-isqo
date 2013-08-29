@@ -1,16 +1,17 @@
 
-# QPOASES_PATH=/Users/traviscj/optimization/qpOASES
-QPOASES_PATH=/Users/traviscj/LocalPrograms/qpOASES-3.0beta
+QPOASES_PATH=/Users/traviscj/LocalPrograms/qpOASES-dj
+QPOASES_INC=-I${QPOASES_PATH}/include_aw
+QPOASES_LIB=-L${QPOASES_PATH}/bin -lqpOASES_aw
 
-# AMPL_LIB=/Users/traviscj/LocalPrograms/ampl/solvers/amplsolver.a
-AMPL_LIB=/Users/traviscj/LocalPrograms/ampl/solvers/amplsolver-debug.a
-AMPL_INC=-I/Users/traviscj/LocalPrograms/ampl/solvers/
+AMPL_PATH=/Users/traviscj/LocalPrograms/ampl/solvers
+AMPL_INC=-I${AMPL_PATH}
+AMPL_LIB=${AMPL_PATH}/amplsolver-debug.a
 
 UNITTEST_LIB=-L/usr/local/lib -lUnitTest++
 
-CFLAGS_INC=-I${QPOASES_PATH}/include ${AMPL_INC} -I../include/
+CFLAGS_INC=${QPOASES_INC} ${AMPL_INC} -I../include/
 CFLAGS=-O0 -g -std=c++11 ${CFLAGS_INC}
-LDFLAGS=-L${QPOASES_PATH}/bin -lqpOASES ${UNITTEST_LIB}
+LDFLAGS=${QPOASES_LIB} ${UNITTEST_LIB}
 # -lqpOASESextras
 # ${QPOASES_PATH}/src/libqpOASES.a ${QPOASES_PATH}/src/libqpOASESextras.a
 LDFLAGS+=-L/usr/local/Cellar/gfortran/4.8.1/gfortran/lib -lgfortran  -llapack -lblas ${AMPL_LIB}
@@ -20,16 +21,20 @@ OBJECTS=utilities.o step.o iterate.o matrix.o nlp.o nlp_hs014.o nlp_ampl.o \
 		residual_function.o solve_subproblem.o linear_model.o \
 		linear_model_reduction.o line_search.o hessian_shifter.o \
 		text_output.o
-		
+
 tests_src=$(wildcard test*.cc)
 tests_bin=$(subst .cc,,${tests_src})
 
-default: isqo run
+default: isqo-sparse isqo-dense
 
 run: isqo
 	./isqo
-isqo: ${OBJECTS}
-	g++-4.8 ${OBJECTS} isqo_functor.cc -o isqo  ${CFLAGS} ${LDFLAGS}
+
+isqo-sparse: isqo_functor.cc ${OBJECTS}
+	g++-4.8 -DISQO_USE_SPARSE ${OBJECTS} isqo_functor.cc -o isqo-sparse  ${CFLAGS} ${LDFLAGS}
+isqo-dense: isqo_functor.cc ${OBJECTS}
+	g++-4.8 ${OBJECTS} isqo_functor.cc -o isqo-dense  ${CFLAGS} ${LDFLAGS}
+
 tests: ${tests_bin}
 
 test_%: test_%.cc ${OBJECTS}

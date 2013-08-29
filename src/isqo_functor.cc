@@ -66,21 +66,34 @@
 
 // standard libraries:
 #include <iostream>
-#include <vector>
 #include <limits>
+#include <string>
+#include <vector>
 #include <cmath>
 #include <cassert>
 
 // iSQO headers:
 #include "isqo.hh"
 
+#ifdef ISQO_USE_SPARSE
+const std::string sparse_version_string = "SparseAmplNlp and iSQOSparseQuadraticSubproblem";
+#define MAGIC_PROBLEM SparseAmplNlp
+#define MAGIC_SUBPROBLEM iSQOSparseQuadraticSubproblem
+#else
+const std::string sparse_version_string = "DenseAmplNlp and iSQOQuadraticSubproblem";
+#define MAGIC_PROBLEM DenseAmplNlp
+#define MAGIC_SUBPROBLEM iSQOQuadraticSubproblem
+#endif
+
 int main(int argc, char **argv) {
 	
+    std::cout << "Hello world! We're serving " << sparse_version_string << " today, please buckle your seat belts and prepare for takeoff..." << std::endl;
 	std::string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs067.nl");
 	if (argc>1) {
 		problem_file = std::string(argv[1]);
 	}
-	AmplNlp problem(problem_file);
+    // DenseAmplNlp problem(problem_file);
+    MAGIC_PROBLEM problem(problem_file);
 	
 	// Utilities for NLP:
 	PenaltyFunction penalty_function(problem);
@@ -141,8 +154,8 @@ int main(int argc, char **argv) {
 		// ALGORITHM A // STEP 3
 		//////////////////////////
 		// Penalty problem is set up AND SOLVED, 
-		iSQOQuadraticSubproblem penalty_subproblem(problem, penalty_iterate);
-		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_iterate, penalty_subproblem);
+		MAGIC_SUBPROBLEM penalty_subproblem(problem, penalty_iterate);
+		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_subproblem);
 		iSQOStep feasibility_step(problem.num_primal(),problem.num_dual_eq(),problem.num_dual_ieq());
 		
 		// per-iteration variable setup.
@@ -162,8 +175,8 @@ int main(int argc, char **argv) {
 			// ALGORITHM A // STEP 4
 			//////////////////////////
 			// Feasibility problem is set up and solved.
-			iSQOQuadraticSubproblem feasibility_subproblem(problem, feasibility_iterate);
-			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_iterate, feasibility_subproblem);
+			MAGIC_SUBPROBLEM feasibility_subproblem(problem, feasibility_iterate);
+			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_subproblem);
 			
 			if (linear_reduction(penalty_iterate,penalty_step) >= linear_decrease_threshold*linear_reduction(feasibility_iterate,feasibility_step)) {
 				//////////////////////////
@@ -182,7 +195,7 @@ int main(int argc, char **argv) {
 					
 					combination_step_contribution_from_penalty_step = convex_combination_search_decrease*combination_step_contribution_from_penalty_step;
 					++num_comb_reductions;
-					assert(! (num_comb_reductions >= max_num_comb_reductions));
+                    // assert(! (num_comb_reductions >= max_num_comb_reductions));
 				}
 				steptype = "5b";
 				

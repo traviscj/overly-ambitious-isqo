@@ -13,3 +13,5 @@ isqo
 test_ampl_interface
 test_display_all
 test_jacobian_mult
+isqo-dense
+isqo-sparse

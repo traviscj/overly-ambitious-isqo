@@ -41,7 +41,44 @@ test_%: test_%.cc ${OBJECTS}
 	g++-4.8 -o $@ $< ${OBJECTS} ${CFLAGS} ${LDFLAGS}
 
 %.o: %.cc
-	g++-4.8 -c $< ${CFLAGS}
+	echo "NOT SUPPORTED!" && false
+#g++-4.8 -c $< ${CFLAGS}
+
+# annoyingly spell out all .o files, so we can capture dependence on the header files.
+constraint_violation.o: constraint_violation.cc ../include/constraint_violation.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+hessian_shifter.o: hessian_shifter.cc ../include/hessian_shifter.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+iterate.o:  iterate.cc ../include/iterate.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+line_search.o:  line_search.cc ../include/line_search.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+linear_model.o:  linear_model.cc ../include/linear_model.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+linear_model_reduction.o:  linear_model_reduction.cc ../include/linear_model_reduction.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+matrix.o:  matrix.cc ../include/matrix.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+nlp.o:  nlp.cc ../include/nlp.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+nlp_ampl.o:  nlp_ampl.cc ../include/nlp_ampl.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+nlp_hs014.o:  nlp_hs014.cc ../include/nlp_hs014.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+penalty_function.o:  penalty_function.cc ../include/penalty_function.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+residual_function.o:  residual_function.cc ../include/residual_function.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+solve_subproblem.o:  solve_subproblem.cc ../include/solve_subproblem.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+step.o:  step.cc ../include/step.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+subproblem.o:  subproblem.cc ../include/subproblem.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+text_output.o:  text_output.cc ../include/text_output.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
+utilities.o:  utilities.cc ../include/utilities.hh
+	g++-4.8 -c -o $@ $< ${CFLAGS}
 
 valgrind: build
 	valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --num-callers=20 --track-fds=yes ./isqo_functor >> valgrind-output 2> valgrind-error

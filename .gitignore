@@ -15,3 +15,5 @@ test_display_all
 test_jacobian_mult
 isqo-dense
 isqo-sparse
+html
+latex

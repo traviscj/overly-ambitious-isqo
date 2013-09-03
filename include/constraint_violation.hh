@@ -9,6 +9,8 @@
 #include "nlp.hh"
 #include "nlp_state.hh"
 
+
+/*! A class for evaluating constraint violation */
 class ConstraintViolationFunction : public FunctionWithNLPState {
 public:
 	ConstraintViolationFunction(Nlp &nlp);

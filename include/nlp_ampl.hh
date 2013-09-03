@@ -98,6 +98,12 @@ protected:
     void sparse_hessian_update(const iSQOIterate &iterate);
 
     // TODO make these returned, let a caching class worry about it.
+    // actually, not sure that this is possible--We have either of the constraints_*_jacobian_sparse functions call
+    // sparse_jacobian_update, which in turn calls the jacobian evaluation functions.
+    // the purpose of this is to NOT evaluate the constraints multiple times.
+    // maybe we can only get away with not storing the hessian?
+    // or maybe we should be more careful about which functions we 'coneval', which might help?
+    // or... maybe we just throw caution to the wind for now, and clean it up later.
     sparse_matrix sparse_eq_jacobian_;
     sparse_matrix sparse_ieq_jacobian_;
     sparse_matrix sparse_hessian_;

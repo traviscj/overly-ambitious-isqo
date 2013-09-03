@@ -9,6 +9,9 @@
 #include "nlp_state.hh"
 #include "utilities.hh"
 
+// TODO reformulate ieq constraints into bounds on slacks instead of this hacky-ass setup?
+// 
+
 class iSQOQuadraticSubproblem : public FunctionWithNLPState {
 public:
 	iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);

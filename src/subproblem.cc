@@ -56,12 +56,12 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
 		jacobian_upper_bound_[iterate.num_dual_eq_+ieq_index] = -con_values_ieq[ieq_index];
 	}
 	for (size_t variable_index=0; variable_index < iterate.num_primal_; ++variable_index) {
-		lower_bound_[variable_index] = -1e10;
-		upper_bound_[variable_index] = +1e10;
+		lower_bound_[variable_index] = -INFINITY;
+		upper_bound_[variable_index] = +INFINITY;
 	}
 	for (size_t variable_index=0; variable_index < 2*(iterate.num_dual_eq_ + iterate.num_dual_ieq_); ++variable_index) {
 		lower_bound_[iterate.num_primal_+variable_index] = 0.0;
-		upper_bound_[iterate.num_primal_+variable_index] = 1e10;
+		upper_bound_[iterate.num_primal_+variable_index] = +INFINITY;
 	}
 }
 

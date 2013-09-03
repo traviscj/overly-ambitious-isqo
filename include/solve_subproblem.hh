@@ -15,7 +15,7 @@ public:
 	iSQOStep operator()(iSQOQuadraticSubproblem &subproblem);
 private:
     void operator_setup();
-    iSQOStep operator_finish(qpOASES::returnValue ret);
+    iSQOStep operator_finish(const iSQOQuadraticSubproblem &subproblem, qpOASES::returnValue ret);
 protected:
     // virtual void solve(iSQOQuadraticSubproblem *subproblem) = 0;
     

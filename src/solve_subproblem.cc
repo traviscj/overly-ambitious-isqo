@@ -4,12 +4,44 @@
 
 SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) : 
     FunctionWithNLPState(nlp), 
-    example_(nlp_->num_primal() + 2*nlp_->num_dual(), nlp_->num_dual()), 
+    example_(nlp_->num_primal() + 2*nlp_->num_dual(), nlp_->num_dual(), qpOASES::HST_UNKNOWN), 
     first_(true)
     {}
 
+// DENSE quadratic subproblem solver:
+iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) {
+	int nWSR = 2000;
+    operator_setup();
 
+    qpOASES::SymDenseMat qpoases_hessian_(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.hessian_.data_[0]);
+    qpOASES::DenseMatrix qpoases_jacobian_(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.jacobian_.data_[0]);
+	qpOASES::returnValue ret;
 
+	if (first_) {
+		ret = example_.init( &qpoases_hessian_,
+							 &subproblem.gradient_[0],
+							 &qpoases_jacobian_,
+							 &subproblem.lower_bound_[0],
+							 &subproblem.upper_bound_[0],
+							 &subproblem.jacobian_lower_bound_[0],
+							 &subproblem.jacobian_upper_bound_[0],
+							 nWSR,
+							 0);
+	} else{
+		ret = example_.hotstart(&qpoases_hessian_,
+							 &subproblem.gradient_[0],
+							 &qpoases_jacobian_,
+							 &subproblem.lower_bound_[0],
+							 &subproblem.upper_bound_[0],
+							 &subproblem.jacobian_lower_bound_[0],
+							 &subproblem.jacobian_upper_bound_[0],
+							 nWSR,
+							 0);
+	}
+	return operator_finish(subproblem, ret);
+}
+
+// SPARSE quadratic subproblem solver:
 iSQOStep SolveQuadraticProgram::operator()(iSQOSparseQuadraticSubproblem &sparse_subproblem) {
 	int nWSR = 2000;
     operator_setup();
@@ -41,28 +73,46 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOSparseQuadraticSubproblem &sparse
 							 nWSR,
 							 0);
 	}
-	return operator_finish(ret);
+	return operator_finish(sparse_subproblem, ret);
 }
 
 void SolveQuadraticProgram::operator_setup() {
 
 	qpOASES::Options opt;
 
-	opt.terminationTolerance = 1e-6;
-	example_.setOptions(opt);
+    // opt.terminationTolerance = 1e-6;
+    // opt.enableEqualities = qpOASES::BooleanType(true);
+    opt.setToReliable();
+    // enableRegularisation
+    opt.enableRegularisation = qpOASES::BooleanType(true);
+    opt.enableNZCTests = qpOASES::BooleanType(true);
+    opt.initialStatusBounds = qpOASES::ST_UPPER;
+    opt.numRegularisationSteps = 200;
+    // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
+    example_.setOptions(opt);
 	example_.setPrintLevel(qpOASES::PL_NONE);
 }
-iSQOStep SolveQuadraticProgram::operator_finish(qpOASES::returnValue ret) {
+iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &subproblem, qpOASES::returnValue ret) {
 	std::cerr.flush();
 	std::cout.flush();
     
 	size_t return_status = example_.getStatus();
 	// getGlobalMessageHandler()->listAllMessages();
 	if( ret != qpOASES::SUCCESSFUL_RETURN ){
-        // sparse_subproblem.print();
-        printf( "%s\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
-		first_ = true;
-		example_.reset();
+        // 
+        if (ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS || 
+            ret == qpOASES::RET_QP_UNBOUNDED || 
+            ret == qpOASES::RET_HOTSTART_STOPPED_UNBOUNDEDNESS || 
+            ret == qpOASES::RET_STEPDIRECTION_FAILED_CHOLESKY
+            ) {
+            // don't need to do anything for unbounded QPs...
+             
+        } else {
+            subproblem.print();
+            printf( "%s\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
+        }
+        first_ = true;
+        example_.reset();
 	} else {
 		if (first_) first_ = false;
 	}
@@ -83,7 +133,7 @@ iSQOStep SolveQuadraticProgram::operator_finish(qpOASES::returnValue ret) {
 	//	- every constraint has a multiplier:
 	//		-- iterate.num_dual_eq_
 	//		-- iterate.num_dual_ieq_
-	// so in total: 
+	// so in total:          VARIABLE MULTIPLIERS   SLACK MULTIPLIERS    CONSTRAINT MULTIPLIERS
 	std::vector<double> yOpt(nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual());
 	example_.getDualSolution( &yOpt[0] );				
 
@@ -104,33 +154,3 @@ iSQOStep SolveQuadraticProgram::operator_finish(qpOASES::returnValue ret) {
 	return step;
 }
 
-iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) {
-	int nWSR = 2000;
-
-    qpOASES::SymDenseMat qpoases_hessian_(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.hessian_.data_[0]);
-    qpOASES::DenseMatrix qpoases_jacobian_(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &subproblem.jacobian_.data_[0]);
-	qpOASES::returnValue ret;
-
-	if (first_) {
-		ret = example_.init( &qpoases_hessian_,
-							 &subproblem.gradient_[0],
-							 &qpoases_jacobian_,
-							 &subproblem.lower_bound_[0],
-							 &subproblem.upper_bound_[0],
-							 &subproblem.jacobian_lower_bound_[0],
-							 &subproblem.jacobian_upper_bound_[0],
-							 nWSR,
-							 0);
-	} else{
-		ret = example_.hotstart(&qpoases_hessian_,
-							 &subproblem.gradient_[0],
-							 &qpoases_jacobian_,
-							 &subproblem.lower_bound_[0],
-							 &subproblem.upper_bound_[0],
-							 &subproblem.jacobian_lower_bound_[0],
-							 &subproblem.jacobian_upper_bound_[0],
-							 nWSR,
-							 0);
-	}
-	return operator_finish(ret);
-}

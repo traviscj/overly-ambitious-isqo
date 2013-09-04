@@ -5,3 +5,6 @@ all:
 
 doxy:
 	cd include && doxygen default-doxy
+
+wc:
+	wc -l include/*.hh src/*.cc

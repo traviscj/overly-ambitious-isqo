@@ -18,9 +18,9 @@ public:
     
 // private:
 // protected:
-	int num_primal_;
-	int num_dual_eq_;
-	int num_dual_ieq_;
+	size_t num_primal_;
+	size_t num_dual_eq_;
+	size_t num_dual_ieq_;
 	
 	std::vector<double> primal_values_;
 	std::vector<double> dual_eq_values_;

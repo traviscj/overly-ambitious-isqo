@@ -78,7 +78,7 @@
 #ifdef ISQO_USE_SPARSE
 const std::string sparse_version_string = "SparseAmplNlp and iSQOSparseQuadraticSubproblem";
 #define MAGIC_PROBLEM SparseAmplNlp
-#define MAGIC_SUBPROBLEM iSQOSparseQuadraticSubproblem
+#define MAGIC_SUBPROBLEM iSQOQuadraticSubproblem
 #else
 const std::string sparse_version_string = "DenseAmplNlp and iSQOQuadraticSubproblem";
 #define MAGIC_PROBLEM DenseAmplNlp
@@ -134,6 +134,7 @@ int main(int argc, char **argv) {
 	feasibility_iterate.penalty_parameter_ = 0.0;
 	size_t iter=-1;
 	for (iter = 0; iter < maximum_iterations; iter ++ ) {
+        // std::cout << std::endl << "penalty: " << penalty_iterate.penalty_parameter_ << std::endl;
 		iSQOStep combination_step(problem.num_primal(), problem.num_dual_eq(), problem.num_dual_ieq());
 		
 		text_output.pre(iter, feasibility_iterate, penalty_iterate);

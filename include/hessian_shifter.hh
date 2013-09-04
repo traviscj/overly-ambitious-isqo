@@ -5,7 +5,7 @@ class HessianShifter : public FunctionWithNLPState {
 public:
 	HessianShifter(Nlp &nlp);
 	iSQOStep operator()(iSQOQuadraticSubproblem &subproblem);
-	iSQOStep operator()(iSQOSparseQuadraticSubproblem &subproblem);
+    // iSQOStep operator()(iSQOSparseQuadraticSubproblem &subproblem);
 	double get_last_shift() const ;
 private:
 protected:

@@ -5,15 +5,26 @@
 
 #include "matrix.hh"
 
-dense_matrix::dense_matrix(std::size_t rows, std::size_t columns) : rows_(rows), columns_(columns), data_(rows*columns) {
+matrix_base_class::matrix_base_class(std::size_t rows, std::size_t columns) 
+                    : rows_(rows)
+                    , columns_(columns)
+                    , last_hessian_shift_(-3.14159) { 
+}
+
+
+matrix_base_class::~matrix_base_class() {
+    // std::cout << "destroying matrix base class" << std::endl;
+}
+
+dense_matrix::dense_matrix(std::size_t rows, std::size_t columns) : matrix_base_class(rows, columns), data_(rows*columns) {
 	// cout << "initializing a matrix..." << endl;
 }
-dense_matrix::dense_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign) : rows_(num_cols), columns_(relevant_variables.size()), data_(rows_*columns_) {
+dense_matrix::dense_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign) : matrix_base_class(num_cols, relevant_variables.size()), data_(rows_*columns_) {
     for (size_t current_relevant_variable=0; current_relevant_variable < relevant_variables.size(); ++current_relevant_variable) {
         set(current_relevant_variable, relevant_variables[current_relevant_variable], cur_sign);
     }
 }    
-dense_matrix::dense_matrix(std::size_t num_variables, double scalar) : rows_(num_variables), columns_(num_variables), data_(rows_*columns_) {
+dense_matrix::dense_matrix(std::size_t num_variables, double scalar) : matrix_base_class(num_variables, num_variables), data_(rows_*columns_) {
     for (size_t current_variable=0; current_variable < num_variables; ++current_variable) {
         set(current_variable, current_variable, scalar);
     }
@@ -25,7 +36,7 @@ void dense_matrix::set(std::size_t r, std::size_t c, double val) {
 double dense_matrix::get(std::size_t r, std::size_t c) const {
 	return data_[columns_*r + c];
 }
-// double
+
 std::ostream &dense_matrix::print(std::ostream& os) const {
 	for (std::size_t r=0; r<rows_; r++) {
 		for (std::size_t c=0; c<columns_; c++) {
@@ -36,6 +47,13 @@ std::ostream &dense_matrix::print(std::ostream& os) const {
 	}
     return os;
 }
+std::ostream &sparse_matrix::print(std::ostream& os) const {
+    os << "values       : " << this->vals_ << std::endl;
+    os << "row indices  : " << this->row_indices_ << std::endl;
+    os << "column starts: " << this->col_starts_ << std::endl;
+    return os;
+}
+
 std::vector<double> dense_matrix::multiply(const std::vector<double> &x) const {
 	assert(x.size() == columns_);
 	std::vector<double> retval(rows_);
@@ -59,8 +77,7 @@ std::vector<double> dense_matrix::multiply_transpose(const std::vector<double> &
 }
 
 sparse_matrix::sparse_matrix(std::size_t num_rows, std::size_t num_cols, std::size_t num_nonzeros) 
-            : rows_(num_rows)
-            , columns_(num_cols)
+            : matrix_base_class(num_rows, num_cols)
             , vals_(num_nonzeros)
             , row_indices_(num_nonzeros)
             , col_starts_(num_cols+1) {
@@ -68,8 +85,7 @@ sparse_matrix::sparse_matrix(std::size_t num_rows, std::size_t num_cols, std::si
 }
 
 sparse_matrix::sparse_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign) 
-            : rows_(relevant_variables.size())
-            , columns_(num_cols)
+            : matrix_base_class(relevant_variables.size(), num_cols)
             , vals_(relevant_variables.size())
             , row_indices_(relevant_variables.size())
             , col_starts_(num_cols+1) {
@@ -92,7 +108,11 @@ sparse_matrix::sparse_matrix(std::size_t num_cols, std::vector<std::size_t> rele
 }
 
 
-sparse_matrix::sparse_matrix(std::size_t num_variables, double scalar) : rows_(num_variables), columns_(num_variables), vals_(num_variables), row_indices_(num_variables), col_starts_(num_variables+1) {
+sparse_matrix::sparse_matrix(std::size_t num_variables, double scalar)
+            : matrix_base_class(num_variables, num_variables)
+            , vals_(num_variables)
+            , row_indices_(num_variables)
+            , col_starts_(num_variables+1) {
     if (num_variables == 0) return;
     
     for (size_t current_nonzero=0; current_nonzero < num_variables; ++current_nonzero) {
@@ -204,10 +224,6 @@ std::shared_ptr<sparse_matrix> horizontal(const std::shared_ptr<sparse_matrix> l
     std::shared_ptr<sparse_matrix> result(new sparse_matrix(   left->num_rows(),
                             left->num_columns() + right->num_columns(), 
                             left->num_nnz() + right->num_nnz()));
-    // sparse_matrix result(   left.num_rows(),
-    //                         left.num_columns() + right.num_columns(), 
-    //                         left.num_nnz() + right.num_nnz());
-
     size_t result_nonzero_index=0;
     for (size_t left_nonzeros=0; left_nonzeros < left->num_nnz(); ++left_nonzeros) {
         result->vals_[result_nonzero_index] = left->vals_[left_nonzeros];

@@ -19,6 +19,8 @@ public:
 	AmplNlp(std::string stub_str);
 	
 	~AmplNlp();
+    
+    void ConstructHelper(std::string stub_str);
 	
 	iSQOIterate initial();
     
@@ -30,9 +32,15 @@ public:
 	
 	// first order NLP quantities:
 	std::vector<double> objective_gradient(const iSQOIterate &iterate);
+	    
+	virtual std::shared_ptr<matrix_base_class> constraints_equality_jacobian(const iSQOIterate &iterate) = 0;
+	virtual std::shared_ptr<matrix_base_class> constraints_inequality_jacobian(const iSQOIterate &iterate) = 0;
+	virtual std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate) = 0;
 	
 	std::size_t num_lower_ieq();
 	std::size_t num_upper_ieq();
+    
+    
 private:
 protected:
 	bool PRINT_;
@@ -48,54 +56,8 @@ protected:
 	std::vector<size_t> variable_equality_;
 	std::vector<size_t> variable_bound_lower_;
 	std::vector<size_t> variable_bound_upper_;
-};
-
-class DenseAmplNlp : public AmplNlp {
-public:
-	// AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
-	DenseAmplNlp(std::string stub_str);
-	
-	~DenseAmplNlp() { }
-	    
-	matrix constraints_equality_jacobian(const iSQOIterate &iterate);
-	matrix constraints_inequality_jacobian(const iSQOIterate &iterate);
-	matrix lagrangian_hessian(const iSQOIterate &iterate);
-	
-	std::size_t num_lower_ieq();
-	std::size_t num_upper_ieq();
-    
-    
-	sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate) { throw "not implemented"; }
-	sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate) { throw "not implemented"; }
-	sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate) { throw "not implemented"; }
-    
-private:
-protected:
-};
-
-class SparseAmplNlp : public DenseAmplNlp {
-public:
-	// AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
-	SparseAmplNlp(std::string stub_str);
-	
-	~SparseAmplNlp() { }
-	
-	// first order NLP quantities:
-	sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate);
-	sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate);
-	// second order NLP quantities:
-	sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate);
-	
-    
-    // matrix constraints_equality_jacobian(const iSQOIterate &iterate) { throw "not implemented"; } 
-    // matrix constraints_inequality_jacobian(const iSQOIterate &iterate) { throw "not implemented"; }
-    // // second order NLP quantities:
-    // matrix lagrangian_hessian(const iSQOIterate &iterate) { throw "not implemented"; }
-	
-private:
-protected:
-    void sparse_jacobian_update(const iSQOIterate &iterate);
-    void sparse_hessian_update(const iSQOIterate &iterate);
+    void jacobian_update(const iSQOIterate &iterate);
+    void hessian_update(const iSQOIterate &iterate);
 
     // TODO make these returned, let a caching class worry about it.
     // actually, not sure that this is possible--We have either of the constraints_*_jacobian_sparse functions call
@@ -104,9 +66,34 @@ protected:
     // maybe we can only get away with not storing the hessian?
     // or maybe we should be more careful about which functions we 'coneval', which might help?
     // or... maybe we just throw caution to the wind for now, and clean it up later.
-    sparse_matrix sparse_eq_jacobian_;
-    sparse_matrix sparse_ieq_jacobian_;
-    sparse_matrix sparse_hessian_;
+    std::shared_ptr<matrix_base_class> eq_jacobian_;
+    std::shared_ptr<matrix_base_class> ieq_jacobian_;
+    std::shared_ptr<matrix_base_class> hessian_;  
+};
+
+class DenseAmplNlp : public AmplNlp {
+public:
+	DenseAmplNlp(std::string stub_str);
+	~DenseAmplNlp();
+
+    std::shared_ptr<matrix_base_class> constraints_equality_jacobian(const iSQOIterate &iterate);
+    std::shared_ptr<matrix_base_class> constraints_inequality_jacobian(const iSQOIterate &iterate);
+    std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate);
+private:
+protected:
+
+};
+
+class SparseAmplNlp : public AmplNlp {
+public:
+	SparseAmplNlp(std::string stub_str);
+	~SparseAmplNlp();
+    
+    std::shared_ptr<matrix_base_class> constraints_equality_jacobian(const iSQOIterate &iterate);
+    std::shared_ptr<matrix_base_class> constraints_inequality_jacobian(const iSQOIterate &iterate);
+    std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate);
+private:
+protected:
 };
 
 #endif

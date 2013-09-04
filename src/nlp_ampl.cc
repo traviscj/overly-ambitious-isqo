@@ -10,6 +10,16 @@ AmplNlp::AmplNlp(std::string stub_str) : Nlp(-1,-1,-1), PRINT_(false), eq_jacobi
     ConstructHelper(stub_str);
 }
 
+DenseAmplNlp::DenseAmplNlp(std::string stub_str) : AmplNlp(stub_str) {
+    // ConstructHelper(stub_str);
+}
+DenseAmplNlp::~DenseAmplNlp() {}
+SparseAmplNlp::SparseAmplNlp(std::string stub_str) : AmplNlp(stub_str) {
+    // ConstructHelper(stub_str);
+}
+
+SparseAmplNlp::~SparseAmplNlp() {}
+
 // AmplNlp::AmplNlp(std::string stub_str) : Nlp(-1,-1,-1), PRINT_(false), eq_jacobian_(0,0,0), ieq_jacobian_(0,0,0), hessian_(0,0,0) {
 //     ConstructHelper(stub_str);
 // }
@@ -250,7 +260,7 @@ std::shared_ptr<matrix_base_class> DenseAmplNlp::constraints_equality_jacobian(c
 		x[primal_index] = iterate.primal_values_[primal_index];
 	
     // std::shared_ptr<matrix_base_class> equality_constraint_jacobian(new dense_matrix(equality_constraints_.size(), n_var));
-    dense_matrix *equality_constraint_jacobian = new dense_matrix(equality_constraints_.size(), this->num_primal());
+    std::shared_ptr<dense_matrix> equality_constraint_jacobian = std::shared_ptr<dense_matrix>(new dense_matrix(equality_constraints_.size(), this->num_primal()));
 	if (PRINT_) std::cout << "equal: " << equality_constraints_ << std::endl;
 	std::vector<double> G(num_primal());
 	for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index < equality_constraints_.size(); ++isqo_eq_constraint_index) {

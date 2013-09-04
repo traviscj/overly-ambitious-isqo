@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <cassert>
 
 #include "utilities.hh"
 
@@ -13,16 +14,22 @@
 //! 
 class matrix_base_class {
 public:
-    // matrix(std::size_t rows, std::size_t columns);
+    matrix_base_class(std::size_t rows, std::size_t columns);
     virtual ~matrix_base_class() = 0;
-    // void set(std::size_t r, std::size_t c, double val);
-    // double get(std::size_t r, std::size_t c) const;
 
 	virtual std::ostream &print(std::ostream& os) const = 0;
 	virtual std::vector<double> multiply(const std::vector<double> &x) const = 0;
 	virtual std::vector<double> multiply_transpose(const std::vector<double> &y) const = 0;
+    virtual void regularize(double hessian_shift, double last_shift) = 0;
+    
+    std::size_t num_columns() const { return columns_;}
+    std::size_t num_rows() const { return rows_;}
+    
 private:
 protected:
+    std::size_t rows_;
+    std::size_t columns_;
+    double last_hessian_shift_;
 };
 
 //! \brief a matrix
@@ -56,16 +63,20 @@ public:
     //!  - col_starts_{I_n}: [0,1,2,...,num_variables] (num_variables+1 entries)
     dense_matrix(std::size_t num_variables, double scalar);
     
-    
+    void regularize(double hessian_shift, double last_shift) {
+        // only allow regularization on square matrices.
+        assert(num_rows() == num_columns());
+        for (size_t diagonal_entry=0; diagonal_entry<num_rows(); ++diagonal_entry) {
+                set(diagonal_entry,diagonal_entry, (hessian_shift - last_shift) + get(diagonal_entry, diagonal_entry));
+        }
+    }
     void set(std::size_t r, std::size_t c, double val);
 	double get(std::size_t r, std::size_t c) const;
-    std::size_t num_columns() const { return columns_;}
-    std::size_t num_rows() const { return rows_;}
 
 	std::ostream &print(std::ostream& os) const;
 	std::vector<double> multiply(const std::vector<double> &x) const;
 	std::vector<double> multiply_transpose(const std::vector<double> &y) const;
-	std::size_t rows_, columns_;
+
 	std::vector<double> data_;
 private:
 protected:
@@ -73,9 +84,7 @@ protected:
 };
 
 inline std::ostream& operator<< (std::ostream& os, const dense_matrix& m) {
-    os << "[";
 	m.print(os);
-    os << " ]";
     return os;
 }
 
@@ -111,11 +120,26 @@ public:
     std::vector<double> multiply_transpose(const std::vector<double> &) const;
     std::ostream &print(std::ostream& os) const;
     
-    std::size_t num_columns() const { return columns_;}
-    std::size_t num_rows() const { return rows_;}
+    void regularize(double hessian_shift, double last_shift) {
+        // only allow regularization on square matrices.
+        assert(num_rows() == num_columns());
+        
+        // std::cout << "trying to regularize: " << hessian_shift << std::endl;
+        for (size_t column_index=0; column_index < num_columns(); ++column_index) {
+            // std::cout << " - col: " << column_index << std::endl;
+            for (size_t nonzero_index=col_starts_[column_index]; nonzero_index < col_starts_[column_index+1]; ++nonzero_index) {
+                // std::cout << " - col: " << column_index << "; nonzero: " << nonzero_index << "; row:" << row_indices_[nonzero_index] << "; val:" << vals_[nonzero_index] << std::endl;
+                if (row_indices_[nonzero_index] == column_index) {
+                    vals_[nonzero_index] = vals_[nonzero_index] + hessian_shift - last_shift;
+                    // std::cout << " - col: " << column_index << "; nonzero: " << nonzero_index << "; row:" << row_indices_[nonzero_index] << "; val:" << vals_[nonzero_index] << "UPDATED!" << std::endl;
+                }
+            }
+        }
+        // last_hessian_shift_ = hessian_shift;
+    }
+    
     std::size_t num_nnz() const { return vals_.size();}
-    std::size_t rows_;
-    std::size_t columns_;
+
     std::vector<double> vals_;
     std::vector<int> row_indices_;
     std::vector<int> col_starts_;
@@ -127,6 +151,14 @@ public:
 inline std::ostream& operator<< (std::ostream& os, const sparse_matrix& mat) {
     return mat.print(os);
 }
+
+//! \brief print a sparse matrix
+//!
+//! here, we print out the underlying vectors associated with the sparse matrix 'mat', to the output stream 'os'.
+inline std::ostream& operator<< (std::ostream& os, const std::shared_ptr<matrix_base_class>& mat) {
+    return mat->print(os);
+}
+
 
 // TODO: 'add_to_diag' function for sparse_matrix.
 // TODO: change this to 'append_below' & put into sparse_matrix class.

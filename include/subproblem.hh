@@ -15,12 +15,16 @@
 class iSQOQuadraticSubproblem : public FunctionWithNLPState {
 public:
 	iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
+
+    void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<matrix_base_class> nlp_eq_jacobian, std::shared_ptr<matrix_base_class> nlp_ieq_jacobian, std::shared_ptr<matrix_base_class> nlp_hessian);
 	
     void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<dense_matrix> nlp_eq_jacobian, std::shared_ptr<dense_matrix> nlp_ieq_jacobian, std::shared_ptr<dense_matrix> nlp_hessian);
     void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<sparse_matrix> nlp_eq_jacobian, std::shared_ptr<sparse_matrix> nlp_ieq_jacobian, std::shared_ptr<sparse_matrix> nlp_hessian);
     
-	void inc_regularization(double hessian_shift);
-	
+	void inc_regularization(double hessian_shift, double last_shift);
+
+    
+    
 	void print() const;
 	size_t num_qp_variables_, num_qp_constraints_;
 	size_t num_nlp_variables_, num_nlp_constraints_eq_, num_nlp_constraints_ieq_;
@@ -45,20 +49,20 @@ protected:
     
 };
 
-class iSQOSparseQuadraticSubproblem : public iSQOQuadraticSubproblem {
-public:
-	iSQOSparseQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
-	void inc_regularization(double hessian_shift);
-    std::shared_ptr<matrix_base_class> jacobian_sparse_;
-    std::shared_ptr<matrix_base_class> hessian_sparse_;
-	std::shared_ptr<matrix_base_class> nlp_hessian_sparse_;
-	std::shared_ptr<matrix_base_class> nlp_eq_jacobian_sparse_;
-	std::shared_ptr<matrix_base_class> nlp_ieq_jacobian_sparse_;
-	
-    double hessian_shift_;
-private:
-protected:
-    void setup_matrix_data_sparse(const iSQOIterate &);
-};
+// class iSQOSparseQuadraticSubproblem : public iSQOQuadraticSubproblem {
+// public:
+//     iSQOSparseQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
+//     void inc_regularization(double hessian_shift);
+//     std::shared_ptr<matrix_base_class> jacobian_sparse_;
+//     std::shared_ptr<matrix_base_class> hessian_sparse_;
+//     std::shared_ptr<matrix_base_class> nlp_hessian_sparse_;
+//     std::shared_ptr<matrix_base_class> nlp_eq_jacobian_sparse_;
+//     std::shared_ptr<matrix_base_class> nlp_ieq_jacobian_sparse_;
+//     
+//     double hessian_shift_;
+// private:
+// protected:
+//     void setup_matrix_data_sparse(const iSQOIterate &);
+// };
 
 #endif /* end of include guard: SUBPROBLEM_HH_FOZWW1AF */

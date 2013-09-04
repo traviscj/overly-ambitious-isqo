@@ -1,4 +1,4 @@
-
+#include <memory>
 #include <cmath>
 
 #include "utilities.hh"
@@ -10,16 +10,16 @@ ResidualFunction::ResidualFunction(Nlp &nlp) : FunctionWithNLPState(nlp) {
 double ResidualFunction::resid_helper(const iSQOIterate &iterate, std::vector<double> stationarity, std::vector<double> constraint_eq_values, std::vector<double> constraint_ieq_values, std::vector<double> constraint_eq_dual_values, std::vector<double> constraint_ieq_dual_values) const {
 	std::vector<double> rho(stationarity.size() + 2*constraint_eq_values.size() + 2*constraint_ieq_values.size());
 	
-	matrix jac_ce = nlp_->constraints_equality_jacobian(iterate);
-	matrix jac_ci = nlp_->constraints_inequality_jacobian(iterate);
+	std::shared_ptr<matrix_base_class> jac_ce = nlp_->constraints_equality_jacobian(iterate);
+	std::shared_ptr<matrix_base_class> jac_ci = nlp_->constraints_inequality_jacobian(iterate);
 			
 	size_t rho_index = 0;
 
 	double eq_signflip = 1;
 	double ieq_signflip = 1;
 	// std::cout << "sta pre: " << stationarity << std::endl << std::endl << std::endl;
-	std::vector<double> eq_jacobian_trans_times_mults = jac_ce.multiply_transpose(constraint_eq_dual_values);
-	std::vector<double> ieq_jacobian_trans_times_mults = jac_ci.multiply_transpose(constraint_ieq_dual_values);
+	std::vector<double> eq_jacobian_trans_times_mults = jac_ce->multiply_transpose(constraint_eq_dual_values);
+	std::vector<double> ieq_jacobian_trans_times_mults = jac_ci->multiply_transpose(constraint_ieq_dual_values);
 	
 	for (size_t stationarity_index=0; stationarity_index < stationarity.size(); ++stationarity_index) {
 		rho[rho_index] = stationarity[stationarity_index] + eq_jacobian_trans_times_mults[stationarity_index] + ieq_jacobian_trans_times_mults[stationarity_index];
@@ -81,9 +81,9 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 	bool PRINT=true;
 	std::vector<double> stationarity = nlp_->objective_gradient(iterate);
 	
-	matrix hessian = nlp_->lagrangian_hessian(iterate);
+	std::shared_ptr<matrix_base_class> hessian = nlp_->lagrangian_hessian(iterate);
 	
-	std::vector<double> hessian_times_step = hessian.multiply(step.primal_values_);
+	std::vector<double> hessian_times_step = hessian->multiply(step.primal_values_);
 	
 	for (size_t stationarity_index=0; stationarity_index < nlp_->num_primal(); ++stationarity_index) {
 		// mu*grad f + H*d:
@@ -91,15 +91,15 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 		
 	}
 	
-	matrix jacobian_eq = nlp_->constraints_equality_jacobian(iterate);
+	std::shared_ptr<matrix_base_class> jacobian_eq = nlp_->constraints_equality_jacobian(iterate);
 	std::vector<double> con_values_eq = nlp_->constraints_equality(iterate);
 	// std::cout << "about to do j eq" << std::endl;
-	std::vector<double> linear_step_eq = jacobian_eq.multiply(step.primal_values_);
+	std::vector<double> linear_step_eq = jacobian_eq->multiply(step.primal_values_);
 	
 	// std::cout << "about to do j ieq" << std::endl;
-	matrix jacobian_ieq = nlp_->constraints_inequality_jacobian(iterate);
+	std::shared_ptr<matrix_base_class> jacobian_ieq = nlp_->constraints_inequality_jacobian(iterate);
 	std::vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
-	std::vector<double> linear_step_ieq = jacobian_ieq.multiply(step.primal_values_);
+	std::vector<double> linear_step_ieq = jacobian_ieq->multiply(step.primal_values_);
 
 	for (size_t eq_con_index=0; eq_con_index< nlp_->num_dual_eq(); ++eq_con_index) {
 		con_values_eq[eq_con_index] += linear_step_eq[eq_con_index];

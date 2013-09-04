@@ -13,10 +13,9 @@ public:
 	std::vector<double> constraints_inequality(const iSQOIterate &iterate);
 	
 	std::vector<double> objective_gradient(const iSQOIterate &iterate);
-	matrix constraints_equality_jacobian(const iSQOIterate &iterate);
-	matrix constraints_inequality_jacobian(const iSQOIterate &iterate);
-	
-	matrix lagrangian_hessian(const iSQOIterate &iterate);
+	std::shared_ptr<matrix_base_class> constraints_equality_jacobian(const iSQOIterate &iterate);
+	std::shared_ptr<matrix_base_class> constraints_inequality_jacobian(const iSQOIterate &iterate);
+	std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate);
 protected:
 };
 #endif

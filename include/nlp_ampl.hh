@@ -18,7 +18,7 @@ public:
 	// AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
 	AmplNlp(std::string stub_str);
 	
-	~AmplNlp();
+	virtual ~AmplNlp() = 0;
     
     void ConstructHelper(std::string stub_str);
 	

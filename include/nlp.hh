@@ -25,12 +25,9 @@ public:
 	virtual std::vector<double> objective_gradient(const iSQOIterate &iterate) = 0;
 	virtual std::shared_ptr<matrix_base_class> constraints_equality_jacobian(const iSQOIterate &iterate) = 0;
 	virtual std::shared_ptr<matrix_base_class> constraints_inequality_jacobian(const iSQOIterate &iterate) = 0;
-    // virtual sparse_matrix constraints_equality_jacobian_sparse(const iSQOIterate &iterate) = 0;
-    // virtual sparse_matrix constraints_inequality_jacobian_sparse(const iSQOIterate &iterate) = 0;
     
 	// second order NLP quantities:
 	virtual std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate) = 0;
-    // virtual sparse_matrix lagrangian_hessian_sparse(const iSQOIterate &iterate) = 0;
 
 	size_t num_primal();
 	size_t num_dual();

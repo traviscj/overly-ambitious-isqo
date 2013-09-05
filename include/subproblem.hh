@@ -25,7 +25,7 @@ public:
 
     
     
-	void print() const;
+	std::ostream &print(std::ostream &os) const;
 	size_t num_qp_variables_, num_qp_constraints_;
 	size_t num_nlp_variables_, num_nlp_constraints_eq_, num_nlp_constraints_ieq_;
 	std::shared_ptr<matrix_base_class> hessian_;
@@ -48,6 +48,13 @@ protected:
     // void setup_matrix_data(const iSQOIterate &);
     
 };
+
+//! \brief print a subproblem
+//!
+//! here, we print out the underlying vectors associated with the subproblem subproblem, to the output stream 'os'.
+inline std::ostream& operator<< (std::ostream& os, const iSQOQuadraticSubproblem& subproblem) {
+    return subproblem.print(os);
+}
 
 // class iSQOSparseQuadraticSubproblem : public iSQOQuadraticSubproblem {
 // public:

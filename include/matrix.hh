@@ -77,6 +77,8 @@ public:
 	std::vector<double> multiply(const std::vector<double> &x) const;
 	std::vector<double> multiply_transpose(const std::vector<double> &y) const;
 
+    void sum(const std::shared_ptr<dense_matrix> b);
+
 	std::vector<double> data_;
 private:
 protected:
@@ -120,23 +122,10 @@ public:
     std::vector<double> multiply_transpose(const std::vector<double> &) const;
     std::ostream &print(std::ostream& os) const;
     
-    void regularize(double hessian_shift, double last_shift) {
-        // only allow regularization on square matrices.
-        assert(num_rows() == num_columns());
-        
-        // std::cout << "trying to regularize: " << hessian_shift << std::endl;
-        for (size_t column_index=0; column_index < num_columns(); ++column_index) {
-            // std::cout << " - col: " << column_index << std::endl;
-            for (size_t nonzero_index=col_starts_[column_index]; nonzero_index < col_starts_[column_index+1]; ++nonzero_index) {
-                // std::cout << " - col: " << column_index << "; nonzero: " << nonzero_index << "; row:" << row_indices_[nonzero_index] << "; val:" << vals_[nonzero_index] << std::endl;
-                if (row_indices_[nonzero_index] == column_index) {
-                    vals_[nonzero_index] = vals_[nonzero_index] + hessian_shift - last_shift;
-                    // std::cout << " - col: " << column_index << "; nonzero: " << nonzero_index << "; row:" << row_indices_[nonzero_index] << "; val:" << vals_[nonzero_index] << "UPDATED!" << std::endl;
-                }
-            }
-        }
-        // last_hessian_shift_ = hessian_shift;
-    }
+    void regularize(double hessian_shift, double last_shift);
+    void sum(const std::shared_ptr<sparse_matrix> b);
+    
+    // std::shared_ptr<sparse_matrix> sum(const std::shared_ptr<sparse_matrix> a, const std::shared_ptr<sparse_matrix> b);
     
     std::size_t num_nnz() const { return vals_.size();}
 
@@ -152,13 +141,17 @@ inline std::ostream& operator<< (std::ostream& os, const sparse_matrix& mat) {
     return mat.print(os);
 }
 
-//! \brief print a sparse matrix
+//! \brief print an arbitrary matrix from a shared_ptr.
 //!
 //! here, we print out the underlying vectors associated with the sparse matrix 'mat', to the output stream 'os'.
 inline std::ostream& operator<< (std::ostream& os, const std::shared_ptr<matrix_base_class>& mat) {
     return mat->print(os);
 }
 
+
+// these should move into the classes.
+// std::shared_ptr<dense_matrix> sum(const std::shared_ptr<dense_matrix> a, const std::shared_ptr<dense_matrix> b);
+// std::shared_ptr<sparse_matrix> sum(const std::shared_ptr<sparse_matrix> a, const std::shared_ptr<sparse_matrix> b);
 
 // TODO: 'add_to_diag' function for sparse_matrix.
 // TODO: change this to 'append_below' & put into sparse_matrix class.

@@ -19,4 +19,7 @@
 #include "hessian_shifter.hh"
 #include "text_output.hh"
 
+// TODO: implement something like: 
+// typedef int linear_algebra_t;
+
 #endif /* end of include guard: ISQO_HH_Q7VFC86U */

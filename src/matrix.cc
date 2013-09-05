@@ -151,6 +151,85 @@ std::vector<double> sparse_matrix::multiply_transpose(const std::vector<double> 
     return product;
 }
 
+void dense_matrix::sum(const std::shared_ptr<dense_matrix> b) {
+    assert(num_rows() == b->num_rows());
+    assert(num_columns() == b->num_columns());
+    std::shared_ptr<dense_matrix> result(new dense_matrix(num_rows(), num_columns()));
+    
+    for (size_t row_index=0; row_index < num_rows(); ++row_index) {
+        for (size_t column_index=0; column_index < num_rows(); ++column_index) {
+            set(row_index, column_index, get(row_index, column_index) + b->get(row_index, column_index));
+        }
+    }
+    // return result;
+}
+void sparse_matrix::sum(const std::shared_ptr<sparse_matrix> b) {
+    assert(num_rows() == b->num_rows());
+    assert(num_columns() == b->num_columns());
+    bool PRINT = false;
+    // std::shared_ptr<sparse_matrix> result(new sparse_matrix(num_rows(), a->num_columns(), 0));
+    
+    if (PRINT) std::cout << std::endl << "summing: " << std::endl << *this << std::endl;
+    if (PRINT) std::cout << "and : " << std::endl << *b << std::endl;
+    std::vector<double> result_vals;
+    std::vector<int> result_row_indices;
+    std::vector<int> result_col_starts;
+    size_t A_nnz_index=0, A_row_index=0, A_col_index=0;
+    size_t B_nnz_index=0, B_row_index=0, B_col_index=0;
+    size_t C_nnz_index=0, C_row_index=0, C_col_index=0;
+    result_col_starts.push_back(C_nnz_index);
+    for (; C_col_index < col_starts_.size() - 1; ) {        
+        if (PRINT) std::cout << "A bounds: " << col_starts_[C_col_index] << " <= A_nnz_index < " << col_starts_[C_col_index+1] << "; "
+                             << "B bounds: " << b->col_starts_[C_col_index] << " <= B_nnz_index < " << b->col_starts_[C_col_index+1]
+                             << std::endl;
+        
+        A_nnz_index=col_starts_[C_col_index];
+        B_nnz_index=b->col_starts_[C_col_index];
+        while ( (A_nnz_index < col_starts_[C_col_index+1]) &&  (B_nnz_index < b->col_starts_[C_col_index+1]) ) {
+            if (row_indices_[A_nnz_index] < b->row_indices_[B_nnz_index]) {
+                result_vals.push_back(vals_[A_nnz_index]);
+                result_row_indices.push_back(row_indices_[A_nnz_index]);
+                ++A_nnz_index;
+                ++C_nnz_index;
+            } else if (row_indices_[A_nnz_index] > b->row_indices_[B_nnz_index]) {
+                result_vals.push_back(b->vals_[B_nnz_index]);
+                result_row_indices.push_back(b->row_indices_[B_nnz_index]);
+                ++B_nnz_index;
+                ++C_nnz_index;
+            } else {
+                assert((row_indices_[A_nnz_index] == b->row_indices_[B_nnz_index]));
+                result_vals.push_back(vals_[A_nnz_index] + b->vals_[B_nnz_index]);
+                result_row_indices.push_back(row_indices_[A_nnz_index]);
+                ++A_nnz_index;
+                ++B_nnz_index;
+                ++C_nnz_index;
+            }
+        }
+                
+        while ( (A_nnz_index < col_starts_[C_col_index+1]) ) {
+            result_vals.push_back(vals_[A_nnz_index]);
+            result_row_indices.push_back(row_indices_[A_nnz_index]);
+            ++A_nnz_index;
+            ++C_nnz_index;
+        }
+        while ( (B_nnz_index < b->col_starts_[C_col_index+1]) ) {
+            result_vals.push_back(b->vals_[B_nnz_index]);
+            result_row_indices.push_back(b->row_indices_[B_nnz_index]);
+            ++B_nnz_index;
+            ++C_nnz_index;
+        }
+        
+        result_col_starts.push_back(C_nnz_index);
+        ++C_col_index;
+        
+    }
+    vals_ = result_vals;
+    row_indices_ = result_row_indices;
+    col_starts_ = result_col_starts;
+    if (PRINT) std::cout << "result : " << std::endl << *this << std::endl << "=========" << std::endl;
+    
+}
+
 std::shared_ptr<dense_matrix> vertical(const std::shared_ptr<dense_matrix> top, const std::shared_ptr<dense_matrix> bottom) {
     assert(top->num_columns() == bottom->num_columns());
     std::shared_ptr<dense_matrix> result(new dense_matrix(top->num_rows() + bottom->num_rows(), 
@@ -249,3 +328,33 @@ std::shared_ptr<sparse_matrix> horizontal(const std::shared_ptr<sparse_matrix> l
     return result;
 }
 
+void sparse_matrix::regularize(double hessian_shift, double last_shift) {
+    // only allow regularization on square matrices.
+    assert(num_rows() == num_columns());
+    
+    // assert(false); // this is fucked because AMPL doesn't always include the diags.
+    
+    // std::cout << "trying to regularize: " << hessian_shift << std::endl;
+    // for (size_t column_index=0; column_index < num_columns(); ++column_index) {
+//             // std::cout << " - col: " << column_index << std::endl;
+//             for (size_t nonzero_index=col_starts_[column_index]; nonzero_index < col_starts_[column_index+1]; ++nonzero_index) {
+//                 // std::cout << " - col: " << column_index << "; nonzero: " << nonzero_index << "; row:" << row_indices_[nonzero_index] << "; val:" << vals_[nonzero_index] << std::endl;
+//                 if (row_indices_[nonzero_index] == column_index) {
+//                     vals_[nonzero_index] = vals_[nonzero_index] + hessian_shift - last_shift;
+//                     // std::cout << " - col: " << column_index << "; nonzero: " << nonzero_index << "; row:" << row_indices_[nonzero_index] << "; val:" << vals_[nonzero_index] << "UPDATED!" << std::endl;
+//                 }
+//             }
+//         }
+//         // last_hessian_shift_ = hessian_shift;
+    std::shared_ptr<sparse_matrix> scaled_identity(new sparse_matrix(num_columns(), hessian_shift - last_shift));
+    // sparse_matrix sib(num_columns(), hessian_shift - last_shift);
+     // *scaled_identity_nosmart = scaled_identity.get();
+    
+    // scaled_identity->print(std::cout);
+    // std::cout << "scaled identity: " << scaled_identity->print(std::cout) << std::endl;
+    // std::cout << "scaled identity: " << std::endl << *scaled_identity << std::endl;
+    sum(scaled_identity);
+    // std::cout << "*this: " << std::endl << *this << std::endl;
+    
+    // assert(false);
+}

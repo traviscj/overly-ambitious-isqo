@@ -27,7 +27,7 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
 			nlp_objective_gradient_(num_nlp_variables_)
  {
 	nlp_objective_gradient_ = nlp_->objective_gradient(iterate);
-	
+	    
     // setup matrix data
     setup_matrix_data(iterate, nlp_->constraints_equality_jacobian(iterate), nlp_->constraints_inequality_jacobian(iterate), nlp_->lagrangian_hessian(iterate));
     
@@ -107,9 +107,11 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
 void iSQOQuadraticSubproblem::inc_regularization(double hessian_shift, double last_shift) {
 	bool PRINT = false;
     hessian_->regularize(hessian_shift, last_shift);
+    // std::shared_ptr< identity(NUM_FUCKING_VARIABLES, (hessian_shift - last_shift));
+    // hessian_ = sum(hessian_, )
 }
 
-void iSQOQuadraticSubproblem::print() const {
+std::ostream &iSQOQuadraticSubproblem::print(std::ostream &os) const {
 	std::cout << std::endl;
 	std::cout << "H = [";
 	std::cout << hessian_;
@@ -158,7 +160,6 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
     // void iSQOSparseQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate) {
 	
     // std::cout << "iSQOQuadraticSubproblem::setup_matrix_data" << std::endl;
-    
 	nlp_eq_jacobian_ = nlp_eq_jacobian;
     // std::cout << "nlp_eq_jacobian_sparse_: " << nlp_eq_jacobian_sparse_ << std::endl;
 	nlp_ieq_jacobian_ = nlp_ieq_jacobian;

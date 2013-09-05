@@ -12,7 +12,7 @@ public:
 	iSQOIterate(int number_primal, int number_dual_eq, int number_dual_ieq);
 	iSQOIterate(const iSQOIterate& s);
 	double x_norm() const;
-	std::ostream &print(std::ostream &);
+	std::ostream &print(std::ostream &) const;
 	void update(const iSQOIterate &iterate, double alpha, const iSQOStep& step);
 	void update_dual(const iSQOStep& step);
     
@@ -27,5 +27,12 @@ public:
 	std::vector<double> dual_ieq_values_;
 	double penalty_parameter_;
 };
+
+//! \brief print an iterate
+//!
+//! here, we print out the underlying vectors associated with the iterate iter, to the output stream 'os'.
+inline std::ostream& operator<< (std::ostream& os, const iSQOIterate& iter) {
+    return iter.print(os);
+}
 
 #endif

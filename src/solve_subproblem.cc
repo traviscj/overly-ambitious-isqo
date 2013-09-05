@@ -1,31 +1,23 @@
+#include <memory>
 #include <typeinfo>
 
 #include "solve_subproblem.hh"
 
 SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) : 
     FunctionWithNLPState(nlp), 
-    example_(nlp_->num_primal() + 2*nlp_->num_dual(), nlp_->num_dual(), qpOASES::HST_UNKNOWN), 
+    example_(0),
     first_(true)
-    {}
+    {
+        // TODO: switch this based on sparsity.
+        // TODO: smart pointer or deconstruct this.
+        example_ = std::shared_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nlp_->num_primal() + 2*nlp_->num_dual(), nlp_->num_dual(), qpOASES::HST_UNKNOWN));
+    }
 
-// std::shared_ptr<qpOASES::SymDenseMat> get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> hessian);
-// std::shared_ptr<qpOASES::SymDenseMat> get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> hessian) {
-//     return std::shared_ptr<qpOASES::SymDenseMat>(new qpOASES::SymDenseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &hessian->data_[0]));
-// }
-// 
-// std::shared_ptr<qpOASES::SymDenseMat> get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> hessian) {
-//     
-// }
-// std::shared_ptr<qpOASES::DenseMatrix> get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> jacobian);
-// std::shared_ptr<qpOASES::DenseMatrix> get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> jacobian) {
-//     return std::shared_ptr<qpOASES::DenseMatrix>(new qpOASES::DenseMatrix(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &jacobian->data_[0]));
-// }
-// 
-// std::shared_ptr<qpOASES::DenseMatrix> get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> jacobian) {
-//     
-// }
+SolveQuadraticProgram::~SolveQuadraticProgram() {
+    
+}
 
-qpOASES::SymmetricMatrix *SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> hessian) {
+std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> hessian) {
     std::shared_ptr<dense_matrix> attempt_dense = std::dynamic_pointer_cast< dense_matrix >(hessian);
     std::shared_ptr<sparse_matrix> attempt_sparse = std::dynamic_pointer_cast< sparse_matrix >(hessian);
     
@@ -37,23 +29,24 @@ qpOASES::SymmetricMatrix *SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadrat
         throw("wtf mate");
     }
 }
-qpOASES::SymmetricMatrix *SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> hessian) {
-    return (new qpOASES::SymDenseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &hessian->data_[0]));
+std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> hessian) {
+    return std::shared_ptr<qpOASES::SymmetricMatrix>(new qpOASES::SymDenseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &hessian->data_[0]));
 }
 
-qpOASES::SymmetricMatrix *SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> hessian) {
-    qpOASES::SymSparseMat *qpoases_hessian = new qpOASES::SymSparseMat(   
+std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> hessian) {
+    // TODO fix this casting, but later...
+    std::shared_ptr<qpOASES::SymSparseMat> qpoases_hessian(new qpOASES::SymSparseMat(   
                                                                 subproblem.num_qp_variables_, 
                                                                 subproblem.num_qp_variables_, 
-                                                                &hessian->row_indices_[0],
-                                                                &hessian->col_starts_[0], 
-                                                                &hessian->vals_[0]
-                                                                    );
+                                                                (int*)(&hessian->row_indices_[0]),
+                                                                (int*)(&hessian->col_starts_[0]), 
+                                                                (double*)(&hessian->vals_[0])
+                                                                    ));
     qpoases_hessian->createDiagInfo();
     return qpoases_hessian;
     // return (new qpOASES::SymSparseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &hessian->data_[0]));
 }
-qpOASES::Matrix *SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> jacobian) {
+std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> jacobian) {
     // std::shared_ptr<dense_matrix> attempt_dense = std::dynamic_pointer_cast< dense_matrix  >(nlp_eq_jacobian);
     
     std::shared_ptr<dense_matrix> attempt_dense = std::dynamic_pointer_cast< dense_matrix >(jacobian);
@@ -67,35 +60,35 @@ qpOASES::Matrix *SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubpro
         throw("wtf mate");
     }
 }
-qpOASES::Matrix *SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> jacobian) {
-    return (new qpOASES::DenseMatrix(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &jacobian->data_[0]));
+std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> jacobian) {
+    return std::shared_ptr<qpOASES::Matrix>(new qpOASES::DenseMatrix(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &jacobian->data_[0]));
 }
 
-qpOASES::Matrix *SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> jacobian) {
-    qpOASES::SparseMatrix *qpoases_jacobian = new qpOASES::SparseMatrix(
+std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> jacobian) {
+    std::shared_ptr<qpOASES::Matrix> qpoases_jacobian(new qpOASES::SparseMatrix(
                                                                 subproblem.num_qp_constraints_, 
                                                                 subproblem.num_qp_variables_, 
-                                                                &jacobian->row_indices_[0],
-                                                                &jacobian->col_starts_[0], 
-                                                                &jacobian->vals_[0]
-                                                                    );
+                                                                (int*)&jacobian->row_indices_[0],
+                                                                (int*)&jacobian->col_starts_[0], 
+                                                                (double*)&jacobian->vals_[0]
+                                                                    ));
     return qpoases_jacobian;
-    // return (new qpOASES::DenseMatrix(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &jacobian->data_[0]));
 }
 
 // DENSE quadratic subproblem solver:
 iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) {
 	int nWSR = 2000;
     operator_setup();
-
-    qpOASES::SymmetricMatrix *qpoases_hessian_ = this->get_qpoases_hessian(subproblem, subproblem.hessian_);
-    qpOASES::Matrix *qpoases_jacobian_ = this->get_qpoases_jacobian(subproblem, subproblem.jacobian_);
+    
+    // std::cout << std::endl << "immediately before solve: " << subproblem << std::endl;
+    std::shared_ptr<qpOASES::SymmetricMatrix> qpoases_hessian_ = this->get_qpoases_hessian(subproblem, subproblem.hessian_);
+    std::shared_ptr<qpOASES::Matrix> qpoases_jacobian_ = this->get_qpoases_jacobian(subproblem, subproblem.jacobian_);
 	qpOASES::returnValue ret;
 // subproblem.print();
 	if (first_) {
-		ret = example_.init( qpoases_hessian_,
+		ret = example_->init( qpoases_hessian_.get(),
 							 &subproblem.gradient_[0],
-							 qpoases_jacobian_,
+							 qpoases_jacobian_.get(),
 							 &subproblem.lower_bound_[0],
 							 &subproblem.upper_bound_[0],
 							 &subproblem.jacobian_lower_bound_[0],
@@ -103,9 +96,9 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 							 nWSR,
 							 0);
 	} else{
-		ret = example_.hotstart(qpoases_hessian_,
+		ret = example_->hotstart(qpoases_hessian_.get(),
 							 &subproblem.gradient_[0],
-							 qpoases_jacobian_,
+							 qpoases_jacobian_.get(),
 							 &subproblem.lower_bound_[0],
 							 &subproblem.upper_bound_[0],
 							 &subproblem.jacobian_lower_bound_[0],
@@ -127,7 +120,7 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 //     
 //     qpOASES::returnValue ret;
 //     if (first_) {
-//         ret = example_.init( &qpoases_hessian_,
+//         ret = example_->init( &qpoases_hessian_,
 //                              &sparse_subproblem.gradient_[0],
 //                              &qpoases_jacobian_,
 //                              &sparse_subproblem.lower_bound_[0],
@@ -137,7 +130,7 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 //                              nWSR,
 //                              0);
 //     } else{
-//         ret = example_.hotstart(&qpoases_hessian_,
+//         ret = example_->hotstart(&qpoases_hessian_,
 //                              &sparse_subproblem.gradient_[0],
 //                              &qpoases_jacobian_,
 //                              &sparse_subproblem.lower_bound_[0],
@@ -152,41 +145,47 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 
 void SolveQuadraticProgram::operator_setup() {
 
-	qpOASES::Options opt;
-
-    // opt.terminationTolerance = 1e-6;
-    // opt.enableEqualities = qpOASES::BooleanType(true);
-    opt.setToReliable();
-    // enableRegularisation
-    opt.enableRegularisation = qpOASES::BooleanType(true);
-    opt.enableNZCTests = qpOASES::BooleanType(true);
-    opt.initialStatusBounds = qpOASES::ST_UPPER;
-    opt.numRegularisationSteps = 200;
-    // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
-    example_.setOptions(opt);
-	example_.setPrintLevel(qpOASES::PL_NONE);
+    // qpOASES::Options *opt = new qpOASES::Options;
+    // 
+    //     // opt.terminationTolerance = 1e-6;
+    //     opt->setToReliable();
+    //     
+    //     opt->enableEqualities = qpOASES::BooleanType(true);
+    //     opt->enableFullLITests = qpOASES::BooleanType(true);
+    //     // opt->epsLITests ; // maybe play with this later. (maybe 1e-8)
+    //     opt->enableRegularisation = qpOASES::BooleanType(true);
+    //     opt->enableNZCTests = qpOASES::BooleanType(true);
+    //     // opt->initialStatusBounds = qpOASES::ST_LOWER;
+    //     // opt->numRegularisationSteps = 200;
+    //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
+    //     example_->setOptions(*opt);
+	example_->setPrintLevel(qpOASES::PL_NONE);
 }
 iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &subproblem, qpOASES::returnValue ret) {
 	std::cerr.flush();
 	std::cout.flush();
     
-	size_t return_status = example_.getStatus();
+	size_t return_status = example_->getStatus();
 	// getGlobalMessageHandler()->listAllMessages();
 	if( ret != qpOASES::SUCCESSFUL_RETURN ){
         // 
         if (ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS || 
             ret == qpOASES::RET_QP_UNBOUNDED || 
             ret == qpOASES::RET_HOTSTART_STOPPED_UNBOUNDEDNESS || 
-            ret == qpOASES::RET_STEPDIRECTION_FAILED_CHOLESKY
+            ret == qpOASES::RET_STEPDIRECTION_FAILED_CHOLESKY ||      // only in dense.
+            ret == qpOASES::RET_INIT_FAILED_HOTSTART
             ) {
             // don't need to do anything for unbounded QPs...
              
         } else {
             // subproblem.print();
-            // printf( "%s\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
+            // 
+            std::cout << "failed subproblem: " << subproblem << std::endl;
+            printf( "%s\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
+        
         }
         first_ = true;
-        example_.reset();
+        example_->reset();
 	} else {
 		if (first_) first_ = false;
 	}
@@ -195,7 +194,7 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 
 	// full_primal needs to hold primal variables and all slack variables
 	std::vector<double> primal_and_slack_values(nlp_->num_primal() + 2*nlp_->num_dual());
-	example_.getPrimalSolution( &primal_and_slack_values[0] );
+	example_->getPrimalSolution( &primal_and_slack_values[0] );
 	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index)
 		step.primal_values_[primal_index] = primal_and_slack_values[primal_index];
 
@@ -209,7 +208,7 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	//		-- iterate.num_dual_ieq_
 	// so in total:          VARIABLE MULTIPLIERS   SLACK MULTIPLIERS    CONSTRAINT MULTIPLIERS
 	std::vector<double> yOpt(nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual());
-	example_.getDualSolution( &yOpt[0] );				
+	example_->getDualSolution( &yOpt[0] );				
 
 	step.status_ = ret;
 	// to get eq con multipliers, read past NLP & slack variables:
@@ -225,6 +224,8 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	if (PRINT) {
 		std::cout << step;
 	}
+    
+    // assert(false);
 	return step;
 }
 

@@ -106,6 +106,7 @@ test:
 	./isqo_functor ~/optimization/cute_nl_nopresolve/hs020.nl > output/isqo_hs020.nl
 
 clean:
-	@rm -f *.o
-	@rm -f isqo ${tests_bin}
-	@rm -rf *.dSYM
+	rm -f *.o
+	rm -f isqo-dense isqo-sparse
+	rm -f isqo ${tests_bin}
+	rm -rf *.dSYM

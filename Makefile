@@ -8,3 +8,6 @@ doxy:
 
 wc:
 	wc -l include/*.hh src/*.cc
+
+clean:
+	cd src && make clean

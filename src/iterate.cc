@@ -41,7 +41,7 @@ double iSQOIterate::x_norm() const {
 	norm_sqrt = sqrt(norm);
 	return norm_sqrt;
 }
-std::ostream &iSQOIterate::print(std::ostream &os) {
+std::ostream &iSQOIterate::print(std::ostream &os) const {
 	os << "prim: [";
 	for (size_t primal_index=0; primal_index<num_primal_; ++primal_index) {
 		if (primal_index != 0) os << ", ";

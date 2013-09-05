@@ -36,8 +36,8 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 	double current_shift = 0.0;
 	
 	// try to solve without regularization:
-    // WHY would this line be necessary?
-    // subproblem.inc_regularization(current_shift, current_shift);
+    // WHY would this line be necessary? (maybe so the matrix has the same sparsity structure?)
+    subproblem.inc_regularization(current_shift, current_shift);
 	iSQOStep return_step = solve_qp_(subproblem);
 	
 	
@@ -72,7 +72,6 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 			}
 		}
 		subproblem.inc_regularization(current_shift, last_shift);
-        // std::cout << "subproblem.inc_regularization(current_shift=" << current_shift << ", last_shift=" << last_shift << ")" << std::endl;
 		return_step = solve_qp_(subproblem);
 		
 		for (size_t primal_index = 0; primal_index < nlp_->num_primal(); ++primal_index) {

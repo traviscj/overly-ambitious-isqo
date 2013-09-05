@@ -665,6 +665,8 @@ void AmplNlp::hessian_update(const iSQOIterate &iterate) {
 std::shared_ptr<matrix_base_class> SparseAmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
     if (PRINT_) std::cout << "trying to create a sparse hessian." << std::endl;
     
+    if (PRINT_) std::cout << "iterate is: " << iterate << std::endl;
+    
     ASL *asl = asl_;
 	std::vector<double> H(num_primal() * num_primal());
 	std::vector<double> OW(1);

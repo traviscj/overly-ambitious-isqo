@@ -18,19 +18,12 @@ AC_PROG_MAKE_SET
 
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lblas':
 AC_CHECK_LIB([blas], [dgemm_],[],AC_MSG_ERROR([Could not find blas!!]))
-# FIXME: Replace `main' with a function in `-lgfortran':
 AC_CHECK_LIB([gfortran], [_gfortran_st_write],[],AC_MSG_ERROR([Could not find -lgfortran!!]))
-# FIXME: Replace `main' with a function in `-llapack':
 AC_CHECK_LIB([lapack], [dtrtrs_],[],AC_MSG_ERROR([Could not find -llapack!!]))
-##########################################################################
-# adding the qpOASES_aw library (e.g. with static name 'libqpOASES_aw.a')
-##########################################################################
 
 # adding the lib to the files to link
 LIBS="-lqpOASES_aw $LIBS"
-
 # introduce the optional configure parameter for a non-standard install prefix of qpOASES_aw
 AC_ARG_WITH([qpOASES_aw],
     [AS_HELP_STRING([--with-qpOASES_aw=prefix],

@@ -17,8 +17,8 @@
 //! where \f$[x]^+ = max(x,0)\f$, or the constraint violation after a step,
 //!   \f[ v(x,d):= ||c_{\mathcal{E}}(x) + J_{\mathcal{E}}\cdot d||_1 + ||[c_{\mathcal{I}}(x) + J_{\mathcal{I}}\cdot d]^+||_1 \f]
 //! 
-//! As always, we assume that the Nlp object returns a model of the form (for a specified \f$x_k\f$, \f$\lambda^{\mathcal{E}}_k\f$, and \f$\lambda^{\mathcal{I}}_k\f$)
-//! \f{align*}{\min& \qquad  f(x_k) + \nabla f(x_k) + \frac{1}{2}d^T\left[ \nabla^2_{xx} f(x) + \sum_{i\in\mathcal{E}} \nabla^2_{xx} c_{i}(x_k) \cdot \lambda^{(i)}_k + \sum_{i\in\mathcal{I}} \nabla^2_{xx} c_{i}(x_k) \cdot \lambda^{(i)}_k \right]d \\ \text{s.t.}& \qquad  J_{\mathcal{E}}\cdot d + c_{\mathcal{E}}(x) = 0\\& \qquad   J_{\mathcal{I}}\cdot d + c_{\mathcal{I}}(x) \leq 0 \f}
+//! As always, we assume that the Nlp object returns a model of the form (for a specified \f$x\f$, \f$\lambda_{\mathcal{E}}\f$, and \f$\lambda_{\mathcal{I}}\f$)
+//! \f{align*}{\min& \qquad  f(x) + \nabla f(x)^T d + \frac{1}{2}d^T\left[ \nabla^2_{xx} f(x) + \sum_{i\in\mathcal{E}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} + \sum_{i\in\mathcal{I}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} \right]d \\ \text{s.t.}& \qquad  J_{\mathcal{E}}\cdot d + c_{\mathcal{E}}(x) = 0\\& \qquad   J_{\mathcal{I}}\cdot d + c_{\mathcal{I}}(x) \leq 0 \f}
 class ConstraintViolationFunction : public FunctionWithNLPState {
 public:
     

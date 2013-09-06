@@ -8,6 +8,7 @@
 #include "subproblem.hh"
 #include "step.hh"
 
+//! \brief class which returns a function for evaluating NLP or QP residuals
 class ResidualFunction : public FunctionWithNLPState {
 public:
 	ResidualFunction(Nlp &nlp);

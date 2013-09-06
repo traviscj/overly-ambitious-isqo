@@ -11,6 +11,7 @@
 #include "residual_function.hh"
 #include "nlp_state.hh"
 
+//! \brief class responsible for doing text output as the algorithm progresses
 class TextOutput : public FunctionWithNLPState {
 public:
 	TextOutput (Nlp &nlp);

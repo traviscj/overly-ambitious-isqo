@@ -9,7 +9,7 @@
 
 #include "utilities.hh"
 
-//! \brief a matrix
+//! \brief a generic, abstract matrix
 //!
 //! 
 class matrix_base_class {
@@ -32,7 +32,7 @@ protected:
     double last_hessian_shift_;
 };
 
-//! \brief a matrix
+//! \brief a dense, double*-type matrix
 //!
 //! 
 class dense_matrix : public matrix_base_class {
@@ -90,7 +90,8 @@ inline std::ostream& operator<< (std::ostream& os, const dense_matrix& m) {
     return os;
 }
 
-
+//! \brief sparse matrices (column compressed format)
+//!
 class sparse_matrix : public matrix_base_class {
 public:
     //! \brief create a 'null' sparse matrix

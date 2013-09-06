@@ -13,6 +13,7 @@
 #include "nlp.hh"
 #include "utilities.hh"
 
+//! \brief an Nlp object which returns evaluations from the AMPL Solver Library (abstract base class--no jacobian/hessian functions defined!)
 class AmplNlp : public Nlp {
 public:
 	// AmplNlp(char *stub_str) : Nlp(-1,-1,-1), PRINT_(false) {
@@ -71,6 +72,7 @@ protected:
     std::shared_ptr<matrix_base_class> hessian_;  
 };
 
+//! \brief an Nlp object which returns dense_matrix evaluations from the AMPL Solver Library
 class DenseAmplNlp : public AmplNlp {
 public:
 	DenseAmplNlp(std::string stub_str);
@@ -84,6 +86,7 @@ protected:
 
 };
 
+//! \brief an Nlp object which returns sparse_matrix evaluations from the AMPL Solver Library
 class SparseAmplNlp : public AmplNlp {
 public:
 	SparseAmplNlp(std::string stub_str);

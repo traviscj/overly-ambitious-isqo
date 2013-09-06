@@ -158,6 +158,7 @@ iSQOIterate AmplNlp::initial() {
 // zeroth order NLP quantities:
 double AmplNlp::objective(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
+    // TODO look into doing const casts here (& in all other AmplNlp functions...)
 	std::vector<double> x(this->num_primal());
 	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
 		x[primal_index] = iterate.primal_values_[primal_index];

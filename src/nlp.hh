@@ -8,6 +8,11 @@
 #include "matrix.hh"
 #include "utilities.hh"
 
+//! \brief class returning NLP evaluations.
+//!
+//! We assume that the Nlp object returns a model of the form (for a specified \f$x\f$, \f$\lambda_{\mathcal{E}}\f$, and \f$\lambda_{\mathcal{I}}\f$)
+//! \f{align*}{\min& \qquad  f(x) + \nabla f(x)^T d + \frac{1}{2}d^T\left[ \nabla^2_{xx} f(x) + \sum_{i\in\mathcal{E}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} + \sum_{i\in\mathcal{I}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} \right]d \\ \text{s.t.}& \qquad  J_{\mathcal{E}}\cdot d + c_{\mathcal{E}}(x) = 0\\& \qquad   J_{\mathcal{I}}\cdot d + c_{\mathcal{I}}(x) \leq 0 \f}
+
 class Nlp {
 	// this class implements 
 public:

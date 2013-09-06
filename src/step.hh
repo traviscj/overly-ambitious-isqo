@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 
+//! \brief class for storing iSQO steps (primal values and one set of dual values)
 class iSQOStep {
 public:
 	iSQOStep(int number_primal, int number_dual_eq, int number_dual_ieq);

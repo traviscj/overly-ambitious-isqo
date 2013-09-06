@@ -11,19 +11,21 @@
 
 // TODO reformulate ieq constraints into bounds on slacks instead of this hacky-ass setup?
 // 
+//! \brief a class for actually constructing the qpOASES subproblem.
+//! 
+//! Here, we convert Nlp's format(for a particular \f$x\f$, \f$\lambda_{\mathcal{E}}\f$, and \f$\lambda_{\mathcal{I}}\f$)
+//!  \f{align*}{\min_{d}& \qquad  f(x) + \nabla f(x)^T d + \frac{1}{2}d^T\left[ \nabla^2_{xx} f(x) + \sum_{i\in\mathcal{E}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} + \sum_{i\in\mathcal{I}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} \right]d \\ \text{s.t.}& \qquad  J_{\mathcal{E}}\cdot d + c_{\mathcal{E}}(x) = 0\\& \qquad   J_{\mathcal{I}}\cdot d + c_{\mathcal{I}}(x) \leq 0 \f}
+//! into
+//! \f{align*}{\min_{d}& \qquad \mu f(x) + \mu\nabla f(x)^T d + e^T(p_{\mathcal{E}}+n_{\mathcal{E}}) + e^T(p_{\mathcal{I}}) + \frac{1}{2}d^T\left[ \mu\nabla^2_{xx} f(x) + \sum_{i\in\mathcal{E}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} + \sum_{i\in\mathcal{I}} \nabla^2_{xx} c_{i}(x) \cdot \lambda_{(i)} \right]d \\ \text{s.t.}& \qquad  lb <= J_{\texttt{qpOASES}}\cdot d - Ip + In <= ub\\& \qquad (p,n) \geq 0 \f}
+//! by stacking
+//! \f[ J_{\texttt{qpOASES}} = \begin{pmatrix} J_{\mathcal{E}} \\ J_{\mathcal{I}} \end{pmatrix}, lb = \begin{pmatrix} -c_{\mathcal{E}}(x) \\ -\infty \end{pmatrix}, ub = \begin{pmatrix} -c_{\mathcal{E}}(x) \\ -c_{\mathcal{I}}(x) \end{pmatrix} \f]
+//! \todo change this to bounds on the slacks instead.
 
 class iSQOQuadraticSubproblem : public FunctionWithNLPState {
 public:
 	iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
 
-    void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<matrix_base_class> nlp_eq_jacobian, std::shared_ptr<matrix_base_class> nlp_ieq_jacobian, std::shared_ptr<matrix_base_class> nlp_hessian);
-	
-    void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<dense_matrix> nlp_eq_jacobian, std::shared_ptr<dense_matrix> nlp_ieq_jacobian, std::shared_ptr<dense_matrix> nlp_hessian);
-    void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<sparse_matrix> nlp_eq_jacobian, std::shared_ptr<sparse_matrix> nlp_ieq_jacobian, std::shared_ptr<sparse_matrix> nlp_hessian);
-    
 	void inc_regularization(double hessian_shift, double last_shift);
-
-    
     
 	std::ostream &print(std::ostream &os) const;
 	size_t num_qp_variables_, num_qp_constraints_;
@@ -45,7 +47,12 @@ public:
 	
 private:
 protected:
-    // void setup_matrix_data(const iSQOIterate &);
+    void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<matrix_base_class> nlp_eq_jacobian, std::shared_ptr<matrix_base_class> nlp_ieq_jacobian, std::shared_ptr<matrix_base_class> nlp_hessian);
+	
+    void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<dense_matrix> nlp_eq_jacobian, std::shared_ptr<dense_matrix> nlp_ieq_jacobian, std::shared_ptr<dense_matrix> nlp_hessian);
+    void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<sparse_matrix> nlp_eq_jacobian, std::shared_ptr<sparse_matrix> nlp_ieq_jacobian, std::shared_ptr<sparse_matrix> nlp_hessian);
+    
+
     
 };
 

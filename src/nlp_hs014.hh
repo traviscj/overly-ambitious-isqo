@@ -4,6 +4,7 @@
 #include <vector>
 #include "iterate.hh"
 
+//! \brief a specific Nlp class for the problem Hs014, for demonstration & testing.
 class Hs014 : public Nlp {
 public:
 	Hs014();	

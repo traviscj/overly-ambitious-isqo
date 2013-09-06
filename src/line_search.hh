@@ -8,6 +8,7 @@
 #include "penalty_function.hh"
 #include "linear_model_reduction.hh"
 
+//! \brief class returning a function to perform line search
 class LineSearchFunction : public FunctionWithNLPState {
 public:
 	LineSearchFunction(Nlp &nlp);

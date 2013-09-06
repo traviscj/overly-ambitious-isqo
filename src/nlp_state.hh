@@ -4,6 +4,8 @@
 
 #include "nlp.hh"
 
+//! \brief a class for holding some Nlp state. derived classes override operator()
+// \todo implement some caching here.
 class FunctionWithNLPState {
 public:
 	FunctionWithNLPState(Nlp &nlp) {

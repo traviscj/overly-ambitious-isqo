@@ -7,6 +7,7 @@
 #include "nlp_state.hh"
 #include "constraint_violation.hh"
 
+//! \brief class returning a function to evaluate linear models
 class LinearModelFunction : public FunctionWithNLPState {
 public:
 	LinearModelFunction(Nlp &nlp);

@@ -7,6 +7,7 @@
 
 #include "step.hh"
 
+//! \brief class for storing iSQO iterates (primal values and one set of dual values)
 class iSQOIterate {
 public:
 	iSQOIterate(int number_primal, int number_dual_eq, int number_dual_ieq);

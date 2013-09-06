@@ -6,6 +6,7 @@
 #include "subproblem.hh"
 #include "nlp_state.hh"
 
+//! \brief class which returns a function for actually solving QPs with qpOASES
 class SolveQuadraticProgram : public FunctionWithNLPState {
 public:
 	SolveQuadraticProgram(Nlp &nlp);
@@ -13,6 +14,10 @@ public:
 
     // iSQOStep operator()(iSQOSparseQuadraticSubproblem &subproblem);
 	iSQOStep operator()(iSQOQuadraticSubproblem &subproblem);
+        
+private:
+    void operator_setup();
+    iSQOStep operator_finish(const iSQOQuadraticSubproblem &subproblem, qpOASES::returnValue ret);
     
     std::shared_ptr<qpOASES::SymmetricMatrix> get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> hessian);
     std::shared_ptr<qpOASES::SymmetricMatrix> get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> hessian);
@@ -21,9 +26,6 @@ public:
     std::shared_ptr<qpOASES::Matrix> get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> jacobian);
     std::shared_ptr<qpOASES::Matrix> get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> jacobian);
     
-private:
-    void operator_setup();
-    iSQOStep operator_finish(const iSQOQuadraticSubproblem &subproblem, qpOASES::returnValue ret);
 protected:
     // virtual void solve(iSQOQuadraticSubproblem *subproblem) = 0;
     

@@ -26,11 +26,11 @@
 // future feature list:
 // - DONE !!! variable bounds !!!
 // - DONE !!! more robust shifting strategy and/or Quasi-Newton. (Quasi-Newton might still be an interesting experiment)
-// - DONE... rewrite some of the matrix computations into the matrix class. (But still need to check for stragglers...)
+// - DONE !!! rewrite some of the matrix computations into the matrix class. ) !!!
+// - DONE !!! integrate DJ/CK/AW/et al's work on sparse qpOASES. !!!
 // - constraint/objective scaling (should fix HS99... )
 // - other iSQO features (algo II-features.)
 // - iQP interface! -- but how to do fallback/etc?
-// - integrate DJ/CK/AW/et al's work on sparse qpOASES.
 // - logbook-style reporting/logging, with sql.
 // - use qpoases matrices instead of custom matrix code
 // - sparse matrices from ampl/to qpOASES.

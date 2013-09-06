@@ -48,9 +48,9 @@ fi
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
-AC_SUBST([LIBS])
-AC_SUBST([AM_CXXFLAGS])
-AC_SUBST([AM_LDFLAGS])
+# AC_SUBST([LIBS])
+# AC_SUBST([AM_CXXFLAGS])
+# AC_SUBST([AM_LDFLAGS])
 
 # to check qpOASES, need to pass the library flags.
 AX_CXX_CHECK_LIB([qpOASES_aw], [qpOASES::SparseMatrix], [], AC_MSG_ERROR([Could not find qpOASES_aw!!]), $AM_LDFLAGS)
@@ -60,8 +60,10 @@ AX_CXX_CHECK_LIB([qpOASES_aw], [qpOASES::SparseMatrix], [], AC_MSG_ERROR([Could 
 # adding the amplsolver library (e.g. with static name 'amplsolver.a')
 ##########################################################################
 
-# adding the lib to the files to link
-LIBS="$LIBS"
+AC_CHECK_HEADER([asl.h],
+[],
+[AC_MSG_ERROR([required header file "asl.h" not found. (specify with --with-amplsolver= ?)])])
+
 
 # introduce the optional configure parameter for a non-standard install prefix of amplsolver
 AC_ARG_WITH([amplsolver],
@@ -72,22 +74,19 @@ AC_ARG_WITH([amplsolver],
 	
 # if optional parameter used, extend path flags for compliler and linker
 if test $amplsolverPATHSET = 1 ; then
-
     # extend the compiler and linker flags according to the path set
     AM_CXXFLAGS="$AM_CXXFLAGS -I$with_amplsolver/"
-    AM_LDFLAGS="$AM_LDFLAGS $with_amplsolver/amplsolver.a"
+    ASL_LOCATION="$with_amplsolver"
 fi
 
-##########################################################################
-# distribute the changed variables among the Makefiles
+AC_CHECK_FILE([$ASL_LOCATION/amplsolver.a], [], AC_MSG_ERROR([Could not find amplsolver.a in "$ASL_LOCATION"; 
+check --with-amplsolver option!!!]))
+
+
 AC_SUBST([LIBS])
+AC_SUBST([ASL_LOCATION])
 AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_LDFLAGS])
-
-# to check qpOASES, need to pass the library flags.
-AC_CHECK_LIB([], [jac0dim], [], AC_MSG_ERROR([Could not find amplsolver!!]), $AM_LDFLAGS)
-
-
 
 
 # Checks for header files.

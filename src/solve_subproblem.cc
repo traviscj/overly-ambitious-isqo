@@ -77,7 +77,7 @@ std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQ
 
 // DENSE quadratic subproblem solver:
 iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) {
-	int nWSR = 2000;
+	int nWSR = 50000;
     operator_setup();
     
     // std::cout << std::endl << "immediately before solve: " << subproblem << std::endl;

@@ -39,6 +39,7 @@
 // - second order correction (might fix HS067...)
 // - use multiple qp objects for getting subproblem solutions.
 // - const all applicable functions.
+// - stay bound feasible option? (eg, dallas* need feasible primal variables.)
 // - 
 
 // justification for weirder choices:
@@ -75,20 +76,20 @@
 // iSQO headers:
 #include "isqo.hh"
 
-#ifdef ISQO_USE_SPARSE
-const std::string sparse_version_string = "SparseAmplNlp and iSQOSparseQuadraticSubproblem";
-#define MAGIC_PROBLEM SparseAmplNlp
-#define MAGIC_SUBPROBLEM iSQOQuadraticSubproblem
-#else
+#ifdef ISQO_USE_DENSE
 const std::string sparse_version_string = "DenseAmplNlp and iSQOQuadraticSubproblem";
 #define MAGIC_PROBLEM DenseAmplNlp
+#define MAGIC_SUBPROBLEM iSQOQuadraticSubproblem
+#else
+const std::string sparse_version_string = "SparseAmplNlp and iSQOSparseQuadraticSubproblem";
+#define MAGIC_PROBLEM SparseAmplNlp
 #define MAGIC_SUBPROBLEM iSQOQuadraticSubproblem
 #endif
 
 int main(int argc, char **argv) {
 	
     std::cout << "Hello world! We're serving " << sparse_version_string << " today, please buckle your seat belts and prepare for takeoff..." << std::endl;
-	std::string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/hs067.nl");
+	std::string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/qpcstair.nl");
 	if (argc>1) {
 		problem_file = std::string(argv[1]);
 	}

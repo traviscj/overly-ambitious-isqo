@@ -56,14 +56,14 @@ double ResidualFunction::operator()(const iSQOIterate &iterate) const {
 	
 	for (size_t stationarity_index=0; stationarity_index < nlp_->num_primal(); ++stationarity_index) {
 		// mu*grad f:
-		stationarity[stationarity_index] *= iterate.penalty_parameter_;
+		stationarity[stationarity_index] *= iterate.get_penalty_parameter();
 	}
 	
 	std::vector<double> eq_con_values = nlp_->constraints_equality(iterate);
 	std::vector<double> ieq_con_values = nlp_->constraints_inequality(iterate);
 	
 	if (PRINT) {
-		std::cout << std::endl << "mu: " << iterate.penalty_parameter_ << std::endl;
+		std::cout << std::endl << "mu: " << iterate.get_penalty_parameter() << std::endl;
 		std::cout << "sta (pre): " << nlp_->objective_gradient(iterate) << std::endl;
 		std::cout << "sta: " << stationarity << std::endl;
 		std::cout << "constraints  eq: " << eq_con_values << std::endl;
@@ -71,10 +71,15 @@ double ResidualFunction::operator()(const iSQOIterate &iterate) const {
 	
 		std::cout << "jac eq: " << nlp_->constraints_equality_jacobian(iterate) << std::endl;
 	
-		std::cout << "       dual  eq: " << iterate.dual_eq_values_ << std::endl;
-		std::cout << "       dual ieq: " << iterate.dual_ieq_values_ << std::endl;
+		std::cout << "       dual  eq: " << iterate.get_dual_eq_values() << std::endl;
+		std::cout << "       dual ieq: " << iterate.get_dual_ieq_values() << std::endl;
 	}
-	return resid_helper(iterate, stationarity, eq_con_values, ieq_con_values, iterate.dual_eq_values_, iterate.dual_ieq_values_);
+    std::vector<double> dual_eq_values(nlp_->num_dual_eq());
+    dual_eq_values.assign(iterate.get_dual_eq_values()->begin(), iterate.get_dual_eq_values()->end());
+    std::vector<double> dual_ieq_values(nlp_->num_dual_ieq());
+    dual_ieq_values.assign(iterate.get_dual_ieq_values()->begin(), iterate.get_dual_ieq_values()->end());
+    
+	return resid_helper(iterate, stationarity, eq_con_values, ieq_con_values, dual_eq_values, dual_ieq_values);
 }
 double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const {
 	// first entry of rho(x,y,bary,mu):
@@ -87,7 +92,7 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 	
 	for (size_t stationarity_index=0; stationarity_index < nlp_->num_primal(); ++stationarity_index) {
 		// mu*grad f + H*d:
-		stationarity[stationarity_index] = iterate.penalty_parameter_*stationarity[stationarity_index] + hessian_times_step[stationarity_index];
+		stationarity[stationarity_index] = iterate.get_penalty_parameter()*stationarity[stationarity_index] + hessian_times_step[stationarity_index];
 		
 	}
 	

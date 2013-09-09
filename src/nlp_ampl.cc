@@ -48,6 +48,8 @@ void AmplNlp::ConstructHelper(std::string stub_str) {
 
 	int status = pfgh_read(nl_, ASL_return_read_err | ASL_findgroups);
 
+    assert(n_obj == 1);
+
 	if (PRINT_) std::cout << "X0: " << X0[0] << ", " << X0[1] << std::endl;
 	
 	for (size_t ampl_constraint_index=0; ampl_constraint_index<n_con; ++ampl_constraint_index) {
@@ -126,44 +128,46 @@ AmplNlp::~AmplNlp() {
 	fclose(nl_);
 }
 
-iSQOIterate AmplNlp::initial() {
-	iSQOIterate initial(this->num_primal(), this->num_dual_eq(), this->num_dual_ieq());
-	for (size_t primal_index=0; primal_index < this->num_primal(); ++primal_index) {
-		initial.primal_values_[primal_index] = X0_[primal_index];
-		if (PRINT_) std::cout << "initial_" << primal_index << ": " << X0_[primal_index] <<std::endl;
-	}
+iSQOIterate AmplNlp::initial(double penalty_parameter) {
+    iSQOIterate initial(this->num_primal(), this->num_dual_eq(), this->num_dual_ieq(), penalty_parameter);
+    initial.assign_primal(X0_);
+
 	std::vector<double> eq_values = constraints_equality(initial);
+    std::vector<double> dual_eq_values(this->num_dual_eq());
 	for (size_t dual_eq_index=0; dual_eq_index < this->num_dual_eq(); ++dual_eq_index) {
 		if (eq_values[dual_eq_index] < 0) {
-			initial.dual_eq_values_[dual_eq_index] = -1.0;
+			dual_eq_values[dual_eq_index] = -1.0;
 		} else if (eq_values[dual_eq_index] > 0) {
-			initial.dual_eq_values_[dual_eq_index] = +1.0;
+			dual_eq_values[dual_eq_index] = +1.0;
 		} else {
-			initial.dual_eq_values_[dual_eq_index] = 0.0;
+			dual_eq_values[dual_eq_index] = 0.0;
 		}
 	}
+    initial.assign_dual_eq(dual_eq_values);
 
 	std::vector<double> ieq_values = constraints_inequality(initial);
+    std::vector<double> dual_ieq_values(this->num_dual_ieq());
 	for (size_t dual_ieq_index=0; dual_ieq_index < this->num_dual_ieq(); ++dual_ieq_index) {
 		if (ieq_values[dual_ieq_index] < 0) {
-			initial.dual_ieq_values_[dual_ieq_index] = 0.0;
+			dual_ieq_values[dual_ieq_index] = 0.0;
 		} else if (ieq_values[dual_ieq_index] > 0) {
-			initial.dual_ieq_values_[dual_ieq_index] =+1.0;
+			dual_ieq_values[dual_ieq_index] =+1.0;
 		} else {
-			initial.dual_ieq_values_[dual_ieq_index] = 0.0;
+			dual_ieq_values[dual_ieq_index] = 0.0;
 		}
 	}
+    initial.assign_dual_ieq(dual_ieq_values);
+    
 	return initial;
 }
 // zeroth order NLP quantities:
 double AmplNlp::objective(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
-    // TODO look into doing const casts here (& in all other AmplNlp functions...)
-	std::vector<double> x(this->num_primal());
-	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
-		x[primal_index] = iterate.primal_values_[primal_index];
-	
-	real obj = objval(0, &x[0], nerror_);
+    // TODO look into doing const casts here (& in all other AmplNlp functions...), so that we don't have to do any copies!
+    std::vector<double> x(this->num_primal());
+    x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
+
+    real obj = objval(0, &x[0], nerror_);
 	if (PRINT_) std::cout << "objective value(nerror = " << *nerror_ << "): " << obj << std::endl;
 	return obj;
 }
@@ -171,9 +175,8 @@ double AmplNlp::objective(const iSQOIterate &iterate) {
 std::vector<double> AmplNlp::constraints_equality(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(this->num_primal());
-	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
-		x[primal_index] = iterate.primal_values_[primal_index];
-	// std::vector<double> con(num_dual());
+    x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
+    
 	std::vector<double> con(n_con);
 	conval(&x[0], &con[0], nerror_);
 	if (PRINT_) std::cout << "equality_constraints:" << std::endl;
@@ -188,11 +191,9 @@ std::vector<double> AmplNlp::constraints_equality(const iSQOIterate &iterate) {
 std::vector<double> AmplNlp::constraints_inequality(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(this->num_primal());
-	
-	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
-		x[primal_index] = iterate.primal_values_[primal_index];
-	
-	std::vector<double> con(n_con);
+    x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
+    
+    std::vector<double> con(n_con);
 	
 	conval(&x[0], &con[0], nerror_);
 	if (PRINT_) std::cout << "inequality_constraints:" << std::endl;
@@ -243,8 +244,7 @@ std::vector<double> AmplNlp::objective_gradient(const iSQOIterate &iterate) {
 	std::vector<double> return_gradient(this->num_primal());
 	
 	std::vector<double> x(this->num_primal());
-	for (size_t primal_index=0; primal_index < this->num_primal(); ++primal_index)
-		x[primal_index] = iterate.primal_values_[primal_index];
+    x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
 	
 	objgrd(0, &x[0], &return_gradient[0], nerror_);
 	if (PRINT_) std::cout << "objective gradient(nerror = " << *nerror_ << "): " << return_gradient[0] << std::endl;
@@ -256,9 +256,7 @@ std::vector<double> AmplNlp::objective_gradient(const iSQOIterate &iterate) {
 std::shared_ptr<matrix_base_class> DenseAmplNlp::constraints_equality_jacobian(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(this->num_primal());
-	
-	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
-		x[primal_index] = iterate.primal_values_[primal_index];
+    x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
 	
     // std::shared_ptr<matrix_base_class> equality_constraint_jacobian(new dense_matrix(equality_constraints_.size(), n_var));
     std::shared_ptr<dense_matrix> equality_constraint_jacobian = std::shared_ptr<dense_matrix>(new dense_matrix(equality_constraints_.size(), this->num_primal()));
@@ -281,10 +279,8 @@ std::shared_ptr<matrix_base_class> DenseAmplNlp::constraints_equality_jacobian(c
 void AmplNlp::jacobian_update(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(num_primal());
-	
-	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index)
-		x[primal_index] = iterate.primal_values_[primal_index];
-	
+    x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
+		
     asl->i.congrd_mode = 0;
     double J[nzc];
     jacval(&x[0], &J[0], nerror_);
@@ -552,10 +548,8 @@ std::shared_ptr<matrix_base_class> SparseAmplNlp::constraints_inequality_jacobia
 std::shared_ptr<matrix_base_class> DenseAmplNlp::constraints_inequality_jacobian(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> x(num_primal());
-	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index){
-		x[primal_index] = iterate.primal_values_[primal_index];
-	}
-	
+    x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
+    
     // std::shared_ptr<matrix_base_class> inequality_constraint_jacobian(new dense_matrix(num_dual_ieq(), n_var));
     dense_matrix *inequality_constraint_jacobian= new dense_matrix(num_dual_ieq(), num_primal());
 	size_t isqo_ineq_constraint_index=0;
@@ -598,32 +592,37 @@ std::shared_ptr<matrix_base_class> DenseAmplNlp::constraints_inequality_jacobian
 	return std::shared_ptr<matrix_base_class>(inequality_constraint_jacobian);
 }
 
+std::vector<double> AmplNlp::mux_multipliers(const iSQOIterate &iterate) {
+    ASL *asl = asl_;
+	std::vector<double> Y(n_con);
+	
+	// funnel dual_{,i}eq_values_ into Y to pass to AMPL.
+    std::vector<double> dual_eq_values(this->num_dual_eq());
+    dual_eq_values.assign(iterate.get_dual_eq_values()->begin(), iterate.get_dual_eq_values()->end());
+	for (size_t dual_eq_index=0; dual_eq_index < equality_constraints_.size(); ++dual_eq_index) {
+		Y[equality_constraints_[dual_eq_index]] = dual_eq_values[dual_eq_index];// / iterate.penalty_parameter_;
+	}
+	
+    std::vector<double> dual_ieq_values(this->num_dual_ieq());
+    dual_ieq_values.assign(iterate.get_dual_ieq_values()->begin(), iterate.get_dual_ieq_values()->end());
+	size_t dual_ineq_value_index = 0;
+	for (size_t dual_ineq_lower_index=0; dual_ineq_lower_index < inequality_constraints_lower_.size(); ++dual_ineq_lower_index) {
+		Y[inequality_constraints_lower_[dual_ineq_lower_index]] = -dual_ieq_values[dual_ineq_value_index];
+		dual_ineq_value_index++;
+	}
+	for (size_t dual_ineq_upper_index=0; dual_ineq_upper_index < inequality_constraints_upper_.size(); ++dual_ineq_upper_index) {
+		Y[inequality_constraints_upper_[dual_ineq_upper_index]] = dual_ieq_values[dual_ineq_value_index];
+		dual_ineq_value_index++;
+	}
+    return Y;
+}
 // second order NLP quantities:
 std::shared_ptr<matrix_base_class> DenseAmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
 	ASL *asl = asl_;
 	std::vector<double> H(num_primal() * num_primal());
 	std::vector<double> OW(1);
-	OW[0] = iterate.penalty_parameter_;
-	std::vector<double> Y(n_con);
-	
-	// funnel dual_{,i}eq_values_ into Y to pass to AMPL.
-	for (size_t dual_eq_index=0; dual_eq_index < iterate.dual_eq_values_.size(); ++dual_eq_index) {
-		Y[equality_constraints_[dual_eq_index]] = iterate.dual_eq_values_[dual_eq_index];// / iterate.penalty_parameter_;
-	}
-	
-	size_t dual_ineq_value_index = 0;
-	for (size_t dual_ineq_lower_index=0; dual_ineq_lower_index < inequality_constraints_lower_.size(); ++dual_ineq_lower_index) {
-		Y[inequality_constraints_lower_[dual_ineq_lower_index]] = -iterate.dual_ieq_values_[dual_ineq_value_index];
-		dual_ineq_value_index++;
-	}
-	for (size_t dual_ineq_upper_index=0; dual_ineq_upper_index < inequality_constraints_upper_.size(); ++dual_ineq_upper_index) {
-		Y[inequality_constraints_upper_[dual_ineq_upper_index]] = iterate.dual_ieq_values_[dual_ineq_value_index];
-		dual_ineq_value_index++;
-	}
-	if (PRINT_) std::cout << "Y[0] = " << Y[0] << std::endl;
-	if (PRINT_) std::cout << "Y[1] = " << Y[1] << std::endl;
-	if (PRINT_) std::cout << "Y[2] = " << Y[2] << std::endl;
-	if (PRINT_) std::cout << "Y[3] = " << Y[3] << std::endl;		
+	OW[0] = iterate.get_penalty_parameter();
+	std::vector<double> Y = mux_multipliers(iterate);
 	
 	// In this call:
 	//	 - H : OUTPUT : vector holding entries of full hessian.
@@ -671,23 +670,8 @@ std::shared_ptr<matrix_base_class> SparseAmplNlp::lagrangian_hessian(const iSQOI
     ASL *asl = asl_;
 	std::vector<double> H(num_primal() * num_primal());
 	std::vector<double> OW(1);
-	OW[0] = iterate.penalty_parameter_;
-	std::vector<double> Y(n_con);
-	
-	// funnel dual_{,i}eq_values_ into Y to pass to AMPL.
-	for (size_t dual_eq_index=0; dual_eq_index < iterate.dual_eq_values_.size(); ++dual_eq_index) {
-        Y[equality_constraints_[dual_eq_index]] = iterate.dual_eq_values_[dual_eq_index];
-	}
-	
-	size_t dual_ineq_value_index = 0;
-	for (size_t dual_ineq_lower_index=0; dual_ineq_lower_index < inequality_constraints_lower_.size(); ++dual_ineq_lower_index) {
-        Y[inequality_constraints_lower_[dual_ineq_lower_index]] = -iterate.dual_ieq_values_[dual_ineq_value_index];
-		dual_ineq_value_index++;
-	}
-	for (size_t dual_ineq_upper_index=0; dual_ineq_upper_index < inequality_constraints_upper_.size(); ++dual_ineq_upper_index) {
-        Y[inequality_constraints_upper_[dual_ineq_upper_index]] = iterate.dual_ieq_values_[dual_ineq_value_index];
-		dual_ineq_value_index++;
-	}     
+	OW[0] = iterate.get_penalty_parameter();
+	std::vector<double> Y = mux_multipliers(iterate);
 	
 	// In this call:
 	//	 - H : OUTPUT : vector holding entries of full hessian.
@@ -695,16 +679,16 @@ std::shared_ptr<matrix_base_class> SparseAmplNlp::lagrangian_hessian(const iSQOI
 	//	 - 0 : INPUT : index of the desired objective.
 	//	 - OW : INPUT : multipliers for objective function ("objective weights")
 	//	 - Y : INPUT : lagrange multipliers for constraints.
-	fullhes(&H[0], n_var, 0, &OW[0], &Y[0]);
-    if (PRINT_) {
-        for (size_t i=0; i<n_var; ++i) {
-            for (size_t j=0; j<n_var; ++j) {
-                std::cout << "H[n_var*i=" << i << ", j=" << j << "]: " << H[n_var*i + j] << std::endl;
-            }
-        }
-    }
+	// fullhes(&H[0], n_var, 0, &OW[0], &Y[0]);
+//     if (PRINT_) {
+//         for (size_t i=0; i<n_var; ++i) {
+//             for (size_t j=0; j<n_var; ++j) {
+//                 std::cout << "H[n_var*i=" << i << ", j=" << j << "]: " << H[n_var*i + j] << std::endl;
+//             }
+//         }
+//     }
     
-    assert(n_obj == 1);
+    
     // fint sphsetup(int nobj, int ow, int y, int uptri)
     int hessian_nnz = sphsetup(-1, 1, 1, 0);
     

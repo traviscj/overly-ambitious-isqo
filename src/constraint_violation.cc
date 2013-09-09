@@ -26,7 +26,7 @@ double ConstraintViolationFunction::operator()(const iSQOIterate &iterate, const
 	std::shared_ptr<matrix_base_class> jac_ce = nlp_->constraints_equality_jacobian(iterate);
 	if (PRINT) std::cout << jac_ce;
     std::vector<double> con_values_eq_mult_result = jac_ce->multiply(step.primal_values_);
-    for (size_t row=0; row<iterate.num_dual_eq_; ++row) {
+    for (size_t row=0; row<nlp_->num_dual_eq(); ++row) {
         con_values_eq[row] += con_values_eq_mult_result[row];
     }
 	if (PRINT) std::cout << "constraintviolationfunction e 1: " << con_values_eq << std::endl;
@@ -38,7 +38,7 @@ double ConstraintViolationFunction::operator()(const iSQOIterate &iterate, const
     if (PRINT) std::cout << "jac_ci: " << jac_ci << std::endl;
     // if (PRINT) std::cout << "step: " << step.primal_values_ << std::endl;
     std::vector<double> con_values_ieq_mult_result = jac_ci->multiply(step.primal_values_);
-    for (size_t row=0; row<iterate.num_dual_ieq_; ++row) {
+    for (size_t row=0; row < nlp_->num_dual_ieq(); ++row) {
         con_values_ieq[row] += con_values_ieq_mult_result[row];
     }
 	if (PRINT) std::cout << "constraintviolationfunction i 1: " << con_values_ieq << std::endl;

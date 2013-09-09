@@ -23,7 +23,7 @@ public:
     
     void ConstructHelper(std::string stub_str);
 	
-	iSQOIterate initial();
+	iSQOIterate initial(double penalty_parameter);
     
 	// zeroth order NLP quantities:
 	double objective(const iSQOIterate &iterate);
@@ -40,6 +40,8 @@ public:
 	
 	std::size_t num_lower_ieq();
 	std::size_t num_upper_ieq();
+    
+    std::vector<double> mux_multipliers(const iSQOIterate &iterate);
     
     
 private:

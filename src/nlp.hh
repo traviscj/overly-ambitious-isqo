@@ -19,7 +19,7 @@ public:
 	Nlp(size_t num_primal, size_t num_dual_eq, size_t num_dual_ieq);
 	
 	// starting point:
-	virtual iSQOIterate initial() = 0;
+	virtual iSQOIterate initial(double penalty_parameter) = 0;
 	
 	// zeroth order NLP quantities:
 	virtual double objective(const iSQOIterate &iterate) = 0;

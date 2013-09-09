@@ -8,16 +8,16 @@
 #include "iterate.hh"
 
 
-iSQOIterate::iSQOIterate(int number_primal, int number_dual_eq, int number_dual_ieq) : 
+iSQOIterate::iSQOIterate(int number_primal, int number_dual_eq, int number_dual_ieq, double penalty_parameter) : 
 		num_primal_(number_primal), 
 		num_dual_eq_(number_dual_eq),
 		num_dual_ieq_(number_dual_ieq),
 		primal_values_(number_primal),
 		dual_eq_values_(num_dual_eq_),
 		dual_ieq_values_(num_dual_ieq_),
-		penalty_parameter_(1e-1)
+		penalty_parameter_(penalty_parameter)
 {
-	// penalty_parameter_ = 1e-1;
+
 }
 iSQOIterate::iSQOIterate(const iSQOIterate& s):
 	num_primal_(s.num_primal_), 

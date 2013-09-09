@@ -128,11 +128,11 @@ int main(int argc, char **argv) {
 	//////////////////////////
 	// ALGORITHM A // STEP 1
 	//////////////////////////
-	iSQOIterate penalty_iterate = problem.initial();
-	penalty_iterate.penalty_parameter_ = 1.0e-1;
+	iSQOIterate penalty_iterate = problem.initial(1.0e-1);
+    // penalty_iterate.penalty_parameter_ = ;
 
-	iSQOIterate feasibility_iterate = problem.initial();
-	feasibility_iterate.penalty_parameter_ = 0.0;
+	iSQOIterate feasibility_iterate = problem.initial(0.0);
+    // feasibility_iterate.penalty_parameter_ = 0.0;
 	size_t iter=-1;
 	for (iter = 0; iter < maximum_iterations; iter ++ ) {
         // std::cout << std::endl << "penalty: " << penalty_iterate.penalty_parameter_ << std::endl;
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 			std::cout << std::endl << "Termination 2a - optimality" << std::endl;
 			break;
 		}
-		if ((kkt_residual(feasibility_iterate) < termination_threshold) && (constraint_violation(penalty_iterate) > termination_threshold) && (penalty_iterate.penalty_parameter_ < termination_penalty_threshold)) {
+		if ((kkt_residual(feasibility_iterate) < termination_threshold) && (constraint_violation(penalty_iterate) > termination_threshold) && (penalty_iterate.get_penalty_parameter() < termination_penalty_threshold)) {
 			std::cout << std::endl << "Termination 2b - infeasible problem!" << std::endl;
 			break;
 		}
@@ -208,13 +208,14 @@ int main(int argc, char **argv) {
 					if (combination_step_contribution_from_penalty_step >= mostly_feasibility_step_threshold) {
 						// no-op: keep the current penalty parameter.
 					} else {
-						penalty_iterate.penalty_parameter_ = penalty_parameter_reduction_factor*penalty_iterate.penalty_parameter_;
+						penalty_iterate.set_penalty_parameter(penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter());
 					}
 				} else {
 					std::vector<double> gradient = problem.objective_gradient(penalty_iterate);
 					double potential_new_penalty_parameter_numerator = (1-linear_reduction_threshold_for_penalty_reduction)*linear_decrease_in_feasibility_combination;
 					double potential_new_penalty_parameter_denominator = combination_step.x_dot_product(gradient) + hessian_min_convexity*pow(combination_step.x_norm(),2);
-					penalty_iterate.penalty_parameter_ = std::min(penalty_parameter_reduction_factor*penalty_iterate.penalty_parameter_, potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator);
+					penalty_iterate.set_penalty_parameter(std::min(  penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter(), 
+                                                                    potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator));
 				}
 			}
 
@@ -246,7 +247,7 @@ int main(int argc, char **argv) {
 	if (iter == maximum_iterations) {
 		std::cout << "Failure - Did not converge" << std::endl;
 	}
-	std::cout << penalty_iterate.primal_values_ << std::endl;
+	std::cout << penalty_iterate.get_primal_values() << std::endl;
 	return 0;
 }
 

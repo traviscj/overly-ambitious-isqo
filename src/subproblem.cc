@@ -32,37 +32,37 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
     setup_matrix_data(iterate, nlp_->constraints_equality_jacobian(iterate), nlp_->constraints_inequality_jacobian(iterate), nlp_->lagrangian_hessian(iterate));
     
 	// NLP gradient copied over
-	for (size_t primal_index=0; primal_index<iterate.num_primal_; ++primal_index)
-		gradient_[primal_index] = iterate.penalty_parameter_*nlp_objective_gradient_[primal_index];
+	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index)
+		gradient_[primal_index] = iterate.get_penalty_parameter()*nlp_objective_gradient_[primal_index];
 	// equality slacks both have positive:
-	for (size_t dual_eq_index=0; dual_eq_index<iterate.num_dual_eq_; ++dual_eq_index) {
-		gradient_[iterate.num_primal_+dual_eq_index] = 1.0;
-		gradient_[iterate.num_primal_+iterate.num_dual_eq_+dual_eq_index] = 1.0;
+	for (size_t dual_eq_index=0; dual_eq_index<nlp_->num_dual_eq(); ++dual_eq_index) {
+		gradient_[nlp_->num_primal()+dual_eq_index] = 1.0;
+		gradient_[nlp_->num_primal()+nlp_->num_dual_eq()+dual_eq_index] = 1.0;
 	}
 	// inequality slacks only penalize the positive parts:
-	for (size_t dual_ieq_index=0; dual_ieq_index<iterate.num_dual_ieq_; ++dual_ieq_index) {
-		gradient_[iterate.num_primal_+2*iterate.num_dual_eq_+dual_ieq_index] = 1.0;
-		gradient_[iterate.num_primal_+2*iterate.num_dual_eq_+iterate.num_dual_ieq_+dual_ieq_index] = 0.0;
+	for (size_t dual_ieq_index=0; dual_ieq_index<nlp_->num_dual_ieq(); ++dual_ieq_index) {
+		gradient_[nlp_->num_primal()+2*nlp_->num_dual_eq()+dual_ieq_index] = 1.0;
+		gradient_[nlp_->num_primal()+2*nlp_->num_dual_eq()+nlp_->num_dual_ieq()+dual_ieq_index] = 0.0;
 	}
 	
 	std::vector<double> con_values_eq=nlp_->constraints_equality(iterate);
 	std::vector<double> con_values_ieq=nlp_->constraints_inequality(iterate);
 	
-	for (size_t eq_index=0; eq_index<iterate.num_dual_eq_; ++eq_index) {
+	for (size_t eq_index=0; eq_index<nlp_->num_dual_eq(); ++eq_index) {
 		jacobian_lower_bound_[eq_index] = -con_values_eq[eq_index];
 		jacobian_upper_bound_[eq_index] = -con_values_eq[eq_index];
 	}
-	for (size_t ieq_index=0; ieq_index<iterate.num_dual_ieq_; ++ieq_index) {
-		jacobian_lower_bound_[iterate.num_dual_eq_+ieq_index] = -INFINITY;
-		jacobian_upper_bound_[iterate.num_dual_eq_+ieq_index] = -con_values_ieq[ieq_index];
+	for (size_t ieq_index=0; ieq_index<nlp_->num_dual_ieq(); ++ieq_index) {
+		jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = -INFINITY;
+		jacobian_upper_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
 	}
-	for (size_t variable_index=0; variable_index < iterate.num_primal_; ++variable_index) {
+	for (size_t variable_index=0; variable_index < nlp_->num_primal(); ++variable_index) {
 		lower_bound_[variable_index] = -INFINITY;
 		upper_bound_[variable_index] = +INFINITY;
 	}
-	for (size_t variable_index=0; variable_index < 2*(iterate.num_dual_eq_ + iterate.num_dual_ieq_); ++variable_index) {
-		lower_bound_[iterate.num_primal_+variable_index] = 0.0;
-		upper_bound_[iterate.num_primal_+variable_index] = +INFINITY;
+	for (size_t variable_index=0; variable_index < 2*(nlp_->num_dual_eq() + nlp_->num_dual_ieq()); ++variable_index) {
+		lower_bound_[nlp_->num_primal()+variable_index] = 0.0;
+		upper_bound_[nlp_->num_primal()+variable_index] = +INFINITY;
 	}
 }
 
@@ -75,27 +75,27 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
     // jacobian_ = std::shared_ptr<dense_matrix>(new dense_matrix(num_qp_constraints_, num_qp_variables_));
     std::shared_ptr<dense_matrix> jacobian_tmp(new dense_matrix(num_qp_constraints_, num_qp_variables_));
     
-	for (size_t eq_constraint_index=0; eq_constraint_index < iterate.num_dual_eq_; ++eq_constraint_index) {
-		for (size_t variables=0; variables<iterate.num_primal_; ++variables) {
+	for (size_t eq_constraint_index=0; eq_constraint_index < nlp_->num_dual_eq(); ++eq_constraint_index) {
+		for (size_t variables=0; variables<nlp_->num_primal(); ++variables) {
 			jacobian_tmp->set(eq_constraint_index,variables, nlp_eq_jacobian->get(eq_constraint_index,variables));
 		}
 		jacobian_tmp->set(eq_constraint_index,nlp_->num_primal()+eq_constraint_index, -1.0);
-		jacobian_tmp->set(eq_constraint_index,nlp_->num_primal()+iterate.num_dual_eq_+iterate.num_dual_ieq_+eq_constraint_index, +1.0);
+		jacobian_tmp->set(eq_constraint_index,nlp_->num_primal()+nlp_->num_dual_eq()+nlp_->num_dual_ieq()+eq_constraint_index, +1.0);
 	}
 			
-	for (size_t ieq_constraint_index=0; ieq_constraint_index < iterate.num_dual_ieq_; ++ieq_constraint_index) {
-		for (size_t variables=0; variables<iterate.num_primal_; ++variables) {
-			jacobian_tmp->set(iterate.num_dual_eq_+ieq_constraint_index,variables, nlp_ieq_jacobian->get(ieq_constraint_index,variables));
+	for (size_t ieq_constraint_index=0; ieq_constraint_index < nlp_->num_dual_ieq(); ++ieq_constraint_index) {
+		for (size_t variables=0; variables<nlp_->num_primal(); ++variables) {
+			jacobian_tmp->set(nlp_->num_dual_eq()+ieq_constraint_index,variables, nlp_ieq_jacobian->get(ieq_constraint_index,variables));
 		}
-		jacobian_tmp->set(iterate.num_dual_eq_+ieq_constraint_index, nlp_->num_primal()+iterate.num_dual_eq_+ieq_constraint_index, -1.0);
-		jacobian_tmp->set(iterate.num_dual_eq_+ieq_constraint_index, nlp_->num_primal()+iterate.num_dual_eq_+iterate.num_dual_ieq_+iterate.num_dual_eq_+ieq_constraint_index, +1.0);
+		jacobian_tmp->set(nlp_->num_dual_eq()+ieq_constraint_index, nlp_->num_primal()+nlp_->num_dual_eq()+ieq_constraint_index, -1.0);
+		jacobian_tmp->set(nlp_->num_dual_eq()+ieq_constraint_index, nlp_->num_primal()+nlp_->num_dual_eq()+nlp_->num_dual_ieq()+nlp_->num_dual_eq()+ieq_constraint_index, +1.0);
 	}
     jacobian_ = jacobian_tmp;
     
     // hessian_ = std::shared_ptr<dense_matrix>(new dense_matrix(num_qp_variables_, num_qp_variables_));
     std::shared_ptr<dense_matrix> hessian_tmp(new dense_matrix(num_qp_variables_, num_qp_variables_));
-	for (size_t r=0; r<iterate.num_primal_; ++r) {
-		for (size_t c=0; c<iterate.num_primal_; ++c) {
+	for (size_t r=0; r<nlp_->num_primal(); ++r) {
+		for (size_t c=0; c<nlp_->num_primal(); ++c) {
 			hessian_tmp->set(r,c, nlp_hessian->get(r,c));
 		}
 	}
@@ -171,9 +171,9 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
     std::shared_ptr<sparse_matrix> jacobian_eq_ieq = vertical(nlp_eq_jacobian, nlp_ieq_jacobian);
     // std::cout << "jacobian_eq_ieq: " << jacobian_eq_ieq << std::endl;
     
-    std::shared_ptr<sparse_matrix> jacobian_p_slack(new sparse_matrix(iterate.num_dual_eq_+iterate.num_dual_ieq_, -1.0));
+    std::shared_ptr<sparse_matrix> jacobian_p_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), -1.0));
     // std::cout << "jacobian_p_slack: " << jacobian_p_slack << std::endl;
-    std::shared_ptr<sparse_matrix> jacobian_n_slack(new sparse_matrix(iterate.num_dual_eq_+iterate.num_dual_ieq_, +1.0));
+    std::shared_ptr<sparse_matrix> jacobian_n_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), +1.0));
     // std::cout << "jacobian_n_slack: " << jacobian_n_slack << std::endl;
     std::shared_ptr<sparse_matrix> jacobian_slacks = horizontal(jacobian_p_slack, jacobian_n_slack);
     // std::cout << "jacobian_slacks: " << jacobian_slacks << std::endl;

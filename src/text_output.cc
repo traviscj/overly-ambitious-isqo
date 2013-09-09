@@ -42,7 +42,7 @@ void TextOutput::pre(size_t iter, const iSQOIterate &feasibility_iterate, const 
 	printf(output_format_pre_, 
 			iter, 
 			nlp_->objective(penalty_iterate), constraint_violation_func_(penalty_iterate),
-			penalty_iterate.penalty_parameter_, pen_func_(penalty_iterate),
+			penalty_iterate.get_penalty_parameter(), pen_func_(penalty_iterate),
 			residual_func_(feasibility_iterate), residual_func_(penalty_iterate)
 			);
 }

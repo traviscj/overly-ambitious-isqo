@@ -10,14 +10,14 @@ double LinearReductionFunction::operator()(const iSQOIterate &iterate, const iSQ
 	std::vector<double> gradient = nlp_->objective_gradient(iterate);
 	// dotproduct(gradient, )
 	double dot_product=0.0;
-	for (size_t primal_index=0; primal_index<iterate.num_primal_; ++primal_index) {
+	for (size_t primal_index=0; primal_index < nlp_->num_primal(); ++primal_index) {
 		dot_product += gradient[primal_index]*step.primal_values_[primal_index];
 	}
 	
 	if (PRINT) std::cout << "linear decrease: " << std::endl;
-	if (PRINT) std::cout << " - " << -iterate.penalty_parameter_*dot_product << std::endl;
+	if (PRINT) std::cout << " - " << -iterate.get_penalty_parameter()*dot_product << std::endl;
 	if (PRINT) std::cout << " - " << constraint_violation_func_(iterate) << std::endl;
 	if (PRINT) std::cout << " - " << constraint_violation_func_(iterate,step) << std::endl;
-	if (PRINT) std::cout << " - " << -iterate.penalty_parameter_*dot_product + constraint_violation_func_(iterate) - constraint_violation_func_(iterate,step) << std::endl;
-	return -iterate.penalty_parameter_*dot_product + constraint_violation_func_(iterate) - constraint_violation_func_(iterate,step);
+	if (PRINT) std::cout << " - " << -iterate.get_penalty_parameter()*dot_product + constraint_violation_func_(iterate) - constraint_violation_func_(iterate,step) << std::endl;
+	return -iterate.get_penalty_parameter()*dot_product + constraint_violation_func_(iterate) - constraint_violation_func_(iterate,step);
 }

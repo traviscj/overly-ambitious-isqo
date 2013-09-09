@@ -168,17 +168,17 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
     
     // JACOBIAN PART
 	
-    std::shared_ptr<sparse_matrix> jacobian_eq_ieq = vertical(nlp_eq_jacobian, nlp_ieq_jacobian);
+    std::shared_ptr<sparse_matrix> jacobian_eq_ieq = nlp_eq_jacobian->vertical(nlp_ieq_jacobian);
     // std::cout << "jacobian_eq_ieq: " << jacobian_eq_ieq << std::endl;
     
     std::shared_ptr<sparse_matrix> jacobian_p_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), -1.0));
     // std::cout << "jacobian_p_slack: " << jacobian_p_slack << std::endl;
     std::shared_ptr<sparse_matrix> jacobian_n_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), +1.0));
     // std::cout << "jacobian_n_slack: " << jacobian_n_slack << std::endl;
-    std::shared_ptr<sparse_matrix> jacobian_slacks = horizontal(jacobian_p_slack, jacobian_n_slack);
+    std::shared_ptr<sparse_matrix> jacobian_slacks = jacobian_p_slack->horizontal(jacobian_n_slack);
     // std::cout << "jacobian_slacks: " << jacobian_slacks << std::endl;
     
-    jacobian_ = horizontal(jacobian_eq_ieq,jacobian_slacks);
+    jacobian_ = jacobian_eq_ieq->horizontal(jacobian_slacks);
     // std::cout << "jacobian_sparse: " << jacobian_sparse_ << std::endl;
     
     // LAGRANGIAN PART
@@ -187,11 +187,11 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
     std::shared_ptr<sparse_matrix> hess_right_bottom(new sparse_matrix(2*(num_nlp_constraints_eq_ + num_nlp_constraints_ieq_), 0.0));            // 0.0*I_{2*num_qp_con} for lower right. (fixes bug in qpOASES...)
     // std::cout << "hess_right_bottom: " << hess_right_bottom << std::endl;
     
-    std::shared_ptr<sparse_matrix> hess_left = vertical(nlp_hessian, hess_left_bottom);
+    std::shared_ptr<sparse_matrix> hess_left = nlp_hessian->vertical(hess_left_bottom);
     // std::cout << "hess_left: " << hess_left << std::endl;
-    std::shared_ptr<sparse_matrix> hess_right = vertical(hess_right_top, hess_right_bottom);
+    std::shared_ptr<sparse_matrix> hess_right = hess_right_top->vertical(hess_right_bottom);
     // std::cout << "hess_right: " << hess_right << std::endl;
-    hessian_ = horizontal(hess_left, hess_right);
+    hessian_ = hess_left->horizontal(hess_right);
     // std::cout << "hessian_sparse_: " << hessian_sparse_ << std::endl;
     
 }

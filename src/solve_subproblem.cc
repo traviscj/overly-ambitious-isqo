@@ -30,7 +30,10 @@ std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hes
     }
 }
 std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> hessian) {
-    return std::shared_ptr<qpOASES::SymmetricMatrix>(new qpOASES::SymDenseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &hessian->data_[0]));
+    // std::vector<double> *data_vec_double = ;
+    // double *data_double_star = ;
+    
+    return std::shared_ptr<qpOASES::SymmetricMatrix>(new qpOASES::SymDenseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &(*hessian->get_data())[0]));
 }
 
 std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> hessian) {
@@ -38,9 +41,9 @@ std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hes
     std::shared_ptr<qpOASES::SymSparseMat> qpoases_hessian(new qpOASES::SymSparseMat(   
                                                                 subproblem.num_qp_variables_, 
                                                                 subproblem.num_qp_variables_, 
-                                                                (int*)(&hessian->row_indices_[0]),
-                                                                (int*)(&hessian->col_starts_[0]), 
-                                                                (double*)(&hessian->vals_[0])
+                                                                (int*)(&hessian->get_row_indices()[0]),
+                                                                (int*)(&hessian->get_col_starts()[0]), 
+                                                                (double*)(&hessian->get_vals()[0])
                                                                     ));
     qpoases_hessian->createDiagInfo();
     return qpoases_hessian;
@@ -48,7 +51,7 @@ std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hes
 }
 std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> jacobian) {
     // std::shared_ptr<dense_matrix> attempt_dense = std::dynamic_pointer_cast< dense_matrix  >(nlp_eq_jacobian);
-    
+    // TODO fix this, before anyone notices!
     std::shared_ptr<dense_matrix> attempt_dense = std::dynamic_pointer_cast< dense_matrix >(jacobian);
     std::shared_ptr<sparse_matrix> attempt_sparse = std::dynamic_pointer_cast< sparse_matrix >(jacobian);
     
@@ -61,16 +64,18 @@ std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQ
     }
 }
 std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> jacobian) {
-    return std::shared_ptr<qpOASES::Matrix>(new qpOASES::DenseMatrix(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &jacobian->data_[0]));
+    return std::shared_ptr<qpOASES::Matrix>(new qpOASES::DenseMatrix(subproblem.num_qp_constraints_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &(*jacobian->get_data())[0]));
 }
 
 std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> jacobian) {
+    // need to cheat here! don't mess with my matrix, qpOASES!
+    std::shared_ptr<sparse_matrix> nonconst_jacobian(std::const_pointer_cast<sparse_matrix>(jacobian));
     std::shared_ptr<qpOASES::Matrix> qpoases_jacobian(new qpOASES::SparseMatrix(
                                                                 subproblem.num_qp_constraints_, 
                                                                 subproblem.num_qp_variables_, 
-                                                                (int*)&jacobian->row_indices_[0],
-                                                                (int*)&jacobian->col_starts_[0], 
-                                                                (double*)&jacobian->vals_[0]
+                                                                (int*)&nonconst_jacobian->get_row_indices()[0],
+                                                                (int*)&nonconst_jacobian->get_col_starts()[0], 
+                                                                (double*)&nonconst_jacobian->get_vals()[0]
                                                                     ));
     return qpoases_jacobian;
 }

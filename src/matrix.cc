@@ -229,7 +229,7 @@ void sparse_matrix::sum(const std::shared_ptr<sparse_matrix> b) {
     if (PRINT) std::cout << "result : " << std::endl << *this << std::endl << "=========" << std::endl;
     
 }
-
+// TODO move this into dense_matrix
 std::shared_ptr<dense_matrix> vertical(const std::shared_ptr<dense_matrix> top, const std::shared_ptr<dense_matrix> bottom) {
     assert(top->num_columns() == bottom->num_columns());
     std::shared_ptr<dense_matrix> result(new dense_matrix(top->num_rows() + bottom->num_rows(), 
@@ -249,37 +249,96 @@ std::shared_ptr<dense_matrix> vertical(const std::shared_ptr<dense_matrix> top, 
     return result;
 }
 
-std::shared_ptr<sparse_matrix> vertical(const std::shared_ptr<sparse_matrix> top, const std::shared_ptr<sparse_matrix> bottom) {
-    assert(top->num_columns() == bottom->num_columns());
-    std::shared_ptr<sparse_matrix> result(new sparse_matrix(top->num_rows() + bottom->num_rows(), 
-                            top->num_columns(), 
-                            top->num_nnz() + bottom->num_nnz()));
+std::shared_ptr<sparse_matrix> sparse_matrix::vertical(const std::shared_ptr<sparse_matrix> bottom)  const {
+    assert(num_columns() == bottom->num_columns());
+    std::shared_ptr<sparse_matrix> result(new sparse_matrix(num_rows() + bottom->num_rows(), 
+                            num_columns(), 
+                            num_nnz() + bottom->num_nnz()));
+    
     size_t current_a_index=0, current_b_index=0;
 
     size_t current_nnz_index=0;
-    for (size_t col_start_index=0; col_start_index < top->num_columns(); ++col_start_index) {
+    std::vector<double> bottom_vals        = bottom->get_vals();
+    std::vector<   int> bottom_row_indices = bottom->get_row_indices();
+    std::vector<   int> bottom_col_starts  = bottom->get_col_starts();
+    
+    // std::vector<double> *result_vals = new std::vector<double>(num_nnz() + bottom->num_nnz());
+    // std::vector<   int> *result_row_indices = new std::vector<int>(num_nnz() + bottom->num_nnz());
+    // std::vector<   int> *result_col_starts = new std::vector<int>(num_columns()+1);
+        
+    for (size_t col_start_index=0; col_start_index < num_columns(); ++col_start_index) {
         // std::cout << "col_start_index: " <<col_start_index << std::endl;
         // std::cout << "              a: " << lower_var.col_starts_[col_start_index] << " -> " << lower_var.col_starts_[col_start_index+1] << std::endl;
         // std::cout << "              b: " << upper_var.col_starts_[col_start_index] << " -> " << upper_var.col_starts_[col_start_index+1] << std::endl;
-        for (std::size_t current_a_index=top->col_starts_[col_start_index]; current_a_index < top->col_starts_[col_start_index+1]; ++current_a_index ) {
+        for (std::size_t current_a_index=col_starts_[col_start_index]; current_a_index < col_starts_[col_start_index+1]; ++current_a_index ) {
             // std::cout << "reading an A" << std::endl;
-            result->vals_[current_nnz_index] = top->vals_[current_a_index];
-            result->row_indices_[current_nnz_index] = top->row_indices_[current_a_index];
+            result->vals_[current_nnz_index] = vals_[current_a_index];
+            result->row_indices_[current_nnz_index] = row_indices_[current_a_index];
             ++current_nnz_index;
         }
-        for (std::size_t current_b_index=bottom->col_starts_[col_start_index]; current_b_index < bottom->col_starts_[col_start_index+1]; ++current_b_index ) {
+        for (std::size_t current_b_index=bottom_col_starts[col_start_index]; current_b_index < bottom_col_starts[col_start_index+1]; ++current_b_index ) {
             // std::cout << "reading a B..." << std::endl;
-            result->vals_[current_nnz_index] = bottom->vals_[current_b_index];
-            result->row_indices_[current_nnz_index] = top->num_rows() + bottom->row_indices_[current_b_index];
+            result->vals_[current_nnz_index] = bottom_vals[current_b_index];
+            result->row_indices_[current_nnz_index] = num_rows() + bottom_row_indices[current_b_index];
             ++current_nnz_index;
         }
         result->col_starts_[col_start_index+1] = current_nnz_index;
     }
-
+    
+    // free(vals_);
+    // &vals_ = result_vals;
+    // free(row_indices_);
+    // &row_indices_ = result_row_indices;
+    // free(col_starts_);
+    // &col_starts_ = result_col_starts;
+    
     // std::cout << "result:"<< std::endl << result << std::endl;
     return result;
 }
 
+// std::shared_ptr<sparse_matrix> vertical(const std::shared_ptr<sparse_matrix> top, const std::shared_ptr<sparse_matrix> bottom) {
+//     assert(top->num_columns() == bottom->num_columns());
+//     std::shared_ptr<sparse_matrix> result(new sparse_matrix(top->num_rows() + bottom->num_rows(), 
+//                             top->num_columns(), 
+//                             top->num_nnz() + bottom->num_nnz()));
+//     size_t current_a_index=0, current_b_index=0;
+// 
+//     size_t current_nnz_index=0;
+//     std::vector<double> top_vals        = top->get_vals();
+//     std::vector<   int> top_row_indices = top->get_row_indices();
+//     std::vector<   int> top_col_starts  = top->get_col_starts();
+//     std::vector<double> bottom_vals        = bottom->get_vals();
+//     std::vector<   int> bottom_row_indices = bottom->get_row_indices();
+//     std::vector<   int> bottom_col_starts  = bottom->get_col_starts();
+//     
+//     std::vector<double> result_vals(top->num_nnz() + bottom->num_nnz());
+//     std::vector<   int> result_row_indices(top->num_nnz() + bottom->num_nnz());
+//     std::vector<   int> result_col_starts(top->num_columns()+1);
+//         
+//     for (size_t col_start_index=0; col_start_index < top->num_columns(); ++col_start_index) {
+//         // std::cout << "col_start_index: " <<col_start_index << std::endl;
+//         // std::cout << "              a: " << lower_var.col_starts_[col_start_index] << " -> " << lower_var.col_starts_[col_start_index+1] << std::endl;
+//         // std::cout << "              b: " << upper_var.col_starts_[col_start_index] << " -> " << upper_var.col_starts_[col_start_index+1] << std::endl;
+//         for (std::size_t current_a_index=top_col_starts[col_start_index]; current_a_index < top_col_starts[col_start_index+1]; ++current_a_index ) {
+//             // std::cout << "reading an A" << std::endl;
+//             result_vals[current_nnz_index] = top_vals[current_a_index];
+//             result_row_indices[current_nnz_index] = top_row_indices[current_a_index];
+//             ++current_nnz_index;
+//         }
+//         for (std::size_t current_b_index=bottom_col_starts[col_start_index]; current_b_index < bottom_col_starts[col_start_index+1]; ++current_b_index ) {
+//             // std::cout << "reading a B..." << std::endl;
+//             result_vals[current_nnz_index] = bottom_vals[current_b_index];
+//             result_row_indices[current_nnz_index] = top->num_rows() + result_row_indices[current_b_index];
+//             ++current_nnz_index;
+//         }
+//         result_col_starts[col_start_index+1] = current_nnz_index;
+//     }
+// 
+//     // std::cout << "result:"<< std::endl << result << std::endl;
+//     return result;
+// }
+
+// TODO move this into dense_matrix
 std::shared_ptr<dense_matrix> horizontal(const std::shared_ptr<dense_matrix> left, const std::shared_ptr<dense_matrix> right) {
     assert(left->num_rows() == right->num_rows());
     std::shared_ptr<dense_matrix> result(new dense_matrix(   left->num_rows(),
@@ -298,15 +357,15 @@ std::shared_ptr<dense_matrix> horizontal(const std::shared_ptr<dense_matrix> lef
 }
 
 
-std::shared_ptr<sparse_matrix> horizontal(const std::shared_ptr<sparse_matrix> left, const std::shared_ptr<sparse_matrix> right) {
-    assert(left->num_rows() == right->num_rows());
-    std::shared_ptr<sparse_matrix> result(new sparse_matrix(   left->num_rows(),
-                            left->num_columns() + right->num_columns(), 
-                            left->num_nnz() + right->num_nnz()));
+std::shared_ptr<sparse_matrix> sparse_matrix::horizontal(const std::shared_ptr<sparse_matrix> right) const {
+    assert(num_rows() == right->num_rows());
+    std::shared_ptr<sparse_matrix> result(new sparse_matrix(   num_rows(),
+                            num_columns() + right->num_columns(), 
+                            num_nnz() + right->num_nnz()));
     size_t result_nonzero_index=0;
-    for (size_t left_nonzeros=0; left_nonzeros < left->num_nnz(); ++left_nonzeros) {
-        result->vals_[result_nonzero_index] = left->vals_[left_nonzeros];
-        result->row_indices_[result_nonzero_index] = left->row_indices_[left_nonzeros];
+    for (size_t left_nonzeros=0; left_nonzeros < num_nnz(); ++left_nonzeros) {
+        result->vals_[result_nonzero_index] = vals_[left_nonzeros];
+        result->row_indices_[result_nonzero_index] = row_indices_[left_nonzeros];
         ++result_nonzero_index;
     }
     for (size_t right_nonzeros=0; right_nonzeros < right->num_nnz(); ++right_nonzeros) {
@@ -316,13 +375,13 @@ std::shared_ptr<sparse_matrix> horizontal(const std::shared_ptr<sparse_matrix> l
     }
     
     size_t result_column_index=0;
-    for (size_t left_cols=0; left_cols < left->num_columns()+1; ++left_cols) {
-        result->col_starts_[result_column_index] = left->col_starts_[left_cols];
+    for (size_t left_cols=0; left_cols < num_columns()+1; ++left_cols) {
+        result->col_starts_[result_column_index] = col_starts_[left_cols];
         ++result_column_index;
     }
-    result_column_index=left->num_columns();
+    result_column_index=num_columns();
     for (size_t right_cols=0; right_cols < right->num_columns()+1; ++right_cols) {
-        result->col_starts_[result_column_index] = left->num_nnz() + right->col_starts_[right_cols];
+        result->col_starts_[result_column_index] = num_nnz() + right->col_starts_[right_cols];
         ++result_column_index;
     }
     return result;

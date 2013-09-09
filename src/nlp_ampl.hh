@@ -59,19 +59,8 @@ protected:
 	std::vector<size_t> variable_equality_;
 	std::vector<size_t> variable_bound_lower_;
 	std::vector<size_t> variable_bound_upper_;
-    void jacobian_update(const iSQOIterate &iterate);
-    void hessian_update(const iSQOIterate &iterate);
 
-    // TODO make these returned, let a caching class worry about it.
-    // actually, not sure that this is possible--We have either of the constraints_*_jacobian_sparse functions call
-    // sparse_jacobian_update, which in turn calls the jacobian evaluation functions.
-    // the purpose of this is to NOT evaluate the constraints multiple times.
-    // maybe we can only get away with not storing the hessian?
-    // or maybe we should be more careful about which functions we 'coneval', which might help?
-    // or... maybe we just throw caution to the wind for now, and clean it up later.
-    std::shared_ptr<matrix_base_class> eq_jacobian_;
-    std::shared_ptr<matrix_base_class> ieq_jacobian_;
-    std::shared_ptr<matrix_base_class> hessian_;  
+
 };
 
 //! \brief an Nlp object which returns dense_matrix evaluations from the AMPL Solver Library
@@ -99,6 +88,18 @@ public:
     std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate);
 private:
 protected:
+    void jacobian_update(const iSQOIterate &iterate);
+    void hessian_update(const iSQOIterate &iterate);
+    // TODO make these returned, let a caching class worry about it.
+    // actually, not sure that this is possible--We have either of the constraints_*_jacobian_sparse functions call
+    // sparse_jacobian_update, which in turn calls the jacobian evaluation functions.
+    // the purpose of this is to NOT evaluate the constraints multiple times.
+    // maybe we can only get away with not storing the hessian?
+    // or maybe we should be more careful about which functions we 'coneval', which might help?
+    // or... maybe we just throw caution to the wind for now, and clean it up later.
+    std::shared_ptr<matrix_base_class> eq_jacobian_;
+    std::shared_ptr<matrix_base_class> ieq_jacobian_;
+    std::shared_ptr<matrix_base_class> hessian_;  
 };
 
 #endif

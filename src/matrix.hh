@@ -79,9 +79,11 @@ public:
 
     void sum(const std::shared_ptr<dense_matrix> b);
 
-	std::vector<double> data_;
+    // TODO make this const!!!
+    std::vector<double> *get_data() { return &data_; }
 private:
 protected:
+	std::vector<double> data_;
 	
 };
 
@@ -119,6 +121,10 @@ public:
     //!  - col_starts_{I_n}: [0,1,2,...,num_variables] (num_variables+1 entries)
     sparse_matrix(std::size_t num_variables, double scalar);
     
+    // ! \brief construct a sparse matrix from the bare column compressed format
+    // sparse_matrix(std::size_t num_rows, std::size_t num_cols, std::vector<double> values, std::vector<int> row_indices, std::vector<int> column_starts);
+    
+    
     std::vector<double> multiply(const std::vector<double> &) const;
     std::vector<double> multiply_transpose(const std::vector<double> &) const;
     std::ostream &print(std::ostream& os) const;
@@ -130,6 +136,22 @@ public:
     
     std::size_t num_nnz() const { return vals_.size();}
 
+    const std::vector<double> &get_vals() const { return vals_; }
+    const std::vector<   int> &get_row_indices() const { return row_indices_; }
+    const std::vector<   int> &get_col_starts() const { return col_starts_; }
+    
+    double get_value(int index) const { return vals_[index]; }
+    int get_row_index(int index) const { return row_indices_[index]; }
+    int get_col_start(int index) const { return col_starts_[index]; }
+    
+    void set_value(int index, double value) { vals_[index] = value; }
+    void set_row_index(int index, int value) { row_indices_[index] = value; }
+    void set_col_start(int index, int value) { col_starts_[index] = value; }
+    
+    std::shared_ptr<sparse_matrix> vertical(const std::shared_ptr<sparse_matrix> bottom) const;
+    std::shared_ptr<sparse_matrix> horizontal(const std::shared_ptr<sparse_matrix> right) const;
+    
+protected:
     std::vector<double> vals_;
     std::vector<int> row_indices_;
     std::vector<int> col_starts_;
@@ -157,10 +179,10 @@ inline std::ostream& operator<< (std::ostream& os, const std::shared_ptr<matrix_
 // TODO: 'add_to_diag' function for sparse_matrix.
 // TODO: change this to 'append_below' & put into sparse_matrix class.
 std::shared_ptr<dense_matrix> vertical(const std::shared_ptr<dense_matrix> top, const std::shared_ptr<dense_matrix> bottom);
-std::shared_ptr<sparse_matrix> vertical(const std::shared_ptr<sparse_matrix> top, const std::shared_ptr<sparse_matrix> bottom);
+// std::shared_ptr<sparse_matrix> vertical(const std::shared_ptr<sparse_matrix> top, const std::shared_ptr<sparse_matrix> bottom);
 
 // TODO: change this to 'append_right' & put into sparse_matrix class.
 std::shared_ptr<dense_matrix> horizontal(const std::shared_ptr<dense_matrix> left, const std::shared_ptr<dense_matrix> right);
-std::shared_ptr<sparse_matrix> horizontal(const std::shared_ptr<sparse_matrix> left, const std::shared_ptr<sparse_matrix> right);
+// std::shared_ptr<sparse_matrix> horizontal(const std::shared_ptr<sparse_matrix> left, const std::shared_ptr<sparse_matrix> right);
 
 #endif

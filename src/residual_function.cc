@@ -88,9 +88,9 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 	
 	std::shared_ptr<matrix_base_class> hessian = nlp_->lagrangian_hessian(iterate);
 	
-	std::vector<double> hessian_times_step = hessian->multiply(step.primal_values_);
+	std::vector<double> hessian_times_step = hessian->multiply(step.get_primal_values());
 	
-	for (size_t stationarity_index=0; stationarity_index < nlp_->num_primal(); ++stationarity_index) {
+    for (size_t stationarity_index=0; stationarity_index < nlp_->num_primal(); ++stationarity_index) {
 		// mu*grad f + H*d:
 		stationarity[stationarity_index] = iterate.get_penalty_parameter()*stationarity[stationarity_index] + hessian_times_step[stationarity_index];
 		
@@ -99,12 +99,12 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 	std::shared_ptr<matrix_base_class> jacobian_eq = nlp_->constraints_equality_jacobian(iterate);
 	std::vector<double> con_values_eq = nlp_->constraints_equality(iterate);
 	// std::cout << "about to do j eq" << std::endl;
-	std::vector<double> linear_step_eq = jacobian_eq->multiply(step.primal_values_);
+	std::vector<double> linear_step_eq = jacobian_eq->multiply(step.get_primal_values());
 	
 	// std::cout << "about to do j ieq" << std::endl;
 	std::shared_ptr<matrix_base_class> jacobian_ieq = nlp_->constraints_inequality_jacobian(iterate);
 	std::vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
-	std::vector<double> linear_step_ieq = jacobian_ieq->multiply(step.primal_values_);
+	std::vector<double> linear_step_ieq = jacobian_ieq->multiply(step.get_primal_values());
 
 	for (size_t eq_con_index=0; eq_con_index< nlp_->num_dual_eq(); ++eq_con_index) {
 		con_values_eq[eq_con_index] += linear_step_eq[eq_con_index];
@@ -112,5 +112,5 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 	for (size_t ieq_con_index=0; ieq_con_index< nlp_->num_dual_ieq(); ++ieq_con_index) {
 		con_values_ieq[ieq_con_index] += linear_step_ieq[ieq_con_index];
 	}		
-	return resid_helper(iterate, stationarity, con_values_eq, con_values_ieq, step.dual_eq_values_, step.dual_ieq_values_);
+	return resid_helper(iterate, stationarity, con_values_eq, con_values_ieq, step.get_dual_eq_values(), step.get_dual_ieq_values());
 }

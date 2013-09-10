@@ -17,7 +17,7 @@ public:
         
 private:
     void operator_setup();
-    iSQOStep operator_finish(const iSQOQuadraticSubproblem &subproblem, qpOASES::returnValue ret);
+    iSQOStep operator_finish(const iSQOQuadraticSubproblem &subproblem, int nWSR, qpOASES::returnValue ret);
     
     std::shared_ptr<qpOASES::SymmetricMatrix> get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> hessian);
     std::shared_ptr<qpOASES::SymmetricMatrix> get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> hessian);

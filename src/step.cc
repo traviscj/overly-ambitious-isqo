@@ -9,14 +9,14 @@
 int isqostep_serial = 0;
 
 // #define X(s) (std::cout << s << ": " << isqostep_serial << "\n")
-iSQOStep::iSQOStep(int number_primal, int number_dual_eq, int number_dual_ieq) : 
+iSQOStep::iSQOStep(int number_primal, int number_dual_eq, int number_dual_ieq, int status) : 
 			num_primal_(number_primal), 
 			num_dual_eq_(number_dual_eq),
 			num_dual_ieq_(number_dual_ieq),
 			primal_values_(number_primal),
 			dual_eq_values_(num_dual_eq_),
 			dual_ieq_values_(num_dual_ieq_),
-			status_(-42),
+			status_(status),
 			serial(isqostep_serial++)
 	{
         // X("iSQOStep::iSQOStep()");
@@ -27,7 +27,8 @@ iSQOStep::iSQOStep(const iSQOStep& other) : serial(isqostep_serial++),
 	num_dual_ieq_(other.num_dual_ieq_),
 	primal_values_(num_primal_),
 	dual_eq_values_(num_dual_eq_),
-	dual_ieq_values_(num_dual_ieq_)
+	dual_ieq_values_(num_dual_ieq_),
+    status_(other.status_)
 	{
     // X("iSQOStep::iSQOStep(const iSQOStep&)");
 	// cerr << "copy being made!" << std::endl;

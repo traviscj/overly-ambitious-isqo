@@ -108,13 +108,11 @@ void AmplNlp::ConstructHelper(std::string stub_str) {
 		}			
 	}
 	
-    PRINT_ = true;
 	std::vector<double> con(n_con);
 	conval(&x[0], &con[0], nerror_);
 	for (size_t ampl_constraint_index =0 ; ampl_constraint_index < n_con; ++ampl_constraint_index) {
 		if (PRINT_) std::cout << "ampl_constraint_index=" << ampl_constraint_index << ": l=" << LUrhs[2*ampl_constraint_index] << " <= c(x_k)= " << con[ampl_constraint_index] << " <= u=" << LUrhs[2*ampl_constraint_index+1] << std::endl;
 	}
-    PRINT_ = false;
 	
 	this->num_dual_eq_ = equality_constraints_.size();
 	this->num_dual_ieq_ = inequality_constraints_lower_.size() + inequality_constraints_upper_.size() + variable_bound_lower_.size() + variable_bound_upper_.size();

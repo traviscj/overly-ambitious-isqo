@@ -6,18 +6,18 @@ LinearReductionFunction::LinearReductionFunction(Nlp &nlp) : FunctionWithNLPStat
 }
 double LinearReductionFunction::operator()(const iSQOIterate &iterate, const iSQOStep &step) const {
 	bool PRINT=false;
-	// double f = nlp_->objective(iterate);
 	std::vector<double> gradient = nlp_->objective_gradient(iterate);
-	// dotproduct(gradient, )
-	double dot_product=0.0;
-	for (size_t primal_index=0; primal_index < nlp_->num_primal(); ++primal_index) {
-		dot_product += gradient[primal_index]*step.primal_values_[primal_index];
-	}
-	
-	if (PRINT) std::cout << "linear decrease: " << std::endl;
-	if (PRINT) std::cout << " - " << -iterate.get_penalty_parameter()*dot_product << std::endl;
-	if (PRINT) std::cout << " - " << constraint_violation_func_(iterate) << std::endl;
-	if (PRINT) std::cout << " - " << constraint_violation_func_(iterate,step) << std::endl;
-	if (PRINT) std::cout << " - " << -iterate.get_penalty_parameter()*dot_product + constraint_violation_func_(iterate) - constraint_violation_func_(iterate,step) << std::endl;
-	return -iterate.get_penalty_parameter()*dot_product + constraint_violation_func_(iterate) - constraint_violation_func_(iterate,step);
+    double penalty_scaled_objective_decrease = -iterate.get_penalty_parameter()*dot_product(gradient, step.get_primal_values());
+    double iterate_constraint_violation = constraint_violation_func_(iterate);
+    double iterate_step_constraint_violation = constraint_violation_func_(iterate,step);
+    double retval =  penalty_scaled_objective_decrease + iterate_constraint_violation - iterate_step_constraint_violation;
+    if (PRINT && (retval < 0)) {
+    	std::cout << std::endl;
+        std::cout << "linear decrease was negative!!" << std::endl;
+    	std::cout << " - penalty_scaled_objective_decrease: " << penalty_scaled_objective_decrease << std::endl;
+    	std::cout << " - iterate_constraint_violation     : " << iterate_constraint_violation << std::endl;
+    	std::cout << " - iterate_step_constraint_violation: " << iterate_step_constraint_violation << std::endl;
+    	std::cout << " - retval                           : " << retval << std::endl;
+    }
+	return retval;
 }

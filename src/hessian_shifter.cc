@@ -44,19 +44,19 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 	int current_regularization_steps = 0;
 	std::vector<double> current_step_values(nlp_->num_primal() + 2*nlp_->num_dual());
 	for (size_t primal_index = 0; primal_index < nlp_->num_primal(); ++primal_index) {
-		current_step_values[primal_index] = return_step.primal_values_[primal_index];
+		current_step_values[primal_index] = return_step.get_primal_value(primal_index);
 	}
 	
 	std::vector<double> hessian_times_step = subproblem.hessian_->multiply(current_step_values);
 	if (PRINT) std::cout << "hessian step: " << subproblem.hessian_ << std::endl;
 	double total = 0.0;
 	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
-		total += hessian_times_step[primal_index] * return_step.primal_values_[primal_index];
+		total += hessian_times_step[primal_index] * return_step.get_primal_value(primal_index);
 	}
 	if (PRINT) std::cout << std::endl << "total: " << total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;
 	if (PRINT) std::cout << "required: " << (total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
 	// std::vector<double> hessian_step = subproblem.hessian_.multiply()
-	while ((return_step.status_ != 0) || (return_step.x_norm() > 1e9) || (total < (1e-8*return_step.x_norm()*return_step.x_norm()))) {
+	while ((return_step.get_status() != 0) || (return_step.x_norm() > 1e9) || (total < (1e-8*return_step.x_norm()*return_step.x_norm()))) {
         double last_shift=current_shift;
 		if (current_regularization_steps == 0) {
 			if (last_shift_ == 0.0) {
@@ -75,15 +75,15 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 		return_step = solve_qp_(subproblem);
 		
 		for (size_t primal_index = 0; primal_index < nlp_->num_primal(); ++primal_index) {
-			current_step_values[primal_index] = return_step.primal_values_[primal_index];
+			current_step_values[primal_index] = return_step.get_primal_value(primal_index);
 		}
 		if (PRINT) std::cout << "hessian: " << subproblem.hessian_ << std::endl;
-		if (PRINT) std::cout << "return step: " << return_step.primal_values_ << std::endl;
+		if (PRINT) std::cout << "return step: " << return_step.get_primal_values() << std::endl;
 		hessian_times_step = subproblem.hessian_->multiply(current_step_values);
 		if (PRINT) std::cout << "hessian step: " << hessian_times_step << std::endl;
 		total = 0.0;
 		for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
-			total += hessian_times_step[primal_index] * return_step.primal_values_[primal_index];
+			total += hessian_times_step[primal_index] * return_step.get_primal_value(primal_index);
 		}
 		if (PRINT) std::cout << "current_shift: " << current_shift << std::endl;
 		if (PRINT) std::cout << std::endl << "total: " << total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;

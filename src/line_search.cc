@@ -31,7 +31,7 @@ double LineSearchFunction::operator()(const iSQOIterate &iterate, const iSQOStep
 			std::cout << "f: " << nlp_->objective(it_and_step) << std::endl;
 			std::cout << "c: " << nlp_->constraints_equality(it_and_step) << std::endl;
 			std::cout << "alpha_cut: " << alpha_cuts << ": original: " << penfunc_start << "; new: " << penfunc_step << "; reduction: " << (penfunc_start-penfunc_step) << std::endl;
-			std::cout << "  rhs: " << - eta*step_size*linear_reduction_start  << " + " << 10*machine_precision*fmax(abs(penfunc_step), 1.0) << " = " << (-eta*step_size*linear_reduction_start+10*machine_precision*std::max(std::abs(penfunc_step), 1.0)) << std::endl;
+			std::cout << "  rhs: " << - eta*step_size*linear_reduction_start  << " + " << 10*machine_precision*fmax(fabs(penfunc_step), 1.0) << " = " << (-eta*step_size*linear_reduction_start+10*machine_precision*fmax(fabs(penfunc_step), 1.0)) << std::endl;
 			std::cout << "mu = " << it_and_step.get_penalty_parameter() << std::endl;
 		}
 		if (penfunc_step - penfunc_start <= - eta*step_size*linear_reduction_start + 10*machine_precision*fmax(fabs(penfunc_step), 1.0)) {

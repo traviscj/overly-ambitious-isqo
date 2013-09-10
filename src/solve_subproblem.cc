@@ -13,7 +13,8 @@ SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) :
         int num_qp_con = (int)(nlp_->num_dual());
         int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual());
         
-        example_ = std::shared_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
+        example_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
+        
     }
 
 SolveQuadraticProgram::~SolveQuadraticProgram() {
@@ -162,20 +163,21 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 
 void SolveQuadraticProgram::operator_setup() {
 
-    // qpOASES::Options *opt = new qpOASES::Options;
+    qpOASES::Options *opt = new qpOASES::Options;
     // 
     //     // opt.terminationTolerance = 1e-6;
     //     opt->setToReliable();
-    //     
-    //     opt->enableEqualities = qpOASES::BooleanType(true);
-    //     opt->enableFullLITests = qpOASES::BooleanType(true);
-    //     // opt->epsLITests ; // maybe play with this later. (maybe 1e-8)
+    opt->enableWorkingSetRepair = qpOASES::BooleanType(true);
+    opt->enableEqualities = qpOASES::BooleanType(true);
+    // opt->enableFullLITests = qpOASES::BooleanType(true);
+    opt->epsLITests = 1e-10; // maybe play with this later. (maybe 1e-8)
+    // usually too low, rather than too high, but might help with the 'infeasible QP' troubles.
     //     opt->enableRegularisation = qpOASES::BooleanType(true);
     //     opt->enableNZCTests = qpOASES::BooleanType(true);
     //     // opt->initialStatusBounds = qpOASES::ST_LOWER;
     //     // opt->numRegularisationSteps = 200;
     //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
-    //     example_->setOptions(*opt);
+    example_->setOptions(*opt);
 	example_->setPrintLevel(qpOASES::PL_NONE);
 }
 iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &subproblem, int nWSR, qpOASES::returnValue ret) {

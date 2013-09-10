@@ -22,6 +22,16 @@ AC_CHECK_LIB([blas], [dgemm_],[],AC_MSG_ERROR([Could not find blas!!]))
 AC_CHECK_LIB([gfortran], [_gfortran_st_write],[],AC_MSG_ERROR([Could not find -lgfortran!!]))
 AC_CHECK_LIB([lapack], [dtrtrs_],[],AC_MSG_ERROR([Could not find -llapack!!]))
 
+# Google Profiler
+AC_CHECK_LIB([profiler], [ProfilerStart], [LIBS="-lprofiler $LIBS"], AC_MSG_WARN([could not find profiler library skipping...]), $AM_LDFLAGS)
+
+# metis
+# AC_CHECK_LIB([metis], [METIS_PartGraphRecursive], [LIBS="-lmetis $LIBS"], AC_MSG_ERROR([could not find metis library!!]), $AM_LDFLAGS)
+AC_CHECK_LIB([fakemetis], [metis_nodend_], [LIBS="-lfakemetis $LIBS"], AC_MSG_ERROR([could not find fakemetis library!!]), $AM_LDFLAGS)
+
+# ma57
+AC_CHECK_LIB([hsl_ma57], [ma57ad_], [LIBS="-lhsl_ma57 $LIBS"], AC_MSG_ERROR([could not find hsl_ma57 library!!]))
+
 # adding the lib to the files to link
 LIBS="-lqpOASES_aw $LIBS"
 # introduce the optional configure parameter for a non-standard install prefix of qpOASES_aw

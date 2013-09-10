@@ -216,6 +216,7 @@ int main(int argc, char **argv) {
 					std::vector<double> gradient = problem.objective_gradient(penalty_iterate);
 					double potential_new_penalty_parameter_numerator = (1-linear_reduction_threshold_for_penalty_reduction)*linear_decrease_in_feasibility_combination;
 					double potential_new_penalty_parameter_denominator = combination_step.x_dot_product(gradient) + hessian_min_convexity*pow(combination_step.x_norm(),2);
+                    assert(potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator > 0);
 					penalty_iterate.set_penalty_parameter(std::min(  penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter(), 
                                                                     potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator));
 				}

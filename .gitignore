@@ -1,5 +1,4 @@
-isqo_functor
-isqo_functor.dSYM
+overly_ambitious_isqo
 tester
 tester.dSYM
 valgrind-*
@@ -13,11 +12,10 @@ isqo
 test_ampl_interface
 test_display_all
 test_jacobian_mult
-isqo-dense
-isqo-sparse
 html
 latex
 
+*~
 
 # http://www.gnu.org/software/automake
 
@@ -28,7 +26,17 @@ Makefile.in
 /autom4te.cache
 /aclocal.m4
 /compile
+/config.h
 /configure
 /depcomp
 /install-sh
 /missing
+/stamp-h1
+
+# more autoconf
+Makefile
+config.log
+config.status
+
+# 
+.deps/

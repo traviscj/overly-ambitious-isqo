@@ -23,4 +23,6 @@ inline std::ostream& operator<< (std::ostream& os, const std::vector< T >& vec) 
     return os;
 }
 
+double dot_product(const std::vector<double> &vector_one, const std::vector<double> &vector_two);
+
 #endif

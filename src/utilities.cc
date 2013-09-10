@@ -29,3 +29,12 @@ bool assert_close(double val1, double val2, double tol) {
 	assert(((val1 > tol) && (val2 > tol)) || ((val1 < -tol) && (val2 < -tol)) || (val1 == 0 && val2 == 0));
 	return (abs(val1) <= abs(val2) + tol*abs(val1)) && (abs(val2) <= abs(val1) + tol*abs(val2));
 }
+
+double dot_product(const std::vector<double> &vector_one, const std::vector<double> &vector_two) {
+    assert(vector_one.size() == vector_two.size());
+	double dot_product=0.0;
+	for (size_t primal_index=0; primal_index < vector_one.size(); ++primal_index) {
+		dot_product += vector_one[primal_index]*vector_two[primal_index];
+	}
+    return dot_product;
+}

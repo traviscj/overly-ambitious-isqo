@@ -13,6 +13,9 @@ TextOutput::TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violat
 	
 }
 
+void TextOutput::nlp() {
+    printf("nvar: %5d\tncon: %5d\n", nlp_->num_primal(), nlp_->num_dual());
+}
 void TextOutput::start() {
 	printf("-----|");
 	printf("----------------------|");
@@ -51,7 +54,7 @@ void TextOutput::subproblem(double shift, const iSQOIterate &iterate, const iSQO
 	//  -> params: shift, step
 	//	-> state: linear_decrease_func, residual_func_
 	printf(output_format_subprob_,
-			shift, step.status_, step.x_norm(),
+			shift, step.get_status(), step.x_norm(),
 			linear_decrease_func_(iterate, step), residual_func_(iterate, subproblem, step)
 				);
 }

@@ -15,6 +15,7 @@
 class TextOutput : public FunctionWithNLPState {
 public:
 	TextOutput (Nlp &nlp);
+    void nlp();
 	void start();
 	void pre(size_t iter, const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate) const;
 	void subproblem(double shift, const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const;

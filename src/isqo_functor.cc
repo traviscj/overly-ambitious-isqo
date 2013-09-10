@@ -108,6 +108,8 @@ int main(int argc, char **argv) {
 	// Other
 	TextOutput text_output(problem);
 	
+    text_output.nlp();
+    
 	// Paper-defined Parameter Values
 	double linear_decrease_threshold = 1e-1; // epsilon in the paper.
 	double linear_reduction_threshold_for_penalty_reduction = 1e-2; // beta in the paper.

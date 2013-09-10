@@ -30,7 +30,7 @@ AC_CHECK_LIB([profiler], [ProfilerStart], [LIBS="-lprofiler $LIBS"], AC_MSG_WARN
 AC_CHECK_LIB([fakemetis], [metis_nodend_], [LIBS="-lfakemetis $LIBS"], AC_MSG_ERROR([could not find fakemetis library!!]), $AM_LDFLAGS)
 
 # ma57
-AC_CHECK_LIB([hsl_ma57], [ma57ad_], [LIBS="-lhsl_ma57 $LIBS"], AC_MSG_WARN([could not find hsl_ma57 library!!]))
+AC_CHECK_LIB([hsl_ma57], [ma57ad_], [LIBS="-lhsl_ma57 $LIBS"], AC_MSG_ERROR([could not find hsl_ma57 library!!]))
 
 # adding the lib to the files to link
 LIBS="-lqpOASES_aw $LIBS"

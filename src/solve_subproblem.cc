@@ -209,7 +209,7 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	} else {
 		if (first_) first_ = false;
 	}
-	iSQOStep step(nlp_->num_primal(), nlp_->num_dual_eq(), nlp_->num_dual_ieq(), ret);
+	iSQOStep step(nlp_->num_primal(), nlp_->num_dual_eq(), nlp_->num_dual_ieq(), ret, nWSR);
 	// std::cout << "address of step: " << &step << std::endl;
 
 	// full_primal needs to hold primal variables and all slack variables

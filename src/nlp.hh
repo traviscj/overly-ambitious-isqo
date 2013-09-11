@@ -38,10 +38,23 @@ public:
 	size_t num_dual();
 	size_t num_dual_eq();
 	size_t num_dual_ieq();
+    
+    ~Nlp() {
+        std::cout
+                << std::endl
+                << "Useful information for your every-day life:" << std::endl
+                << "function evals: " << num_objective_eval_ << std::endl
+                << "num_constraint_eval_: " << num_constraint_eval_ << std::endl
+                << "num_objective_gradient_eval_: " << num_objective_gradient_eval_ << std::endl
+                << "num_constraint_jacobian_eval_: " << num_constraint_jacobian_eval_ << std::endl
+                << "num_lagrangian_eval_: " << num_lagrangian_eval_ << std::endl;
+    }
 protected:
 	size_t num_primal_;
 	size_t num_dual_eq_;
 	size_t num_dual_ieq_;
+    size_t num_objective_eval_, num_constraint_eval_, num_objective_gradient_eval_, num_constraint_jacobian_eval_, num_lagrangian_eval_;
+    
 };
 
 #endif

@@ -106,7 +106,13 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
 
 void iSQOQuadraticSubproblem::inc_regularization(double hessian_shift, double last_shift) {
 	bool PRINT = false;
+    // std::cout << "hessian_shift: " << hessian_shift << "; last_shift: " << last_shift << std::endl;
     hessian_->regularize(hessian_shift, last_shift);
+    // std::cout << "\n\n\n nlp_hessian_ pre: " << nlp_hessian_ << std::endl;
+    nlp_hessian_->regularize(hessian_shift, last_shift);
+    // std::cout << "\n\n\n nlp_hessian_ post: " << nlp_hessian_ << std::endl;
+    
+    // std::cout << "\n\n\n nlp hessian re-evaluation :" << nlp_->lagrangian_hessian(*iterate_pointer) << std::endl;
     // std::shared_ptr< identity(NUM_FUCKING_VARIABLES, (hessian_shift - last_shift));
     // hessian_ = sum(hessian_, )
 }

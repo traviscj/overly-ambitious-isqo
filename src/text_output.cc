@@ -3,10 +3,10 @@
 #include "text_output.hh"
 
 const char TextOutput::output_desc_pre_[] = " it  |       obj     infeas |       pen      merit |   feaskkt     penkkt &";
-const char TextOutput::output_desc_subprob_[] = "     shift  msg     ||d||     penred        res  |";
+const char TextOutput::output_desc_subprob_[] = "     shift  msg  pivots   ||d||     penred        res  |";
 const char TextOutput::output_desc_post_[] = " TT   CvxComb    ||d||   FeasRed     PenRed |    alpha\n";
 const char TextOutput::output_format_pre_[] = " %3d | %9.2e  %9.2e | %9.2e  %+9.2e | %9.2e  %9.2e &";
-const char TextOutput::output_format_subprob_[] = " %9.2e  %3d  %9.2e  %9.2e  %9.2e |";
+const char TextOutput::output_format_subprob_[] = " %9.2e  %3d  %5d %9.2e  %9.2e  %9.2e |";
 const char TextOutput::output_format_post_[] = " %s %9.2e %9.2e %9.2e %9.2e |%9.2e\n";
 
 TextOutput::TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp),linear_decrease_func_(nlp), pen_func_(nlp), residual_func_(nlp) {
@@ -16,13 +16,14 @@ TextOutput::TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violat
 void TextOutput::nlp() {
     printf("nvar: %5d\tncon: %5d\n", nlp_->num_primal(), nlp_->num_dual());
 }
+
 void TextOutput::start() {
 	printf("-----|");
 	printf("----------------------|");
 	printf("----------------------|");
 	printf("----------------------&");
-	printf("-----------------[ FEASIBILITY ]-----------------|");
-	printf("-------------------[ PENALTY ]-------------------|");
+	printf("--------------------[ FEASIBILITY ]--------------------|");
+	printf("----------------------[ PENALTY ]----------------------|");
 	printf("--------------------------------------------|");
 	printf("----------\n");
 	printf("%s",output_desc_pre_);
@@ -33,8 +34,8 @@ void TextOutput::start() {
 	printf("----------------------|");
 	printf("----------------------|");
 	printf("----------------------&");
-	printf("-------------------------------------------------|");
-	printf("-------------------------------------------------|");
+	printf("-------------------------------------------------------|");
+	printf("-------------------------------------------------------|");
 	printf("--------------------------------------------|");
 	printf("----------\n");
 }
@@ -54,12 +55,12 @@ void TextOutput::subproblem(double shift, const iSQOIterate &iterate, const iSQO
 	//  -> params: shift, step
 	//	-> state: linear_decrease_func, residual_func_
 	printf(output_format_subprob_,
-			shift, step.get_status(), step.x_norm(),
+			shift, step.get_status(), step.get_pivots(), step.x_norm(),
 			linear_decrease_func_(iterate, step), residual_func_(iterate, subproblem, step)
 				);
 }
 void TextOutput::subproblem_skip() {
-	printf("         -   -           -          -          - |");
+	printf("         -    -      -         -          -          - |");
 }
 void TextOutput::post(const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate, const iSQOStep &combination_step, std::string step_type, double step_mix, double alpha) {
 	// step, feas_iter, penalty_iter, alpha

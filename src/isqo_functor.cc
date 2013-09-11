@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
 	size_t iter=-1;
 	for (iter = 0; iter < maximum_iterations; iter ++ ) {
         // std::cout << std::endl << "penalty: " << penalty_iterate.penalty_parameter_ << std::endl;
-		iSQOStep combination_step(problem.num_primal(), problem.num_dual_eq(), problem.num_dual_ieq(), -42);
+		iSQOStep combination_step(problem.num_primal(), problem.num_dual_eq(), problem.num_dual_ieq(), -42, -42);
 		
 		text_output.pre(iter, feasibility_iterate, penalty_iterate);
 		
@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
 		// Penalty problem is set up AND SOLVED, 
 		MAGIC_SUBPROBLEM penalty_subproblem(problem, penalty_iterate);
 		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_subproblem);
-		iSQOStep feasibility_step(problem.num_primal(),problem.num_dual_eq(),problem.num_dual_ieq(), -43);
+		iSQOStep feasibility_step(problem.num_primal(),problem.num_dual_eq(),problem.num_dual_ieq(), -43, -43);
 		
 		// per-iteration variable setup.
 		std::string steptype = "4a";

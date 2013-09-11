@@ -62,7 +62,7 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 			if (last_shift_ == 0.0) {
 				current_shift = shift_w0;
 			} else {
-				current_shift = std::max(shift_min, shift_kwm * last_shift_);
+				current_shift = fmax(shift_min, shift_kwm * last_shift_);
 			}
 		} else {
 			if (last_shift_ == 0.0) {

@@ -109,6 +109,7 @@ void AmplNlp::ConstructHelper(std::string stub_str) {
 	}
 	
 	std::vector<double> con(n_con);
+    num_constraint_eval_++;
 	conval(&x[0], &con[0], nerror_);
 	for (size_t ampl_constraint_index =0 ; ampl_constraint_index < n_con; ++ampl_constraint_index) {
 		if (PRINT_) std::cout << "ampl_constraint_index=" << ampl_constraint_index << ": l=" << LUrhs[2*ampl_constraint_index] << " <= c(x_k)= " << con[ampl_constraint_index] << " <= u=" << LUrhs[2*ampl_constraint_index+1] << std::endl;
@@ -166,6 +167,7 @@ double AmplNlp::objective(const iSQOIterate &iterate) {
     std::vector<double> x(this->num_primal());
     x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
 
+    num_objective_eval_++;
     real obj = objval(0, &x[0], nerror_);
 	if (PRINT_) std::cout << "objective value(nerror = " << *nerror_ << "): " << obj << std::endl;
 	return obj;
@@ -177,6 +179,7 @@ std::vector<double> AmplNlp::constraints_equality(const iSQOIterate &iterate) {
     x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
     
 	std::vector<double> con(n_con);
+    num_constraint_eval_++;
 	conval(&x[0], &con[0], nerror_);
 	if (PRINT_) std::cout << "equality_constraints:" << std::endl;
 	std::vector<double> equality_constraint_evaluation(equality_constraints_.size());
@@ -194,6 +197,7 @@ std::vector<double> AmplNlp::constraints_inequality(const iSQOIterate &iterate) 
     
     std::vector<double> con(n_con);
 	
+    num_constraint_eval_++;
 	conval(&x[0], &con[0], nerror_);
 	if (PRINT_) std::cout << "inequality_constraints:" << std::endl;
 	
@@ -244,7 +248,7 @@ std::vector<double> AmplNlp::objective_gradient(const iSQOIterate &iterate) {
 	
 	std::vector<double> x(this->num_primal());
     x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
-	
+	num_objective_gradient_eval_++;
 	objgrd(0, &x[0], &return_gradient[0], nerror_);
 	if (PRINT_) std::cout << "objective gradient(nerror = " << *nerror_ << "): " << return_gradient[0] << std::endl;
 	if (PRINT_) std::cout << "objective gradient(nerror = " << *nerror_ << "): " << return_gradient[1] << std::endl;
@@ -261,6 +265,7 @@ std::shared_ptr<matrix_base_class> DenseAmplNlp::constraints_equality_jacobian(c
     std::shared_ptr<dense_matrix> equality_constraint_jacobian = std::shared_ptr<dense_matrix>(new dense_matrix(equality_constraints_.size(), this->num_primal()));
 	if (PRINT_) std::cout << "equal: " << equality_constraints_ << std::endl;
 	std::vector<double> G(num_primal());
+    num_constraint_jacobian_eval_++;
 	for (size_t isqo_eq_constraint_index=0; isqo_eq_constraint_index < equality_constraints_.size(); ++isqo_eq_constraint_index) {
 		congrd(equality_constraints_[isqo_eq_constraint_index], &x[0], &G[0], nerror_);
 		for (size_t primal_index=0; primal_index < num_primal(); ++primal_index) {
@@ -283,6 +288,7 @@ void SparseAmplNlp::jacobian_update(const iSQOIterate &iterate) {
     asl->i.congrd_mode = 0;
     double J[nzc];
     jacval(&x[0], &J[0], nerror_);
+    num_constraint_jacobian_eval_++;
     if (PRINT_) std::cout << "J: " << std::endl;
     for (size_t current_nz=0; current_nz < nzc; ++current_nz) {
         if (PRINT_) std::cout << "current_nz=" << current_nz << ", val=" << J[current_nz] << std::endl;
@@ -628,6 +634,7 @@ std::shared_ptr<matrix_base_class> DenseAmplNlp::lagrangian_hessian(const iSQOIt
 	//	 - OW : INPUT : multipliers for objective function ("objective weights")
 	//	 - Y : INPUT : lagrange multipliers for constraints.
 	fullhes(&H[0], n_var, 0, &OW[0], &Y[0]);
+    num_lagrangian_eval_++;
     // the code below is highly suspect.
     // I think it was necesary in the MATLAB implementation, where we couldn't set
     // the objective multiplier, but since we can control that with OW[0] now, 
@@ -708,6 +715,8 @@ std::shared_ptr<matrix_base_class> SparseAmplNlp::lagrangian_hessian(const iSQOI
     //  - 2: *OW: pointer to array of 'objective weights'
     //  - 3: *Y: pointer to array of lagrange multipliers.
     sphes(&sparse_hessian_values[0], -1, &OW[0], &Y[0]); // &OW[0], &Y[0]
+    
+    num_lagrangian_eval_++;
     if (PRINT_) 
         for (size_t sparse_hessian_index=0; sparse_hessian_index<hessian_nnz; ++sparse_hessian_index) {
             std::cout << "sparse_hessian_values[sparse_hessian_index=" << sparse_hessian_index << "]: " << sparse_hessian_values[sparse_hessian_index] << std::endl;

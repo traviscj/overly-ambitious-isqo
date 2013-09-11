@@ -98,6 +98,7 @@ public:
     }
 private:
 protected:
+    std::shared_ptr<sparse_matrix> submatrix(std::shared_ptr<sparse_matrix> matrix, std::vector<size_t> rows_to_keep, size_t num_result_nnz, double scale);
     void jacobian_update(const iSQOIterate &iterate);
     void hessian_update(const iSQOIterate &iterate);
     // TODO make these returned, let a caching class worry about it.

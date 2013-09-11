@@ -32,6 +32,7 @@ void TextOutput::start() {
 	printf("%s",output_desc_subprob_);
 	printf("%s",output_desc_subprob_);
 	printf("%s",output_desc_post_);
+    printf("%s",output_desc_line_search_);
 	printf("-----|");
 	printf("----------------------|");
 	printf("----------------------|");

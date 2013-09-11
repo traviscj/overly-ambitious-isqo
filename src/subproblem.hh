@@ -26,8 +26,8 @@ class iSQOQuadraticSubproblem : public FunctionWithNLPState {
 public:
 	iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
     ~iSQOQuadraticSubproblem() {
-        std::cout << "I had " << prior_constructed_hessians_.size() << " items in the hessian cache.\n"
-            << " & " << prior_constructed_jacobians_.size() << " items in the jacobian cache.\n" << std::endl;
+        // std::cout << "I had " << prior_constructed_hessians_.size() << " items in the hessian cache.\n"
+            // << " & " << prior_constructed_jacobians_.size() << " items in the jacobian cache.\n" << std::endl;
     }
 	void inc_regularization(double hessian_shift, double last_shift);
     

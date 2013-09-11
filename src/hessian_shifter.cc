@@ -97,6 +97,7 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 			break;
 		}
 	}
+    if (PRINT) std::cout << "SUCCESSFULLY SHIFTED!!" << current_regularization_steps << std::endl;
 	last_shift_ = current_shift;
 	return return_step;
 }

@@ -195,6 +195,8 @@ std::vector<double> AmplNlp::constraints_inequality(const iSQOIterate &iterate) 
 	std::vector<double> x(this->num_primal());
     x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
     
+    if (PRINT_) std::cout << "my value of x in AmplNlp::constraints_inequality: " << *(iterate.get_primal_values()) << std::endl;
+    if (PRINT_) std::cout << "my value of x in AmplNlp::constraints_inequality: " << x << std::endl;
     std::vector<double> con(n_con);
 	
     num_constraint_eval_++;
@@ -248,10 +250,13 @@ std::vector<double> AmplNlp::objective_gradient(const iSQOIterate &iterate) {
 	
 	std::vector<double> x(this->num_primal());
     x.assign(iterate.get_primal_values()->begin(), iterate.get_primal_values()->end());
+    if (PRINT_) std::cout << "evaluating the gradient with this iterate: " << iterate << std::endl;
+    if (PRINT_) std::cout << "evaluating the gradient with this x: " << x << std::endl;
 	num_objective_gradient_eval_++;
 	objgrd(0, &x[0], &return_gradient[0], nerror_);
 	if (PRINT_) std::cout << "objective gradient(nerror = " << *nerror_ << "): " << return_gradient[0] << std::endl;
 	if (PRINT_) std::cout << "objective gradient(nerror = " << *nerror_ << "): " << return_gradient[1] << std::endl;
+    if (PRINT_) std::cout << "AmplNlp::objective_gradient return_gradient : " << return_gradient << std::endl;
 	
 	return return_gradient;
 }

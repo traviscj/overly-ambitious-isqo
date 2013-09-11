@@ -131,10 +131,8 @@ int main(int argc, char **argv) {
 	// ALGORITHM A // STEP 1
 	//////////////////////////
 	iSQOIterate penalty_iterate = problem.initial(1.0e-1);
-    // penalty_iterate.penalty_parameter_ = ;
-
 	iSQOIterate feasibility_iterate = problem.initial(0.0);
-    // feasibility_iterate.penalty_parameter_ = 0.0;
+
 	size_t iter=-1;
 	for (iter = 0; iter < maximum_iterations; iter ++ ) {
         // std::cout << std::endl << "penalty: " << penalty_iterate.penalty_parameter_ << std::endl;
@@ -182,6 +180,7 @@ int main(int argc, char **argv) {
 			// Feasibility problem is set up and solved.
 			MAGIC_SUBPROBLEM feasibility_subproblem(problem, feasibility_iterate);
 			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_subproblem);
+            assert(feasibility_step.get_status() == 0);
 			
 			if (linear_reduction(penalty_iterate,penalty_step) >= linear_decrease_threshold*linear_reduction(feasibility_iterate,feasibility_step)) {
 				//////////////////////////
@@ -245,10 +244,12 @@ int main(int argc, char **argv) {
 		// ALGORITHM A // STEP 6
 		//////////////////////////
 		// update penalty iterate & dual values:
+		// update FEASIBILITY iterate first, since penalty iterate update changes this answer.
 		penalty_iterate.update(penalty_iterate, step_size, combination_step);
 		penalty_iterate.update_dual(penalty_step);
-		// update feasibility iterate & dual values:
-		feasibility_iterate.update(penalty_iterate, step_size, combination_step);
+
+        // feasibility_iterate.update(penalty_iterate, step_size, combination_step);
+        feasibility_iterate.assign_primal(*(penalty_iterate.get_primal_values()));
 		feasibility_iterate.update_dual(feasibility_step);
         
         problem.reset_cache();

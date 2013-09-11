@@ -165,13 +165,14 @@ int main(int argc, char **argv) {
 		// per-iteration variable setup.
 		std::string steptype = "4a";
 		double combination_step_contribution_from_penalty_step = -1.0;
-		
+		double next_penalty_parameter;
 		if (linear_reduction(penalty_iterate,penalty_step) >= linear_decrease_threshold*constraint_violation(penalty_iterate) + 10*machine_precision*linear_reduction(penalty_iterate,penalty_step)) {
 			//////////////////////////
 			// ALGORITHM A // STEP 3a
 			combination_step_contribution_from_penalty_step = 1.0;
 			text_output.subproblem_skip();
 
+            next_penalty_parameter = penalty_iterate.get_penalty_parameter();
 			combination_step.set_primal(penalty_step);
 		} else {
 			
@@ -209,16 +210,18 @@ int main(int argc, char **argv) {
 				if (linear_decrease_in_penalty_combination >= linear_reduction_threshold_for_penalty_reduction*linear_decrease_in_feasibility_combination + 10*machine_precision*linear_decrease_in_penalty_combination) {
 					if (combination_step_contribution_from_penalty_step >= mostly_feasibility_step_threshold) {
 						// no-op: keep the current penalty parameter.
+                        next_penalty_parameter = penalty_iterate.get_penalty_parameter();
 					} else {
-						penalty_iterate.set_penalty_parameter(penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter());
+                        // penalty_iterate.set_penalty_parameter();
+                        next_penalty_parameter = penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter();
 					}
 				} else {
 					std::vector<double> gradient = problem.objective_gradient(penalty_iterate);
 					double potential_new_penalty_parameter_numerator = (1-linear_reduction_threshold_for_penalty_reduction)*linear_decrease_in_feasibility_combination;
 					double potential_new_penalty_parameter_denominator = combination_step.x_dot_product(gradient) + hessian_min_convexity*pow(combination_step.x_norm(),2);
                     assert(potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator > 0);
-					penalty_iterate.set_penalty_parameter(std::min(  penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter(), 
-                                                                    potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator));
+					next_penalty_parameter = std::min(  penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter(), 
+                                                                    potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator);
 				}
 			}
 
@@ -227,14 +230,16 @@ int main(int argc, char **argv) {
 			
 			text_output.subproblem(hessian_shifting_feasibility_qp_solve.get_last_shift(), feasibility_iterate, feasibility_subproblem, feasibility_step);
 		}
+		text_output.subproblem(hessian_shifting_penalty_qp_solve.get_last_shift(), penalty_iterate, penalty_subproblem, penalty_step);
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 5
 		//////////////////////////
+		text_output.post(feasibility_iterate, penalty_iterate, combination_step, steptype, combination_step_contribution_from_penalty_step);
+        
+        penalty_iterate.set_penalty_parameter(next_penalty_parameter);
 		double step_size = line_search(penalty_iterate, combination_step);
-		
-		text_output.subproblem(hessian_shifting_penalty_qp_solve.get_last_shift(), penalty_iterate, penalty_subproblem, penalty_step);
-		text_output.post(feasibility_iterate, penalty_iterate, combination_step, steptype, combination_step_contribution_from_penalty_step, step_size);
+        text_output.line_search(step_size);
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 6

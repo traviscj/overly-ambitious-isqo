@@ -4,10 +4,12 @@
 
 const char TextOutput::output_desc_pre_[] = " it  |       obj     infeas |       pen      merit |   feaskkt     penkkt &";
 const char TextOutput::output_desc_subprob_[] = "     shift  msg  pivots   ||d||     penred        res  |";
-const char TextOutput::output_desc_post_[] = " TT   CvxComb    ||d||   FeasRed     PenRed |    alpha\n";
+const char TextOutput::output_desc_post_[] = " TT   CvxComb    ||d||   FeasRed     PenRed |";
+const char TextOutput::output_desc_line_search_[] = "    alpha\n";
 const char TextOutput::output_format_pre_[] = " %3d | %9.2e  %9.2e | %9.2e  %+9.2e | %9.2e  %9.2e &";
 const char TextOutput::output_format_subprob_[] = " %9.2e  %3d  %5d %9.2e  %9.2e  %9.2e |";
-const char TextOutput::output_format_post_[] = " %s %9.2e %9.2e %9.2e %9.2e |%9.2e\n";
+const char TextOutput::output_format_post_[] = " %s %9.2e %9.2e %9.2e %9.2e |";
+const char TextOutput::output_format_line_search_[] = "%9.2e\n";
 
 TextOutput::TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp),linear_decrease_func_(nlp), pen_func_(nlp), residual_func_(nlp) {
 	
@@ -62,12 +64,19 @@ void TextOutput::subproblem(double shift, const iSQOIterate &iterate, const iSQO
 void TextOutput::subproblem_skip() {
 	printf("         -    -      -         -          -          - |");
 }
-void TextOutput::post(const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate, const iSQOStep &combination_step, std::string step_type, double step_mix, double alpha) {
+void TextOutput::post(const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate, const iSQOStep &combination_step, std::string step_type, double step_mix) {
 	// step, feas_iter, penalty_iter, alpha
 	//  -> params: step, feas_iter, penalty_iter, alpha
 	printf(output_format_post_,
 			step_type.c_str(),
-			step_mix, combination_step.x_norm(), linear_decrease_func_(feasibility_iterate,combination_step), linear_decrease_func_(penalty_iterate, combination_step),
+			step_mix, combination_step.x_norm(), linear_decrease_func_(feasibility_iterate,combination_step), linear_decrease_func_(penalty_iterate, combination_step)
+				);
+}
+
+void TextOutput::line_search(double alpha) {
+	// step, feas_iter, penalty_iter, alpha
+	//  -> params: step, feas_iter, penalty_iter, alpha
+	printf(output_format_line_search_,
 			alpha
 				);
 }

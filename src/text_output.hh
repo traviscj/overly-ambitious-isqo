@@ -20,7 +20,9 @@ public:
 	void pre(size_t iter, const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate) const;
 	void subproblem(double shift, const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const;
 	void subproblem_skip();
-	void post(const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate, const iSQOStep &combination_step, std::string step_type, double step_mix, double alpha);
+	void post(const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate, const iSQOStep &combination_step, std::string step_type, double step_mix);
+    void line_search(double alpha);
+    
 protected:
 	// Nlp *nlp_;
 	ConstraintViolationFunction constraint_violation_func_;
@@ -31,9 +33,11 @@ protected:
 	static const char output_desc_pre_[];
 	static const char output_desc_subprob_[];
 	static const char output_desc_post_[];
+	static const char output_desc_line_search_[];
 	static const char output_format_pre_[];
 	static const char output_format_subprob_[];
 	static const char output_format_post_[];
+	static const char output_format_line_search_[];
 };
 
 

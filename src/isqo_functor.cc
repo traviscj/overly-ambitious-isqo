@@ -245,6 +245,8 @@ int main(int argc, char **argv) {
 		// update feasibility iterate & dual values:
 		feasibility_iterate.update(penalty_iterate, step_size, combination_step);
 		feasibility_iterate.update_dual(feasibility_step);
+        
+        problem.reset_cache();
 	}
 	
 	if (iter == maximum_iterations) {

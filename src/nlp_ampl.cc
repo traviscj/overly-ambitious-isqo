@@ -529,22 +529,20 @@ void SparseAmplNlp::jacobian_update(const iSQOIterate &iterate) {
 }
 
 std::shared_ptr<matrix_base_class> SparseAmplNlp::constraints_equality_jacobian(const iSQOIterate &iterate) {
+    std::map<int, std::shared_ptr<matrix_base_class> >::iterator it = prior_eq_jacobians_.find(iterate.get_serial());
+    if (it != prior_eq_jacobians_.end()) return it->second;
+    
     jacobian_update(iterate);
-    // std::cout << "qpoases_eq_jacobian_: " << sparse_eq_jacobian_ << std::endl;
-    // double *testmat_eq_full = qpoases_eq_jacobian_.full();
-    // std::cout << "testmat_eq_full: " << std::endl << "[";
-    // for (int eq_entry_index=0; eq_entry_index<eq_jacobian.num_columns() * eq_jacobian.num_rows(); ++eq_entry_index) {
-    //     if (eq_entry_index!=0) std::cout << ", ";
-    //     std::cout << testmat_eq_full[eq_entry_index];
-    // }
-    // std::cout << "]" << std::endl;
-    // qpOASES::SparseMatrix retval(qpoases_eq_jacobian_);
+    prior_eq_jacobians_[iterate.get_serial()] = eq_jacobian_;
 	return eq_jacobian_;
 }
 
 std::shared_ptr<matrix_base_class> SparseAmplNlp::constraints_inequality_jacobian(const iSQOIterate &iterate) {
+    std::map<int, std::shared_ptr<matrix_base_class> >::iterator it = prior_ieq_jacobians_.find(iterate.get_serial());
+    if (it != prior_ieq_jacobians_.end()) return it->second;
+    
     jacobian_update(iterate);
-    // qpOASES::SparseMatrix retval(qpoases_ieq_jacobian_);
+    prior_ieq_jacobians_[iterate.get_serial()] = ieq_jacobian_;
 	return ieq_jacobian_;
 }
 
@@ -667,10 +665,25 @@ std::shared_ptr<matrix_base_class> DenseAmplNlp::lagrangian_hessian(const iSQOIt
 // }
 
 std::shared_ptr<matrix_base_class> SparseAmplNlp::lagrangian_hessian(const iSQOIterate &iterate) {
-    if (PRINT_) std::cout << "trying to create a sparse hessian." << std::endl;
+
+    if (PRINT_) std::cout << "trying to create a sparse hessian using iterate serial #: " << iterate.get_serial() << std::endl;
     
-    if (PRINT_) std::cout << "iterate is: " << iterate << std::endl;
+    if (PRINT_) std::cout << "testing for a cache hit." << std::endl;
+    std::map<int, std::shared_ptr<matrix_base_class> >::iterator it;
+    size_t index = 0;
+    for (std::map<int, std::shared_ptr<matrix_base_class>>::iterator it = prior_hessians_.begin(); it != prior_hessians_.end(); it++) {
+        if (PRINT_) std::cout << "testing index=" << index << "; " << it->first << ", "; // << *(it->second)
+        if (it->first == iterate.get_serial()) {
+            if (PRINT_) std::cout << "HIT HIT HIT HIT" << std::endl;
+            return it->second;
+        } else {
+            if (PRINT_) std::cout << "MISS MISS MISS" << std::endl;
+        }
+        index++;
+    }
     
+    
+    PRINT_ = false;
     ASL *asl = asl_;
 	std::vector<double> H(num_primal() * num_primal());
 	std::vector<double> OW(1);
@@ -786,7 +799,9 @@ std::shared_ptr<matrix_base_class> SparseAmplNlp::lagrangian_hessian(const iSQOI
     if (PRINT_) std::cout << "ampl_to_qp_indices: " << ampl_to_qp_indices << std::endl;
     
     if (PRINT_) std::cout << "sparse_hessian_: " << sparse_hessian_ << std::endl;
-    return std::shared_ptr<matrix_base_class>(sparse_hessian_);
+    std::shared_ptr<matrix_base_class> retval(sparse_hessian_);
+    prior_hessians_[iterate.get_serial()] = retval;
+    return retval;
 }
 
 

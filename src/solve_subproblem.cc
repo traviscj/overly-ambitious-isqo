@@ -166,19 +166,21 @@ void SolveQuadraticProgram::operator_setup() {
     qpOASES::Options *opt = new qpOASES::Options;
     // 
     //     // opt.terminationTolerance = 1e-6;
-    //     opt->setToReliable();
+    // opt->setToReliable();
     opt->enableWorkingSetRepair = qpOASES::BooleanType(true);
     opt->enableEqualities = qpOASES::BooleanType(true);
-    // opt->enableFullLITests = qpOASES::BooleanType(true);
-    opt->epsLITests = 1e-10; // maybe play with this later. (maybe 1e-8)
+    opt->enableFullLITests = qpOASES::BooleanType(true);
+    opt->epsLITests = 1e-8; // maybe play with this later. (maybe 1e-8)
     // usually too low, rather than too high, but might help with the 'infeasible QP' troubles.
     //     opt->enableRegularisation = qpOASES::BooleanType(true);
-    //     opt->enableNZCTests = qpOASES::BooleanType(true);
-    //     // opt->initialStatusBounds = qpOASES::ST_LOWER;
+        opt->enableNZCTests = qpOASES::BooleanType(true);
+    // opt->initialStatusBounds = qpOASES::ST_INACTIVE;
+    opt->initialStatusBounds = qpOASES::ST_LOWER;
     //     // opt->numRegularisationSteps = 200;
     //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
     example_->setOptions(*opt);
-	example_->setPrintLevel(qpOASES::PL_NONE);
+    example_->setPrintLevel(qpOASES::PL_NONE);
+        // example_->setPrintLevel(qpOASES::PL_MEDIUM);
 }
 iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &subproblem, int nWSR, qpOASES::returnValue ret) {
 	std::cerr.flush();

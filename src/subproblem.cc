@@ -48,23 +48,73 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
 	
 	std::vector<double> con_values_eq=nlp_->constraints_equality(iterate);
 	std::vector<double> con_values_ieq=nlp_->constraints_inequality(iterate);
-	
-	for (size_t eq_index=0; eq_index<nlp_->num_dual_eq(); ++eq_index) {
-		jacobian_lower_bound_[eq_index] = -con_values_eq[eq_index];
-		jacobian_upper_bound_[eq_index] = -con_values_eq[eq_index];
-	}
-	for (size_t ieq_index=0; ieq_index<nlp_->num_dual_ieq(); ++ieq_index) {
-		jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = -INFINITY;
-		jacobian_upper_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
-	}
+
+    // formulation 1: group p - X^+
+    size_t BOUND_REFORMULATION_MODE = 2;
+    if (BOUND_REFORMULATION_MODE == 1) {
+        assert(false); // this formulation is WRONG!
+        for (size_t eq_index=0; eq_index<nlp_->num_dual_eq(); ++eq_index) {
+            jacobian_lower_bound_[eq_index] = 0.0; // was: -con_values_eq[eq_index];
+            jacobian_upper_bound_[eq_index] = 0.0; // was: -con_values_eq[eq_index];
+            lower_bound_[nlp_->num_primal() + eq_index] = -bracket_plus(con_values_eq[eq_index]);
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + eq_index] = -bracket_minus(con_values_eq[eq_index]);
+            upper_bound_[nlp_->num_primal() + eq_index] = INFINITY;
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + eq_index] = INFINITY;
+        }
+        for (size_t ieq_index=0; ieq_index<nlp_->num_dual_ieq(); ++ieq_index) {
+            jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = 0.0; // was: -INFINITY;
+            jacobian_upper_bound_[nlp_->num_dual_eq()+ieq_index] = 0.0; // was: -con_values_ieq[ieq_index];
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + ieq_index] = -bracket_plus(con_values_ieq[ieq_index]);
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + nlp_->num_dual_eq() + ieq_index] = -bracket_minus(con_values_ieq[ieq_index]);
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + ieq_index] = INFINITY;
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + nlp_->num_dual_eq() + ieq_index] = INFINITY;            
+        }
+    } else if (BOUND_REFORMULATION_MODE == 2) { 
+        // formulation two: grouping p + X^+:
+    	for (size_t eq_index=0; eq_index<nlp_->num_dual_eq(); ++eq_index) {
+    		jacobian_lower_bound_[eq_index] = 0.0; // was: -con_values_eq[eq_index];
+    		jacobian_upper_bound_[eq_index] = 0.0; // was: -con_values_eq[eq_index];
+            lower_bound_[nlp_->num_primal() + eq_index] = bracket_minus(con_values_eq[eq_index]);
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + eq_index] = bracket_plus(con_values_eq[eq_index]);
+            upper_bound_[nlp_->num_primal() + eq_index] = INFINITY;
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + eq_index] = INFINITY;
+    	}
+    	for (size_t ieq_index=0; ieq_index<nlp_->num_dual_ieq(); ++ieq_index) {
+    		jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = 0.0; // was: -INFINITY;
+    		jacobian_upper_bound_[nlp_->num_dual_eq()+ieq_index] = 0.0; // was: -con_values_ieq[ieq_index];
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + ieq_index] = bracket_minus(con_values_ieq[ieq_index]);
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + nlp_->num_dual_eq() + ieq_index] = bracket_plus(con_values_ieq[ieq_index]);
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + ieq_index] = INFINITY;
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + nlp_->num_dual_eq() + ieq_index] = INFINITY;
+        
+    	}
+    } else {
+        for (size_t eq_index=0; eq_index<nlp_->num_dual_eq(); ++eq_index) {
+            jacobian_lower_bound_[eq_index] = -con_values_eq[eq_index];
+            jacobian_upper_bound_[eq_index] = -con_values_eq[eq_index];
+        }
+        for (size_t ieq_index=0; ieq_index<nlp_->num_dual_ieq(); ++ieq_index) {
+            jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = -INFINITY;
+            jacobian_upper_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
+        }
+        for (size_t variable_index=0; variable_index < 2*(nlp_->num_dual_eq() + nlp_->num_dual_ieq()); ++variable_index) {
+            lower_bound_[nlp_->num_primal()+variable_index] = 0.0;
+            upper_bound_[nlp_->num_primal()+variable_index] = +INFINITY;
+        }
+    }
 	for (size_t variable_index=0; variable_index < nlp_->num_primal(); ++variable_index) {
 		lower_bound_[variable_index] = -INFINITY;
 		upper_bound_[variable_index] = +INFINITY;
 	}
 	for (size_t variable_index=0; variable_index < 2*(nlp_->num_dual_eq() + nlp_->num_dual_ieq()); ++variable_index) {
-		lower_bound_[nlp_->num_primal()+variable_index] = 0.0;
-		upper_bound_[nlp_->num_primal()+variable_index] = +INFINITY;
+        // lower_bound_[nlp_->num_primal()+variable_index] = 0.0;
+        // upper_bound_[nlp_->num_primal()+variable_index] = +INFINITY;
 	}
+    // std::cout << "jacobian_lower_bound_: " << jacobian_lower_bound_ << std::endl;
+    // std::cout << "jacobian_upper_bound_: " << jacobian_upper_bound_ << std::endl;
+    // std::cout << "lower_bound_: " << lower_bound_ << std::endl;
+    // std::cout << "upper_bound_: " << upper_bound_ << std::endl;
+    
 }
 
 void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<dense_matrix> nlp_eq_jacobian, std::shared_ptr<dense_matrix> nlp_ieq_jacobian, std::shared_ptr<dense_matrix> nlp_hessian) {

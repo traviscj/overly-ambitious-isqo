@@ -233,7 +233,9 @@ std::vector<double> AmplNlp::constraints_inequality(const iSQOIterate &iterate) 
 	}
 	for (size_t isqo_ineq_upper_variable_index=0; isqo_ineq_upper_variable_index < variable_bound_upper_.size(); ++isqo_ineq_upper_variable_index) {
 		// std::cout << "variable upper bound " << isqo_ineq_upper_variable_index << "" << std::endl;
-		inequality_constraint_evaluation[isqo_ineq_constraint_index] = -LUv[2*variable_bound_lower_[isqo_ineq_upper_variable_index]+1] + x[variable_bound_lower_[isqo_ineq_upper_variable_index]];
+        // POTENTIALLY BUGGY LINE RIGHT HERE:
+        // inequality_constraint_evaluation[isqo_ineq_constraint_index] = -LUv[2*variable_bound_lower_[isqo_ineq_upper_variable_index]+1] + x[variable_bound_lower_[isqo_ineq_upper_variable_index]];
+        inequality_constraint_evaluation[isqo_ineq_constraint_index] = -LUv[2*variable_bound_upper_[isqo_ineq_upper_variable_index]+1] + x[variable_bound_upper_[isqo_ineq_upper_variable_index]];
 		++isqo_ineq_constraint_index;
 	}
 	assert(isqo_ineq_constraint_index == this->num_dual_ieq());

@@ -215,12 +215,13 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
 
 void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<sparse_matrix> nlp_eq_jacobian, std::shared_ptr<sparse_matrix> nlp_ieq_jacobian, std::shared_ptr<sparse_matrix> nlp_hessian) {
     // void iSQOSparseQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate) {
+    bool PRINT = false;
 	
     // std::cout << "iSQOQuadraticSubproblem::setup_matrix_data" << std::endl;
 	nlp_eq_jacobian_ = nlp_eq_jacobian;
-    // std::cout << "nlp_eq_jacobian_sparse_: " << nlp_eq_jacobian_sparse_ << std::endl;
+    if (PRINT) std::cout << "nlp_eq_jacobian_: " << nlp_eq_jacobian_ << std::endl;
 	nlp_ieq_jacobian_ = nlp_ieq_jacobian;
-    // std::cout << "nlp_ieq_jacobian_sparse_: " << nlp_ieq_jacobian_sparse_ << std::endl;
+    if (PRINT) std::cout << "nlp_ieq_jacobian_: " << nlp_ieq_jacobian_ << std::endl;
 	nlp_hessian_ = nlp_hessian;
     
     // JACOBIAN PART
@@ -228,18 +229,18 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
     //     if (jacobian_it != prior_constructed_jacobians_.end()) {jacobian_ = jacobian_it->second; std::cout << "JAC HIT\n";}
     // else {
         std::shared_ptr<sparse_matrix> jacobian_eq_ieq = nlp_eq_jacobian->vertical(nlp_ieq_jacobian);
-        // std::cout << "jacobian_eq_ieq: " << jacobian_eq_ieq << std::endl;
+        if (PRINT) std::cout << "jacobian_eq_ieq: " << *jacobian_eq_ieq << std::endl;
     
         std::shared_ptr<sparse_matrix> jacobian_p_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), -1.0));
-        // std::cout << "jacobian_p_slack: " << jacobian_p_slack << std::endl;
+        if (PRINT) std::cout << "jacobian_p_slack: " << *jacobian_p_slack << std::endl;
         std::shared_ptr<sparse_matrix> jacobian_n_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), +1.0));
-        // std::cout << "jacobian_n_slack: " << jacobian_n_slack << std::endl;
+        if (PRINT) std::cout << "jacobian_n_slack: " << *jacobian_n_slack << std::endl;
         std::shared_ptr<sparse_matrix> jacobian_slacks = jacobian_p_slack->horizontal(jacobian_n_slack);
-        // std::cout << "jacobian_slacks: " << jacobian_slacks << std::endl;
+        if (PRINT) std::cout << "jacobian_slacks: " << *jacobian_slacks << std::endl;
     
         jacobian_ = jacobian_eq_ieq->horizontal(jacobian_slacks);
         // prior_constructed_jacobians_[iterate.get_serial()] = jacobian_;
-        // std::cout << "jacobian_sparse: " << jacobian_sparse_ << std::endl;
+        if (PRINT) std::cout << "jacobian_: " << jacobian_ << std::endl;
     // }
     
     // LAGRANGIAN PART

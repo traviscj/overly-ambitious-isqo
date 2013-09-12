@@ -31,7 +31,8 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 	double shiftkwbarp = 100;
 	double shiftkwp = 8;
 	double shift_kwm = 1.0/3.0;
-	double shiftmax = 1e40;
+    //! \todo re-add shiftmax in hessian shifter.
+    // double shiftmax = 1e40; 
 	
 	double current_shift = 0.0;
 	

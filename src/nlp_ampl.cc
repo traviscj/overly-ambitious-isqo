@@ -391,7 +391,7 @@ void SparseAmplNlp::jacobian_update(const iSQOIterate &iterate) {
     if (PRINT_) std::cout << "ampl_full_jacobian: " << ampl_full_jacobian << std::endl;    
     if (PRINT_) std::cout << "=================================================== (have full AMPL jacobian now.)" << std::endl;
     
-    eq_jacobian_ = submatrix(ampl_full_jacobian, equality_constraints_, num_eq_nnz, 1.0);
+    eq_jacobian_ = submatrix(ampl_full_jacobian, equality_constraints_, num_eq_nnz, +1.0);
     std::shared_ptr<sparse_matrix> ieq_lower_jacobian = submatrix(ampl_full_jacobian, inequality_constraints_lower_, num_ieq_lower_nnz, -1.0);
     std::shared_ptr<sparse_matrix> ieq_upper_jacobian = submatrix(ampl_full_jacobian, inequality_constraints_upper_, num_ieq_upper_nnz, +1.0);
     

@@ -20,7 +20,7 @@
 //     solve_qp_ = new SolveDenseQuadraticProgram(nlp);
 // }
 
-HessianShifter::HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), last_shift_(0.0), solve_qp_(nlp) {
+HessianShifter::HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), solve_qp_(nlp), last_shift_(0.0) {
     // solve_qp_ = new (nlp);
 }
 

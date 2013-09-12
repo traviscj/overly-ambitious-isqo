@@ -38,8 +38,9 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 	// try to solve without regularization:
     // WHY would this line be necessary? (maybe so the matrix has the same sparsity structure?)
     subproblem.inc_regularization(current_shift, current_shift);
+    int total_pivots=0;
 	iSQOStep return_step = solve_qp_(subproblem);
-	
+	total_pivots += return_step.get_pivots();
 	
 	int current_regularization_steps = 0;
 	std::vector<double> current_step_values(nlp_->num_primal() + 2*nlp_->num_dual());
@@ -73,6 +74,8 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 		}
 		subproblem.inc_regularization(current_shift, last_shift);
 		return_step = solve_qp_(subproblem);
+        total_pivots += return_step.get_pivots();
+        return_step.set_pivots(total_pivots);
 		
 		for (size_t primal_index = 0; primal_index < nlp_->num_primal(); ++primal_index) {
 			current_step_values[primal_index] = return_step.get_primal_value(primal_index);

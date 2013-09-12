@@ -30,6 +30,7 @@ public:
     
 
     int get_pivots() const { return pivots_; }    
+    void set_pivots(int num_pivots) { pivots_ = num_pivots; }
     int get_status() const { return status_; }
     int num_primal() const { return num_primal_; }
     int num_dual_eq() const { return num_dual_eq_; }

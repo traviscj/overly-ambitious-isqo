@@ -253,6 +253,7 @@ int main(int argc, char **argv) {
 		feasibility_iterate.update_dual(feasibility_step);
         
         problem.reset_cache();
+        hessian_shifting_penalty_qp_solve.save_qp_state();
 	}
 	
 	if (iter == maximum_iterations) {

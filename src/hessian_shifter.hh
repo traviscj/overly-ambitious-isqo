@@ -13,6 +13,10 @@ public:
     
     //! \brief allow clients to find the last shift.
 	double get_last_shift() const ;
+    
+    void save_qp_state() { solve_qp_.save_qp_state(); }
+    void restore_qp_state() { solve_qp_.restore_qp_state(); }
+    
 private:
 protected:
 	SolveQuadraticProgram solve_qp_;

@@ -5,8 +5,11 @@
 
 SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) : 
     FunctionWithNLPState(nlp), 
-    example_(0),
-    first_(true)
+    example_(NULL),
+    backup_(NULL),
+    opt_(NULL),
+    first_(true),
+    last_successful_(false)
     {
         // TODO: switch this based on sparsity.
         // TODO: smart pointer or deconstruct this.
@@ -14,6 +17,28 @@ SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) :
         int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual());
         
         example_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
+        opt_ = std::shared_ptr<qpOASES::Options>(new qpOASES::Options);
+        // 
+        //     // opt.terminationTolerance = 1e-6;
+        // opt->setToReliable();
+        opt_->enableWorkingSetRepair = qpOASES::BooleanType(true);
+        opt_->enableEqualities = qpOASES::BooleanType(true);
+        // opt_->enableFarBounds = qpOASES::BooleanType(false);
+        opt_->enableFullLITests = qpOASES::BooleanType(true);
+        opt_->epsLITests = 1e-12; // maybe play with this later. (maybe 1e-8)
+        // usually too low, rather than too high, but might help with the 'infeasible QP' troubles.
+        //     opt->enableRegularisation = qpOASES::BooleanType(true);
+        opt_->enableNZCTests = qpOASES::BooleanType(true);
+        // opt_->initialStatusBounds = qpOASES::ST_INACTIVE;
+        // opt_->initialStatusBounds = qpOASES::ST_LOWER;
+        opt_->printLevel = qpOASES::PL_NONE;
+        // opt_->printLevel = qpOASES::PL_MEDIUM;
+    
+        //     // opt->numRegularisationSteps = 200;
+        //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
+        example_->setOptions(*opt_);
+        // example_->setPrintLevel(qpOASES::PL_NONE);
+            // example_->setPrintLevel(qpOASES::PL_MEDIUM);
         
     }
 
@@ -36,7 +61,7 @@ std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hes
 std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> hessian) {
     // std::vector<double> *data_vec_double = ;
     // double *data_double_star = ;
-    int num_qp_con = (int)subproblem.num_qp_constraints_;
+    // int num_qp_con = (int)subproblem.num_qp_constraints_;
     int num_qp_var = (int)subproblem.num_qp_variables_;
     
     return std::shared_ptr<qpOASES::SymmetricMatrix>(new qpOASES::SymDenseMat(num_qp_var, num_qp_var, num_qp_var, &(*hessian->get_data())[0]));
@@ -44,7 +69,10 @@ std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hes
 
 std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<sparse_matrix> hessian) {
     // TODO fix this casting, but later...
-    int num_qp_con = (int)subproblem.num_qp_constraints_;
+    // int num_qp_con = (int)subproblem.num_qp_constraints_;
+    // std::cout << "SolveQuadraticProgram::get_qpoases_hessian: sizeof subproblem.num_qp_constraints: " << sizeof(subproblem.num_qp_constraints_);
+    // std::cout << "; sizeof num_qp_con: " << sizeof(num_qp_con) << std::endl;
+    
     int num_qp_var = (int)subproblem.num_qp_variables_;
     
     std::shared_ptr<qpOASES::SymSparseMat> qpoases_hessian(new qpOASES::SymSparseMat(   
@@ -73,8 +101,8 @@ std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQ
     }
 }
 std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<dense_matrix> jacobian) {
-    int num_qp_con = (int)subproblem.num_qp_constraints_;
-    int num_qp_var = (int)subproblem.num_qp_variables_;
+    int num_qp_con = subproblem.num_qp_constraints_;
+    int num_qp_var = subproblem.num_qp_variables_;
     return std::shared_ptr<qpOASES::Matrix>(new qpOASES::DenseMatrix(num_qp_con, num_qp_var, subproblem.num_qp_variables_, &(*jacobian->get_data())[0]));
 }
 
@@ -82,6 +110,8 @@ std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQ
     // need to cheat here! don't mess with my matrix, qpOASES!
     std::shared_ptr<sparse_matrix> nonconst_jacobian(std::const_pointer_cast<sparse_matrix>(jacobian));
     int num_qp_con = (int)subproblem.num_qp_constraints_;
+        
+    
     int num_qp_var = (int)subproblem.num_qp_variables_;
     std::shared_ptr<qpOASES::Matrix> qpoases_jacobian(new qpOASES::SparseMatrix(
                                                                 num_qp_con, 
@@ -96,14 +126,31 @@ std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQ
 // DENSE quadratic subproblem solver:
 iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) {
 	int nWSR = 50000;
+    if (!first_ && !last_successful_) {
+        restore_qp_state();
+    }
     operator_setup();
     
     // std::cout << std::endl << "immediately before solve: " << subproblem << std::endl;
     std::shared_ptr<qpOASES::SymmetricMatrix> qpoases_hessian_ = this->get_qpoases_hessian(subproblem, subproblem.hessian_);
     std::shared_ptr<qpOASES::Matrix> qpoases_jacobian_ = this->get_qpoases_jacobian(subproblem, subproblem.jacobian_);
 	qpOASES::returnValue ret;
+    example_->setOptions(*opt_);
+    double cputime=0;
 // subproblem.print();
 	if (first_) {
+        
+        double *initial_guess_primal = new double[nlp_->num_primal() + 2*nlp_->num_dual()];
+        double *initial_guess_dual = new double[nlp_->num_dual()];
+        qpOASES::Bounds *initial_bounds = new qpOASES::Bounds((int)(nlp_->num_primal() + 2*nlp_->num_dual()));
+        initial_bounds->setupAllFree();
+        for (int variable_index=(int)(nlp_->num_primal()); variable_index < (int)(nlp_->num_primal() + 2*nlp_->num_dual()); ++variable_index)
+            initial_bounds->setStatus(variable_index, qpOASES::ST_LOWER);
+        qpOASES::Constraints *initial_constraints = new qpOASES::Constraints((int)nlp_->num_dual());
+        initial_constraints->setupAllLower();
+        // for (int constraint_index=0; constraint_index < (int)(nlp_->num_dual()); ++constraint_index)
+            // initial_constraints->setStatus(constraint_index, qpOASES::ST_LOWER);
+        
 		ret = example_->init( qpoases_hessian_.get(),
 							 &subproblem.gradient_[0],
 							 qpoases_jacobian_.get(),
@@ -112,8 +159,13 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 							 &subproblem.jacobian_lower_bound_[0],
 							 &subproblem.jacobian_upper_bound_[0],
 							 nWSR,
-							 0);
+                             &cputime,
+                             0,
+                             0,
+                             initial_bounds,
+                             initial_constraints);
 	} else{
+        
 		ret = example_->hotstart(qpoases_hessian_.get(),
 							 &subproblem.gradient_[0],
 							 qpoases_jacobian_.get(),
@@ -127,70 +179,17 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 	return operator_finish(subproblem, nWSR, ret);
 }
 
-// SPARSE quadratic subproblem solver:
-// iSQOStep SolveQuadraticProgram::operator()(iSQOSparseQuadraticSubproblem &sparse_subproblem) {
-//     int nWSR = 2000;
-//     operator_setup();
-// 
-//     qpOASES::SymSparseMat qpoases_hessian_();
-//     
-//     qpOASES::SparseMatrix qpoases_jacobian_(sparse_subproblem.num_qp_constraints_, sparse_subproblem.num_qp_variables_, &sparse_subproblem.jacobian_sparse_.row_indices_[0], &sparse_subproblem.jacobian_sparse_.col_starts_[0], &sparse_subproblem.jacobian_sparse_.vals_[0]);
-//     
-//     qpOASES::returnValue ret;
-//     if (first_) {
-//         ret = example_->init( &qpoases_hessian_,
-//                              &sparse_subproblem.gradient_[0],
-//                              &qpoases_jacobian_,
-//                              &sparse_subproblem.lower_bound_[0],
-//                              &sparse_subproblem.upper_bound_[0],
-//                              &sparse_subproblem.jacobian_lower_bound_[0],
-//                              &sparse_subproblem.jacobian_upper_bound_[0],
-//                              nWSR,
-//                              0);
-//     } else{
-//         ret = example_->hotstart(&qpoases_hessian_,
-//                              &sparse_subproblem.gradient_[0],
-//                              &qpoases_jacobian_,
-//                              &sparse_subproblem.lower_bound_[0],
-//                              &sparse_subproblem.upper_bound_[0],
-//                              &sparse_subproblem.jacobian_lower_bound_[0],
-//                              &sparse_subproblem.jacobian_upper_bound_[0],
-//                              nWSR,
-//                              0);
-//     }
-//     return operator_finish(sparse_subproblem, ret);
-// }
-
 void SolveQuadraticProgram::operator_setup() {
-
-    qpOASES::Options *opt = new qpOASES::Options;
-    // 
-    //     // opt.terminationTolerance = 1e-6;
-    // opt->setToReliable();
-    opt->enableWorkingSetRepair = qpOASES::BooleanType(true);
-    opt->enableEqualities = qpOASES::BooleanType(true);
-    opt->enableFullLITests = qpOASES::BooleanType(true);
-    opt->epsLITests = 1e-12; // maybe play with this later. (maybe 1e-8)
-    // usually too low, rather than too high, but might help with the 'infeasible QP' troubles.
-    //     opt->enableRegularisation = qpOASES::BooleanType(true);
-        opt->enableNZCTests = qpOASES::BooleanType(true);
-    // opt->initialStatusBounds = qpOASES::ST_INACTIVE;
-    opt->initialStatusBounds = qpOASES::ST_LOWER;
-    //     // opt->numRegularisationSteps = 200;
-    //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
-    example_->setOptions(*opt);
-    example_->setPrintLevel(qpOASES::PL_NONE);
-        // example_->setPrintLevel(qpOASES::PL_MEDIUM);
 }
 iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &subproblem, int nWSR, qpOASES::returnValue ret) {
 	std::cerr.flush();
 	std::cout.flush();
     
-	int return_status = example_->getStatus();
+    // int return_status = example_->getStatus();
 	// getGlobalMessageHandler()->listAllMessages();
 	if( ret != qpOASES::SUCCESSFUL_RETURN ){
         // 
-        if (false && ( ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS || 
+        if (( ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS || 
             ret == qpOASES::RET_QP_UNBOUNDED || 
             ret == qpOASES::RET_HOTSTART_STOPPED_UNBOUNDEDNESS || 
             ret == qpOASES::RET_STEPDIRECTION_FAILED_CHOLESKY ||      // only in dense.
@@ -204,11 +203,14 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
             printf( "Decoded Error Message: [%s]\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
         
         }
-        first_ = true;
-        example_->reset();
+        if (first_) example_->reset();
+        // first_ = false;
+        last_successful_ = false;
 	} else {
-		if (first_) first_ = false;
+        first_ = false;
+		last_successful_ = true;
 	}
+    
 	iSQOStep step(nlp_->num_primal(), nlp_->num_dual_eq(), nlp_->num_dual_ieq(), ret, nWSR);
 	// std::cout << "address of step: " << &step << std::endl;
 

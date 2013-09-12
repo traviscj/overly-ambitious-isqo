@@ -170,6 +170,13 @@ inline std::ostream& operator<< (std::ostream& os, const sparse_matrix& mat) {
 inline std::ostream& operator<< (std::ostream& os, const std::shared_ptr<matrix_base_class>& mat) {
     return mat->print(os);
 }
+inline std::ostream& operator<< (std::ostream& os, const std::shared_ptr<dense_matrix>& mat) {
+    return mat->print(os);
+}
+inline std::ostream& operator<< (std::ostream& os, const std::shared_ptr<sparse_matrix>& mat) {
+    return mat->print(os);
+}
+
 
 
 // these should move into the classes.

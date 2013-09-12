@@ -53,16 +53,16 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
 		total += hessian_times_step[primal_index] * return_step.get_primal_value(primal_index);
 	}
-	if (PRINT) std::cout << std::endl << "total: " << total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;
-	if (PRINT) std::cout << "required: " << (total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
+	if (PRINT) std::cout << std::endl << "total: " << .5*total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;
+	if (PRINT) std::cout << "required: " << (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
 	// std::vector<double> hessian_step = subproblem.hessian_.multiply()
-	while ((return_step.get_status() != 0) || (return_step.x_norm() > 1e9) || (total < (1e-8*return_step.x_norm()*return_step.x_norm()))) {
+	while ((return_step.get_status() != 0) || (return_step.x_norm() > 1e9) || (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm()))) {
         double last_shift=current_shift;
 		if (current_regularization_steps == 0) {
 			if (last_shift_ == 0.0) {
 				current_shift = shift_w0;
 			} else {
-				current_shift = std::max(shift_min, shift_kwm * last_shift_);
+				current_shift = fmax(shift_min, shift_kwm * last_shift_);
 			}
 		} else {
 			if (last_shift_ == 0.0) {
@@ -97,6 +97,7 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 			break;
 		}
 	}
+    if (PRINT) std::cout << "SUCCESSFULLY SHIFTED!!" << current_regularization_steps << std::endl;
 	last_shift_ = current_shift;
 	return return_step;
 }

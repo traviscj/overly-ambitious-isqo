@@ -11,13 +11,19 @@ ConstraintViolationFunction::ConstraintViolationFunction(Nlp &nlp) : FunctionWit
 	// std::cout << "-- Initializing l1 violation function." << std::endl;
 }
 double ConstraintViolationFunction::operator()(const iSQOIterate &iterate) const {
+    bool PRINT = false;
+    if (PRINT) std::cout << "ConstraintViolationFunction @ iterate serial: " << iterate.get_serial() << std::endl;
 	std::vector<double> con_values_eq = nlp_->constraints_equality(iterate);
 	std::vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
 	
+    if (PRINT) std::cout << "con_values_eq : " << con_values_eq << std::endl;
+    if (PRINT) std::cout << "con_values_ieq: " << con_values_ieq << std::endl;
+    
 	return two_vectors(con_values_eq, con_values_ieq);
 }
 double ConstraintViolationFunction::operator()(const iSQOIterate &iterate, const iSQOStep &step) const {
 	bool PRINT = false;
+    if (PRINT) std::cout << "ConstraintViolationFunction @ iterate serial: " << iterate.get_serial() << " + STEP: "<< std::endl;
 
 	std::vector<double> con_values_eq = nlp_->constraints_equality(iterate);
 	std::vector<double> con_values_ieq = nlp_->constraints_inequality(iterate);
@@ -58,7 +64,9 @@ double ConstraintViolationFunction::two_vectors(const std::vector<double> &eq_it
 	double ieq_violation = 0.0;
 	for (size_t dual_ieq_index=0; dual_ieq_index<ieq_items.size(); ++dual_ieq_index) {
 		// if (ieq_items[i] > 0){
+        if (PRINT) std::cout << "ieq_violation pre step dual_ieq_index=" << dual_ieq_index << ": " << ieq_violation << "; " << ieq_items[dual_ieq_index];
 		ieq_violation += bracket_plus(ieq_items[dual_ieq_index]);
+        if (PRINT) std::cout << "; ieq_violation @ step dual_ieq_index=" << dual_ieq_index << ": " << ieq_violation << std::endl;
 		// }
 	}
     if (PRINT) std::cout << "constraintviolationfunction  eq_violation: " << eq_violation << std::endl;

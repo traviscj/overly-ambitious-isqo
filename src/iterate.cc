@@ -64,31 +64,33 @@ std::ostream &iSQOIterate::print(std::ostream &os) const {
 		
 	}
 	os << "];" << std::endl;
+    os << "penalty parameter: " << penalty_parameter_ << std::endl;
 }
 void iSQOIterate::update(const iSQOIterate &iterate, double alpha, const iSQOStep& step) {
 	assert(step.num_primal() == num_primal_);
+    bool PRINT = false;
+    if (PRINT) std::cout << "============================================================" << std::endl;
+    if (PRINT) std::cout << "in iSQOIterate::update, with iterate = " << iterate << std::endl;
+    if (PRINT) std::cout << "in iSQOIterate::update, with alpha = " << alpha << std::endl;
+    if (PRINT) std::cout << "in iSQOIterate::update, with step = " << step << std::endl;
+    
 	for (size_t primal_index=0; primal_index < iterate.num_primal_; ++primal_index) {
 		primal_values_[primal_index] = iterate.primal_values_[primal_index] + alpha*step.get_primal_value(primal_index);
 	}
     serial_ = global_iSQOIterate_serial++;
-	// for (size_t dual_eq_index=0; dual_eq_index < iterate.num_dual_eq_; ++dual_eq_index) {
-	// 	dual_eq_values_[dual_eq_index] = step.dual_eq_values_[dual_eq_index];
-	// }
-	// for (size_t dual_ieq_index=0; dual_ieq_index < iterate.num_dual_ieq_; ++dual_ieq_index) {
-	// 	dual_ieq_values_[dual_ieq_index] = step.dual_ieq_values_[dual_ieq_index];
-	// }
+    if (PRINT) std::cout << "============================================================" << std::endl;
 }
 void iSQOIterate::update_dual(const iSQOStep& step) {
 	assert(step.num_dual_eq() == num_dual_eq_);
 	assert(step.num_dual_ieq() == num_dual_ieq_);
     
-    dual_eq_values_.assign(step.get_dual_eq_values().begin(), step.get_dual_eq_values().end());
-    dual_ieq_values_.assign(step.get_dual_ieq_values().begin(), step.get_dual_ieq_values().end());
+    // dual_eq_values_.assign(step.get_dual_eq_values().begin(), step.get_dual_eq_values().end());
+    // dual_ieq_values_.assign(step.get_dual_ieq_values().begin(), step.get_dual_ieq_values().end());
     serial_ = global_iSQOIterate_serial++;
-    // for (size_t dual_eq_index=0; dual_eq_index < num_dual_eq_; ++dual_eq_index) {
-    //     dual_eq_values_[dual_eq_index] = step.dual_eq_values_[dual_eq_index];
-    // }
-    // for (size_t dual_ieq_index=0; dual_ieq_index < num_dual_ieq_; ++dual_ieq_index) {
-    //     dual_ieq_values_[dual_ieq_index] = step.dual_ieq_values_[dual_ieq_index];
-    // }
+    for (size_t dual_eq_index=0; dual_eq_index < num_dual_eq_; ++dual_eq_index) {
+        dual_eq_values_[dual_eq_index] = step.get_dual_eq_value(dual_eq_index);
+    }
+    for (size_t dual_ieq_index=0; dual_ieq_index < num_dual_ieq_; ++dual_ieq_index) {
+        dual_ieq_values_[dual_ieq_index] = step.get_dual_ieq_value(dual_ieq_index);
+    }
 }

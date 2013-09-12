@@ -170,7 +170,7 @@ void SolveQuadraticProgram::operator_setup() {
     opt->enableWorkingSetRepair = qpOASES::BooleanType(true);
     opt->enableEqualities = qpOASES::BooleanType(true);
     opt->enableFullLITests = qpOASES::BooleanType(true);
-    opt->epsLITests = 1e-8; // maybe play with this later. (maybe 1e-8)
+    opt->epsLITests = 1e-12; // maybe play with this later. (maybe 1e-8)
     // usually too low, rather than too high, but might help with the 'infeasible QP' troubles.
     //     opt->enableRegularisation = qpOASES::BooleanType(true);
         opt->enableNZCTests = qpOASES::BooleanType(true);
@@ -190,18 +190,16 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	// getGlobalMessageHandler()->listAllMessages();
 	if( ret != qpOASES::SUCCESSFUL_RETURN ){
         // 
-        if (ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS || 
+        if (false && ( ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS || 
             ret == qpOASES::RET_QP_UNBOUNDED || 
             ret == qpOASES::RET_HOTSTART_STOPPED_UNBOUNDEDNESS || 
             ret == qpOASES::RET_STEPDIRECTION_FAILED_CHOLESKY ||      // only in dense.
             ret == qpOASES::RET_INIT_FAILED_HOTSTART
-            ) {
+            )) {
             // don't need to do anything for unbounded QPs...
              
         } else {
-            // subproblem.print();
-            // 
-            // std::cout << "failed subproblem: " << subproblem << std::endl;
+            std::cout << "failed subproblem: " << subproblem << std::endl;
             printf( "# Working Set: [%d]\n", nWSR );
             printf( "Decoded Error Message: [%s]\n", qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) );
         

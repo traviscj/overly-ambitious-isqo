@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([overly_ambitious_isqo], [0.1], [traviscj@traviscj.com])
+AC_INIT([overly_ambitious_isqo], [0.2], [traviscj@traviscj.com])
 AM_INIT_AUTOMAKE(foreign -Wall -Werror)
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])

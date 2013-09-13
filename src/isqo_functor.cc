@@ -254,6 +254,7 @@ int main(int argc, char **argv) {
         
         problem.reset_cache();
         hessian_shifting_penalty_qp_solve.save_qp_state();
+        if (feasibility_step.get_status() == 0) hessian_shifting_feasibility_qp_solve.save_qp_state();
 	}
 	
 	if (iter == maximum_iterations) {

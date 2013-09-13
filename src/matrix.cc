@@ -51,6 +51,14 @@ std::ostream &sparse_matrix::print(std::ostream& os) const {
     os << "values       : " << this->vals_ << std::endl;
     os << "row indices  : " << this->row_indices_ << std::endl;
     os << "column starts: " << this->col_starts_ << std::endl;
+    
+    for (std::size_t col_index=0; col_index < this->columns_; ++col_index) {
+        os << "col: " << col_index << "\t";
+        for (std::size_t nnz_index=this->col_starts_[col_index]; nnz_index < this->col_starts_[col_index+1]; ++nnz_index) {
+            if (nnz_index != this->col_starts_[col_index]) os << "\t";
+            os << "row: " << this->row_indices_[nnz_index] << "; val:" << this->vals_[nnz_index] << std::endl;
+        }
+    }
     return os;
 }
 
@@ -174,9 +182,9 @@ void sparse_matrix::sum(const std::shared_ptr<sparse_matrix> b) {
     std::vector<double> result_vals;
     std::vector<int> result_row_indices;
     std::vector<int> result_col_starts;
-    size_t A_nnz_index=0, A_row_index=0, A_col_index=0;
-    size_t B_nnz_index=0, B_row_index=0, B_col_index=0;
-    size_t C_nnz_index=0, C_row_index=0, C_col_index=0;
+    size_t A_nnz_index=0;
+    size_t B_nnz_index=0;
+    size_t C_nnz_index=0, C_col_index=0;
     result_col_starts.push_back(C_nnz_index);
     for (; C_col_index < col_starts_.size() - 1; ) {        
         if (PRINT) std::cout << "A bounds: " << col_starts_[C_col_index] << " <= A_nnz_index < " << col_starts_[C_col_index+1] << "; "
@@ -255,8 +263,6 @@ std::shared_ptr<sparse_matrix> sparse_matrix::vertical(const std::shared_ptr<spa
                             num_columns(), 
                             num_nnz() + bottom->num_nnz()));
     
-    size_t current_a_index=0, current_b_index=0;
-
     size_t current_nnz_index=0;
     std::vector<double> bottom_vals        = bottom->get_vals();
     std::vector<   int> bottom_row_indices = bottom->get_row_indices();

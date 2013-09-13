@@ -140,8 +140,8 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 // subproblem.print();
 	if (first_) {
         
-        double *initial_guess_primal = new double[nlp_->num_primal() + 2*nlp_->num_dual()];
-        double *initial_guess_dual = new double[nlp_->num_dual()];
+        // double *initial_guess_primal = new double[nlp_->num_primal() + 2*nlp_->num_dual()];
+        // double *initial_guess_dual = new double[nlp_->num_dual()];
         qpOASES::Bounds *initial_bounds = new qpOASES::Bounds((int)(nlp_->num_primal() + 2*nlp_->num_dual()));
         initial_bounds->setupAllFree();
         for (int variable_index=(int)(nlp_->num_primal()); variable_index < (int)(nlp_->num_primal() + 2*nlp_->num_dual()); ++variable_index)

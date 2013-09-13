@@ -120,9 +120,9 @@ int main(int argc, char **argv) {
 	double hessian_min_convexity = 1e-8;	// theta in the paper.
 	// Code-defined parameter values:
 	double convex_combination_search_decrease = .9;
-	bool PRINT=false;
+    // bool PRINT=false;
 	size_t maximum_iterations = 1000;
-	size_t max_num_comb_reductions = 100;
+    // size_t max_num_comb_reductions = 100;
 	double machine_precision = std::numeric_limits<double>::epsilon();
 	
 	text_output.start();

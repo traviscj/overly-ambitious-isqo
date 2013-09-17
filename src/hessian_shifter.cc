@@ -20,11 +20,11 @@
 //     solve_qp_ = new SolveDenseQuadraticProgram(nlp);
 // }
 
-HessianShifter::HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), solve_qp_(nlp), last_shift_(0.0) {
+HessianShifter::HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), solve_qp_(nlp), linear_model_reduction_(nlp), last_shift_(0.0) {
     // solve_qp_ = new (nlp);
 }
 
-iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
+iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSubproblem &subproblem) {
 	bool PRINT=false;
 	double shift_w0 = 1e-4;
 	double shift_min = 1e-20;
@@ -41,6 +41,7 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
     subproblem.inc_regularization(current_shift, current_shift);
     int total_pivots=0;
 	iSQOStep return_step = solve_qp_(subproblem);
+    // std::cout << "hessianShifter :: operator() return_step (prior shift): " << return_step << std::endl;
 	total_pivots += return_step.get_pivots();
 	
 	int current_regularization_steps = 0;
@@ -50,7 +51,7 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 	}
 	
 	std::vector<double> hessian_times_step = subproblem.hessian_->multiply(current_step_values);
-	if (PRINT) std::cout << "hessian step: " << subproblem.hessian_ << std::endl;
+    if (PRINT) std::cout << "hessian step: " << subproblem.hessian_ << std::endl;
 	double total = 0.0;
 	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index) {
 		total += hessian_times_step[primal_index] * return_step.get_primal_value(primal_index);
@@ -58,7 +59,11 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 	if (PRINT) std::cout << std::endl << "total: " << .5*total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;
 	if (PRINT) std::cout << "required: " << (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
 	// std::vector<double> hessian_step = subproblem.hessian_.multiply()
-	while ((return_step.get_status() != 0) || (return_step.x_norm() > 1e9) || (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm()))) {
+	while (        (return_step.get_status() != 0) 
+                // || (return_step.x_norm() > 1e9) 
+                || (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm()))
+                // || linear_model_reduction_(iterate, return_step) < 0
+                ) {
         double last_shift=current_shift;
 		if (current_regularization_steps == 0) {
 			if (last_shift_ == 0.0) {
@@ -75,6 +80,7 @@ iSQOStep HessianShifter::operator()(iSQOQuadraticSubproblem &subproblem) {
 		}
 		subproblem.inc_regularization(current_shift, last_shift);
 		return_step = solve_qp_(subproblem);
+        // std::cout << "hessianShifter :: operator() return_step (after shift): " << return_step << std::endl;
         total_pivots += return_step.get_pivots();
         return_step.set_pivots(total_pivots);
 		

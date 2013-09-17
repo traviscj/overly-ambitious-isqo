@@ -34,7 +34,7 @@ iSQOStep::iSQOStep(const iSQOStep& other) : serial(isqostep_serial++),
 	{
     // X("iSQOStep::iSQOStep(const iSQOStep&)");
 	// cerr << "copy being made!" << std::endl;
-	num_primal_ = other.num_primal_;
+    // num_primal_ = other.num_primal_;
 	
 	
 	for (std::size_t primal_index=0; primal_index < num_primal_; ++primal_index)
@@ -52,18 +52,22 @@ iSQOStep::iSQOStep(const iSQOStep& other) : serial(isqostep_serial++),
 // }
 // 
 const iSQOStep *iSQOStep::operator=(const iSQOStep& other) {
-	iSQOStep tmp(other);
+    // std::cout << "*iSQOStep::operator= other: " << other << std::endl;
+	iSQOStep *tmp = new iSQOStep(other);
+    // std::cout << "*iSQOStep::operator= tmp: " << *tmp << std::endl;
 	
-	std::swap(num_primal_, tmp.num_primal_);
-	std::swap(num_dual_eq_, tmp.num_dual_eq_);
-	std::swap(num_dual_ieq_, tmp.num_dual_ieq_);
+	std::swap(num_primal_, tmp->num_primal_);
+	std::swap(num_dual_eq_, tmp->num_dual_eq_);
+	std::swap(num_dual_ieq_, tmp->num_dual_ieq_);
 	
-	std::swap(primal_values_, tmp.primal_values_);
-	std::swap(dual_eq_values_, tmp.dual_eq_values_);
-	std::swap(dual_ieq_values_, tmp.dual_ieq_values_);
+	std::swap(primal_values_, tmp->primal_values_);
+	std::swap(dual_eq_values_, tmp->dual_eq_values_);
+	std::swap(dual_ieq_values_, tmp->dual_ieq_values_);
 	
-	std::swap(pivots_, tmp.pivots_);
-	std::swap(status_, tmp.status_);
+	std::swap(pivots_, tmp->pivots_);
+	std::swap(status_, tmp->status_);
+    
+    // std::cout << "*iSQOStep::operator= *this: " << *this << std::endl;
 	return this;
 }
 

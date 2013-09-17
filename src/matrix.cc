@@ -135,6 +135,8 @@ sparse_matrix::sparse_matrix(std::size_t num_variables, double scalar)
 std::vector<double> sparse_matrix::multiply(const std::vector<double> &vector_factor) const {
     assert(vector_factor.size() == columns_);
     std::vector<double> product(rows_);
+    // std::cout << "product, pre: " << product << std::endl;
+    for (size_t row_index=0; row_index < rows_; ++row_index) product[row_index]=0.0;
     int current_row=-1;
     
     for (size_t column_index=0; column_index < columns_; ++column_index) {
@@ -143,6 +145,7 @@ std::vector<double> sparse_matrix::multiply(const std::vector<double> &vector_fa
             product[current_row] += vals_[nonzero_index]*vector_factor[column_index];
         }
     }
+    // std::cout << "product, post: " << product << std::endl;
     return product;
 }
 std::vector<double> sparse_matrix::multiply_transpose(const std::vector<double> &vector_factor) const {

@@ -16,10 +16,11 @@ public:
 	iSQOStep operator()(iSQOQuadraticSubproblem &subproblem);
 
     void save_qp_state() {
-        backup_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(*example_));
+        // backup_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(*example_));
+        backup_ = new qpOASES::SQProblemSchur(*example_);
     }
     void restore_qp_state() {
-        example_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(*backup_));
+        example_ = new qpOASES::SQProblemSchur(*backup_);
     }
     
         
@@ -37,8 +38,11 @@ private:
 protected:
     // virtual void solve(iSQOQuadraticSubproblem *subproblem) = 0;
     
-	std::shared_ptr<qpOASES::SQProblemSchur> example_;
-    std::shared_ptr<qpOASES::SQProblemSchur> backup_;
+    // std::shared_ptr<qpOASES::SQProblemSchur> example_;
+    // std::shared_ptr<qpOASES::SQProblemSchur> backup_;
+	qpOASES::SQProblemSchur *example_;
+    qpOASES::SQProblemSchur *backup_;
+    
     std::shared_ptr<qpOASES::Options> opt_;
 	bool first_;
     bool last_successful_;

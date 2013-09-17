@@ -16,7 +16,9 @@ SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) :
         int num_qp_con = (int)(nlp_->num_dual());
         int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual());
         
-        example_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
+        // example_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
+        example_ = new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN);
+        
         opt_ = std::shared_ptr<qpOASES::Options>(new qpOASES::Options);
         // 
         //     // opt.terminationTolerance = 1e-6;
@@ -31,8 +33,9 @@ SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) :
         opt_->enableNZCTests = qpOASES::BooleanType(true);
         // opt_->initialStatusBounds = qpOASES::ST_INACTIVE;
         // opt_->initialStatusBounds = qpOASES::ST_LOWER;
-        opt_->printLevel = qpOASES::PL_NONE;
+        // opt_->printLevel = qpOASES::PL_NONE;
         // opt_->printLevel = qpOASES::PL_MEDIUM;
+        opt_->printLevel = qpOASES::PL_TABULAR;
     
         //     // opt->numRegularisationSteps = 200;
         //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
@@ -126,7 +129,7 @@ std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQ
 // DENSE quadratic subproblem solver:
 iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) {
 	int nWSR = 50000;
-    if (!first_ && !last_successful_) {
+    if (!first_ && !last_successful_ && backup_!= NULL) {
         restore_qp_state();
     }
     operator_setup();
@@ -142,28 +145,75 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
         
         // double *initial_guess_primal = new double[nlp_->num_primal() + 2*nlp_->num_dual()];
         // double *initial_guess_dual = new double[nlp_->num_dual()];
-        qpOASES::Bounds *initial_bounds = new qpOASES::Bounds((int)(nlp_->num_primal() + 2*nlp_->num_dual()));
-        initial_bounds->setupAllFree();
-        for (int variable_index=(int)(nlp_->num_primal()); variable_index < (int)(nlp_->num_primal() + 2*nlp_->num_dual()); ++variable_index)
-            initial_bounds->setStatus(variable_index, qpOASES::ST_LOWER);
-        qpOASES::Constraints *initial_constraints = new qpOASES::Constraints((int)nlp_->num_dual());
-        initial_constraints->setupAllLower();
-        // for (int constraint_index=0; constraint_index < (int)(nlp_->num_dual()); ++constraint_index)
-            // initial_constraints->setStatus(constraint_index, qpOASES::ST_LOWER);
-        
-		ret = example_->init( qpoases_hessian_.get(),
-							 &subproblem.gradient_[0],
-							 qpoases_jacobian_.get(),
-							 &subproblem.lower_bound_[0],
-							 &subproblem.upper_bound_[0],
-							 &subproblem.jacobian_lower_bound_[0],
-							 &subproblem.jacobian_upper_bound_[0],
-							 nWSR,
-                             &cputime,
-                             0,
-                             0,
-                             initial_bounds,
-                             initial_constraints);
+        int num_qp_var = (int)subproblem.num_qp_variables_;
+                // qpOASES::Bounds *initial_bounds = new qpOASES::Bounds(num_qp_var);
+                // qpOASES::Bounds initial_bounds = new qpOASES::Bounds(num_qp_var);
+                qpOASES::Bounds *initial_bounds = new qpOASES::Bounds(example_->getNV());
+                qpOASES::returnValue retval = example_->getBounds(*initial_bounds);
+                assert(retval == 0);
+                // initial_bounds.setupAllFree();
+                initial_bounds->setupAllFree();
+                for (int variable_index=(int)(nlp_->num_primal()); variable_index < (int)(nlp_->num_primal() + 2*nlp_->num_dual()); ++variable_index)
+                    initial_bounds->setStatus(variable_index, qpOASES::ST_LOWER);
+                // int num_qp_con = (int)subproblem.num_qp_variables_;
+                
+                // qpOASES::Constraints *initial_constraints = new qpOASES::Constraints(num_qp_con);
+                qpOASES::Constraints *initial_constraints = new qpOASES::Constraints(example_->getNC());
+                retval = example_->getConstraints(*initial_constraints);
+                assert(retval == 0);
+                initial_constraints->setupAllLower();
+                // for (int constraint_index=0; constraint_index < (int)(nlp_->num_dual()); ++constraint_index)
+                    // initial_constraints->setType(constraint_index, qpOASES::ST_EQUALITY);
+
+                sparse_matrix *identity_for_hessian = new sparse_matrix(nlp_->num_primal() + 2*nlp_->num_dual(), +1.0);
+                qpOASES::SymSparseMat *qpoases_identity_for_hessian(new qpOASES::SymSparseMat(   
+                                                                            num_qp_var, 
+                                                                            num_qp_var, 
+                                                                            (int*)(&identity_for_hessian->get_row_indices()[0]),
+                                                                            (int*)(&identity_for_hessian->get_col_starts()[0]), 
+                                                                            (double*)(&identity_for_hessian->get_vals()[0])
+                                                                                ));
+
+        // std::cout << "QPOASES INIT CALL:" << std::endl;
+        // ret = example_->init( qpoases_identity_for_hessian,
+        //                      &subproblem.gradient_[0],
+        //                      qpoases_jacobian_.get(),
+        //                      &subproblem.lower_bound_[0],
+        //                      &subproblem.upper_bound_[0],
+        //                      &subproblem.jacobian_lower_bound_[0],
+        //                      &subproblem.jacobian_upper_bound_[0],
+        //                      nWSR,
+        //                              0,
+        //                              0,
+        //                              0,
+        //                              initial_bounds,
+        //                              initial_constraints);
+        //  assert(ret == 0);
+         // std::cout << "QPOASES hotstart CALL:" << std::endl;
+        ret = example_->init( qpoases_hessian_.get(),
+                             &subproblem.gradient_[0],
+                             qpoases_jacobian_.get(),
+                             &subproblem.lower_bound_[0],
+                             &subproblem.upper_bound_[0],
+                             &subproblem.jacobian_lower_bound_[0],
+                             &subproblem.jacobian_upper_bound_[0],
+                             nWSR,
+                           0,
+                           NULL,
+                           NULL,
+                           initial_bounds,
+                           initial_constraints);
+           // assert(ret == 0);
+        // std::cout << "DONEDONEDONE:" << std::endl;
+         // ret = example_->hotstart( qpoases_hessian_.get(),
+         //                      &subproblem.gradient_[0],
+         //                      qpoases_jacobian_.get(),
+         //                      &subproblem.lower_bound_[0],
+         //                      &subproblem.upper_bound_[0],
+         //                      &subproblem.jacobian_lower_bound_[0],
+         //                      &subproblem.jacobian_upper_bound_[0],
+         //                      nWSR,
+         //                    0);
 	} else{
         
 		ret = example_->hotstart(qpoases_hessian_.get(),

@@ -16,7 +16,7 @@ TextOutput::TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violat
 }
 
 void TextOutput::nlp() {
-    printf("nvar: %5d\tncon: %5d\n", nlp_->num_primal(), nlp_->num_dual());
+    printf("nvar: %5d\tncon: %5d (eq: %5d, ieq: %5d)\n", nlp_->num_primal(), nlp_->num_dual(), nlp_->num_dual_eq(), nlp_->num_dual_ieq());
 }
 
 void TextOutput::start() {

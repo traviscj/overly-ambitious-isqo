@@ -35,7 +35,7 @@ public:
 	size_t num_qp_variables_, num_qp_constraints_;
 	size_t num_nlp_variables_, num_nlp_constraints_eq_, num_nlp_constraints_ieq_;
 	std::shared_ptr<matrix_base_class> hessian_;
-	bool first_shift_;
+    // bool first_shift_;
 	std::vector<double> unshifted_hessian_diagonal_;
 	std::shared_ptr<matrix_base_class> jacobian_;
 	std::vector<double> gradient_;

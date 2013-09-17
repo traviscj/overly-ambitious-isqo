@@ -14,7 +14,7 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
 			num_nlp_constraints_ieq_(nlp.num_dual_ieq()),
 			hessian_(NULL), 
 			unshifted_hessian_diagonal_(num_qp_variables_), 
-			first_shift_(false),
+            // first_shift_(false),
 			jacobian_(NULL), 
 			gradient_(num_qp_variables_),
 			lower_bound_(num_qp_variables_), 
@@ -50,8 +50,25 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &it
 	std::vector<double> con_values_ieq=nlp_->constraints_inequality(iterate);
 
     // formulation 1: group p - X^+
-    size_t BOUND_REFORMULATION_MODE = 2;
-    if (BOUND_REFORMULATION_MODE == 1) {
+    size_t BOUND_REFORMULATION_MODE = 0;
+    if (BOUND_REFORMULATION_MODE == 0) {
+        for (size_t eq_index=0; eq_index<nlp_->num_dual_eq(); ++eq_index) {
+            jacobian_lower_bound_[eq_index] = -con_values_eq[eq_index];
+            jacobian_upper_bound_[eq_index] = -con_values_eq[eq_index];
+            lower_bound_[nlp_->num_primal() + eq_index] = 0.0;
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + eq_index] = 0.0;
+            upper_bound_[nlp_->num_primal() + eq_index] = INFINITY;
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + eq_index] = INFINITY;
+        }
+        for (size_t ieq_index=0; ieq_index<nlp_->num_dual_ieq(); ++ieq_index) {
+            jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
+            jacobian_upper_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + ieq_index] = 0.0;
+            lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + nlp_->num_dual_eq() + ieq_index] = 0.0;
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + ieq_index] = INFINITY;
+            upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + nlp_->num_dual_eq() + ieq_index] = INFINITY;            
+        }
+    } else if (BOUND_REFORMULATION_MODE == 1){
         assert(false); // this formulation is WRONG!
         for (size_t eq_index=0; eq_index<nlp_->num_dual_eq(); ++eq_index) {
             jacobian_lower_bound_[eq_index] = 0.0; // was: -con_values_eq[eq_index];
@@ -156,7 +173,7 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
 
 
 void iSQOQuadraticSubproblem::inc_regularization(double hessian_shift, double last_shift) {
-	bool PRINT = false;
+    // bool con_values_ieqPRINT = false;
     // std::cout << "hessian_shift: " << hessian_shift << "; last_shift: " << last_shift << std::endl;
     hessian_->regularize(hessian_shift, last_shift);
     // std::cout << "\n\n\n nlp_hessian_ pre: " << nlp_hessian_ << std::endl;
@@ -182,6 +199,7 @@ std::ostream &iSQOQuadraticSubproblem::print(std::ostream &os) const {
 	std::cout << "ub = " << upper_bound_ << "';" << std::endl;
 	std::cout << "lbA = " << jacobian_lower_bound_ << "';" << std::endl;
 	std::cout << "ubA = " << jacobian_upper_bound_ << "';" << std::endl;
+    return os;
 }
 
 // iSQOSparseQuadraticSubproblem::iSQOSparseQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate) :

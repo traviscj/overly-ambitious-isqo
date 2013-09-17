@@ -9,7 +9,6 @@ ResidualFunction::ResidualFunction(Nlp &nlp) : FunctionWithNLPState(nlp) {
 }
 double ResidualFunction::resid_helper(const iSQOIterate &iterate, std::vector<double> stationarity, std::vector<double> constraint_eq_values, std::vector<double> constraint_ieq_values, std::vector<double> constraint_eq_dual_values, std::vector<double> constraint_ieq_dual_values) const {
 	bool PRINT=false;
-    // if (iterate.get_penalty_parameter() == 0.1) PRINT=true;
 	std::vector<double> rho(stationarity.size() + 2*constraint_eq_values.size() + 2*constraint_ieq_values.size());
 	
 	std::shared_ptr<matrix_base_class> jac_ce = nlp_->constraints_equality_jacobian(iterate);
@@ -19,9 +18,14 @@ double ResidualFunction::resid_helper(const iSQOIterate &iterate, std::vector<do
 
 	double eq_signflip = 1;
 	double ieq_signflip = 1;
-	// std::cout << "sta pre: " << stationarity << std::endl << std::endl << std::endl;
+    if (PRINT) std::cout << "sta pre: " << stationarity << std::endl << std::endl << std::endl;
+    if (PRINT) std::cout << "constraint_eq_dual_values pre: " << constraint_eq_dual_values << std::endl << std::endl << std::endl;
 	std::vector<double> eq_jacobian_trans_times_mults = jac_ce->multiply_transpose(constraint_eq_dual_values);
+    if (PRINT) std::cout << "eq_jacobian_trans_times_mults pre: " << eq_jacobian_trans_times_mults << std::endl << std::endl << std::endl;
+    
+    if (PRINT) std::cout << "constraint_ieq_dual_values pre: " << constraint_ieq_dual_values << std::endl << std::endl << std::endl;
 	std::vector<double> ieq_jacobian_trans_times_mults = jac_ci->multiply_transpose(constraint_ieq_dual_values);
+    if (PRINT) std::cout << "ieq_jacobian_trans_times_mults pre: " << ieq_jacobian_trans_times_mults << std::endl << std::endl << std::endl;
 	
 	for (size_t stationarity_index=0; stationarity_index < stationarity.size(); ++stationarity_index) {
 		rho[rho_index] = stationarity[stationarity_index] + eq_jacobian_trans_times_mults[stationarity_index] + ieq_jacobian_trans_times_mults[stationarity_index];
@@ -61,7 +65,7 @@ double ResidualFunction::resid_helper(const iSQOIterate &iterate, std::vector<do
 }
 double ResidualFunction::operator()(const iSQOIterate &iterate) const {
 	bool PRINT=false;
-	// std::cout << "OPERATOR FOR RESID FUNC: " << iterate.penalty_parameter_ << std::endl;
+    if (PRINT) std::cout << "OPERATOR FOR RESID FUNC: " << iterate.get_penalty_parameter() << std::endl;
 	
 	std::vector<double> stationarity = nlp_->objective_gradient(iterate);
 	
@@ -96,6 +100,7 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 	bool PRINT=false;
     
 	if (PRINT) std::cout << "===== START OF STEP RESIDUAL CALCULATION" << std::endl;
+    // std::cout << "residualFunction::operator() step: " << step << std::endl;
 	std::vector<double> stationarity = nlp_->objective_gradient(iterate);
 	
 	std::shared_ptr<matrix_base_class> hessian = nlp_->lagrangian_hessian(iterate);
@@ -142,7 +147,12 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 		std::cout << "       dual  eq: " << (iterate.get_dual_eq_values()) << std::endl;
 		std::cout << "       dual ieq: " << (iterate.get_dual_ieq_values()) << std::endl;
 	}
-    double retval = resid_helper(iterate, stationarity, con_values_eq, con_values_ieq, step.get_dual_eq_values(), step.get_dual_ieq_values());
+    std::vector<double> dual_eq_values(nlp_->num_dual_eq());
+    dual_eq_values.assign(step.get_dual_eq_values().begin(), step.get_dual_eq_values().end());
+    std::vector<double> dual_ieq_values(nlp_->num_dual_ieq());
+    dual_ieq_values.assign(step.get_dual_ieq_values().begin(), step.get_dual_ieq_values().end());
+    
+    double retval = resid_helper(iterate, stationarity, con_values_eq, con_values_ieq, dual_eq_values, dual_ieq_values);
     if (PRINT) std::cout << "===== END OF STEP RESIDUAL CALCULATION" << std::endl;
 	return retval;
 }

@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 	double convex_combination_search_decrease = .9;
     // bool PRINT=false;
 	size_t maximum_iterations = 1000;
-    // size_t max_num_comb_reductions = 100;
+    size_t max_num_comb_reductions = 100;
 	double machine_precision = std::numeric_limits<double>::epsilon();
 	
 	text_output.start();
@@ -157,13 +157,16 @@ int main(int argc, char **argv) {
 		//////////////////////////
 		// Penalty problem is set up AND SOLVED, 
 		MAGIC_SUBPROBLEM penalty_subproblem(problem, penalty_iterate);
-		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_subproblem);
+        // std::cout << "Penalty QP start:" << std::endl;
+		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_iterate, penalty_subproblem);
+        // std::cout << "Penalty QP end:" << std::endl;
 		iSQOStep feasibility_step(problem.num_primal(),problem.num_dual_eq(),problem.num_dual_ieq(), -43, -43);
 		
 		// per-iteration variable setup.
 		std::string steptype = "4a";
 		double combination_step_contribution_from_penalty_step = -1.0;
 		double next_penalty_parameter;
+        std::cout << std::endl << "linear_reduction(penalty_iterate,penalty_step): " << linear_reduction(penalty_iterate,penalty_step) << std::endl;
 		if (linear_reduction(penalty_iterate,penalty_step) >= linear_decrease_threshold*constraint_violation(penalty_iterate) + 10*machine_precision*linear_reduction(penalty_iterate,penalty_step)) {
 			//////////////////////////
 			// ALGORITHM A // STEP 3a
@@ -178,8 +181,10 @@ int main(int argc, char **argv) {
 			// ALGORITHM A // STEP 4
 			//////////////////////////
 			// Feasibility problem is set up and solved.
+            // std::cout << "Feasibility QP start:" << std::endl;
 			MAGIC_SUBPROBLEM feasibility_subproblem(problem, feasibility_iterate);
-			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_subproblem);
+			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_iterate, feasibility_subproblem);
+            // std::cout << "Feasibility QP end:" << std::endl;
             assert(feasibility_step.get_status() == 0);
 			
 			if (linear_reduction(penalty_iterate,penalty_step) >= linear_decrease_threshold*linear_reduction(feasibility_iterate,feasibility_step)) {
@@ -199,7 +204,12 @@ int main(int argc, char **argv) {
 					
 					combination_step_contribution_from_penalty_step = convex_combination_search_decrease*combination_step_contribution_from_penalty_step;
 					++num_comb_reductions;
-                    // assert(! (num_comb_reductions >= max_num_comb_reductions));
+                    if (num_comb_reductions >= max_num_comb_reductions) {
+                        combination_step_contribution_from_penalty_step = 0;
+                        combination_step.convex_combination(penalty_step, feasibility_step, combination_step_contribution_from_penalty_step);
+                        break;
+                    }
+                    // assert(! );
 				}
 				steptype = "5b";
 				

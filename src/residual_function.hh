@@ -11,7 +11,7 @@
 //! \brief class which returns a function for evaluating NLP or QP residuals
 class ResidualFunction : public FunctionWithNLPState {
 public:
-	ResidualFunction(Nlp &nlp);
+	ResidualFunction(iSQOControlPanel &control, Nlp &nlp);
 	double operator()(const iSQOIterate &iterate) const;
 	double operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const;
 protected:

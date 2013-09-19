@@ -11,7 +11,7 @@ const char TextOutput::output_format_subprob_[] = " %9.2e  %3d  %5d %9.2e  %9.2e
 const char TextOutput::output_format_post_[] = " %s %9.2e %9.2e %9.2e %9.2e |";
 const char TextOutput::output_format_line_search_[] = "%9.2e\n";
 
-TextOutput::TextOutput (Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp),linear_decrease_func_(nlp), pen_func_(nlp), residual_func_(nlp) {
+TextOutput::TextOutput (iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp), constraint_violation_func_(control, nlp),linear_decrease_func_(control, nlp), pen_func_(control, nlp), residual_func_(control, nlp) {
 	
 }
 

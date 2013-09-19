@@ -20,7 +20,7 @@
 //     solve_qp_ = new SolveDenseQuadraticProgram(nlp);
 // }
 
-HessianShifter::HessianShifter(Nlp &nlp) : FunctionWithNLPState(nlp), solve_qp_(nlp), linear_model_reduction_(nlp), last_shift_(0.0) {
+HessianShifter::HessianShifter(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp), solve_qp_(control, nlp), linear_model_reduction_(control, nlp), last_shift_(0.0) {
     // solve_qp_ = new (nlp);
 }
 

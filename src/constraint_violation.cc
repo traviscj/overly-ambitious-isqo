@@ -7,7 +7,7 @@
 #include "constraint_violation.hh"
 
 
-ConstraintViolationFunction::ConstraintViolationFunction(Nlp &nlp) : FunctionWithNLPState(nlp){
+ConstraintViolationFunction::ConstraintViolationFunction(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp){
 	// std::cout << "-- Initializing l1 violation function." << std::endl;
 }
 double ConstraintViolationFunction::operator()(const iSQOIterate &iterate) const {

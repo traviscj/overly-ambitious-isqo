@@ -5,8 +5,8 @@
 #include "subproblem.hh"
 #include "utilities.hh"
 
-iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate) :
-			FunctionWithNLPState(nlp),
+iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(iSQOControlPanel &control, Nlp &nlp, const iSQOIterate &iterate) :
+			FunctionWithNLPState(control, nlp),
 			num_qp_variables_(nlp.num_primal() + 2*nlp.num_dual()), 
 			num_qp_constraints_(nlp.num_dual()),
 			num_nlp_variables_(nlp.num_primal()), 

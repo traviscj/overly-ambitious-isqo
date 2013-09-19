@@ -14,7 +14,7 @@
 //! \brief class responsible for doing text output as the algorithm progresses
 class TextOutput : public FunctionWithNLPState {
 public:
-	TextOutput (Nlp &nlp);
+	TextOutput (iSQOControlPanel &control, Nlp &nlp);
     void nlp();
 	void start();
 	void pre(size_t iter, const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate) const;

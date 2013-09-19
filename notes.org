@@ -1,0 +1,28 @@
+* where to put QP deep copies?
+** Option 1: after every successful QP solve
+   - This would work, i think, but pretty wasteful: might really frequently save a deep copy after a successful solve
+       and 
+** option 2: at the end of iSQO iterations.
+* use init always instead
+: init (SymmetricMatrix *_H, const real_t *const _g, Matrix *_A, const real_t *const _lb, const real_t *const _ub, const real_t *const _lbA, const real_t *const _ubA, int &nWSR, real_t *const cputime, const real_t *const xOpt, const real_t *const yOpt, const Bounds *const guessedBounds, const Constraints *const guessedConstraints)
+: setConstraintProduct (ConstraintProduct *const _constraintProduct)
+: getBounds (Bounds &_bounds) const
+: getPrimalSolution (real_t *const xOpt) const
+: getDualSolution (real_t *const yOpt) const
+
+* configuration
+Some things need to be read from configuration files instead of compiled in.
+A couple of the main items I see here:
+ - qpOASES print level (hugely important)
+ - constants from iSQO paper (hugely important)
+
+I'd like to be able to override settings at several layers:
+ - compiled in defaults.
+ - settings file like $PWD/isqo-config
+ - settings file like `basename $1`/isqo-config
+ - arbitrary command-line specified file
+
+I'd like to have some object where I refer to fields directly--I want compile time configuration resolution.
+But that's actually a problem--now we need a different type of control panel for each different shitty class or option, or a mega-control-panel that knows about all types. :-(
+
+For now: engineering pragmatism. Implement as a mega-control-panel, sort out later.

@@ -3,8 +3,8 @@
 
 #include "solve_subproblem.hh"
 
-SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) : 
-    FunctionWithNLPState(nlp), 
+SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp) : 
+    FunctionWithNLPState(control, nlp), 
     example_(NULL),
     backup_(NULL),
     opt_(NULL),
@@ -33,9 +33,16 @@ SolveQuadraticProgram::SolveQuadraticProgram(Nlp &nlp) :
         opt_->enableNZCTests = qpOASES::BooleanType(true);
         // opt_->initialStatusBounds = qpOASES::ST_INACTIVE;
         // opt_->initialStatusBounds = qpOASES::ST_LOWER;
-        // opt_->printLevel = qpOASES::PL_NONE;
+        switch (control_->get_qp_print_level()) {
+            case QPL_NONE: opt_->printLevel = qpOASES::PL_NONE;break;
+            case QPL_LOW: opt_->printLevel = qpOASES::PL_LOW;break;
+            case QPL_MEDIUM: opt_->printLevel = qpOASES::PL_MEDIUM;break;
+            case QPL_HIGH: opt_->printLevel = qpOASES::PL_HIGH;break;
+            case QPL_TABLE: opt_->printLevel = qpOASES::PL_TABULAR;break;
+        }
+        
         // opt_->printLevel = qpOASES::PL_MEDIUM;
-        opt_->printLevel = qpOASES::PL_TABULAR;
+        // opt_->printLevel = qpOASES::PL_TABULAR;
     
         //     // opt->numRegularisationSteps = 200;
         //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;

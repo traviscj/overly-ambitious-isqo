@@ -24,7 +24,7 @@
 
 class iSQOQuadraticSubproblem : public FunctionWithNLPState {
 public:
-	iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
+	iSQOQuadraticSubproblem(iSQOControlPanel &control, Nlp &nlp, const iSQOIterate &iterate);
     ~iSQOQuadraticSubproblem() {
         // std::cout << "I had " << prior_constructed_hessians_.size() << " items in the hessian cache.\n"
             // << " & " << prior_constructed_jacobians_.size() << " items in the jacobian cache.\n" << std::endl;

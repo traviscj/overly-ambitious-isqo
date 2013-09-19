@@ -2,7 +2,7 @@
 #include "linear_model.hh"
 #include "linear_model_reduction.hh"
 
-LinearReductionFunction::LinearReductionFunction(Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp) {
+LinearReductionFunction::LinearReductionFunction(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp), constraint_violation_func_(control, nlp) {
 	
 }
 double LinearReductionFunction::operator()(const iSQOIterate &iterate, const iSQOStep &step) const {
@@ -21,7 +21,7 @@ double LinearReductionFunction::operator()(const iSQOIterate &iterate, const iSQ
         std::cout << "nlp eq: " << nlp_->constraints_equality(iterate) << std::endl;
         std::cout << "nlp ieq: " << nlp_->constraints_inequality(iterate) << std::endl;
         
-        LinearModelFunction lmf(*nlp_);
+        LinearModelFunction lmf(*control_, *nlp_);
         iSQOStep zero_step(nlp_->num_primal(), nlp_->num_dual_eq(), nlp_->num_dual_ieq(), -13, -13);
     	std::cout << " - linear model of zero step: " << lmf(iterate, zero_step) << std::endl;
     	std::cout << " - linear model of real step: " << lmf(iterate, step) << std::endl;

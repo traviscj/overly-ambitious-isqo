@@ -9,7 +9,7 @@
 //! then \f$ H \gets H + \xi I \f$ and try to re-solve the QP.
 class HessianShifter : public FunctionWithNLPState {
 public:
-	HessianShifter(Nlp &nlp);
+	HessianShifter(iSQOControlPanel &control, Nlp &nlp);
     //! \brief solve the QP with appropriate shifts until we get a \f$d\f$ matching the above condition.
 	iSQOStep operator()(const iSQOIterate &iterate, iSQOQuadraticSubproblem &subproblem);
     

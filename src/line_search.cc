@@ -4,10 +4,11 @@
 
 #include <cmath>
 
+#include "isqo_config.hh"
 #include "utilities.hh"
 #include "line_search.hh"
 
-LineSearchFunction::LineSearchFunction(Nlp &nlp) : FunctionWithNLPState(nlp), penalty_func_(nlp), linear_decrease_func_(nlp) {
+LineSearchFunction::LineSearchFunction(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp), penalty_func_(control, nlp), linear_decrease_func_(control, nlp) {
 	// std::cout << "initializing a linesearcher!" << std::endl;
 }
 double LineSearchFunction::operator()(const iSQOIterate &iterate, const iSQOStep &step) {

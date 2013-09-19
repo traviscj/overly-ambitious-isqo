@@ -66,6 +66,7 @@
 // hs99exp.out:Failure - Did not converge - iteration limit in MATLAB implementation.
 
 // standard libraries:
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -87,7 +88,12 @@ const std::string sparse_version_string = "SparseAmplNlp and iSQOSparseQuadratic
 #endif
 
 int main(int argc, char **argv) {
-	
+    
+    iSQOControlPanel control;
+    std::ifstream config_file("config_reader_input");
+    control.update_settings(config_file);
+    control.print();
+    
     std::cout << "Hello world! We're serving " << sparse_version_string << " today, please buckle your seat belts and prepare for takeoff..." << std::endl;
 	std::string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/qpcstair.nl");
 	if (argc>1) {
@@ -97,16 +103,16 @@ int main(int argc, char **argv) {
     MAGIC_PROBLEM problem(problem_file);
 	
 	// Utilities for NLP:
-	PenaltyFunction penalty_function(problem);
-	ResidualFunction kkt_residual(problem);
-	SolveQuadraticProgram solve_qp(problem);
-	ConstraintViolationFunction constraint_violation(problem);
-	LineSearchFunction line_search(problem);
-	LinearReductionFunction linear_reduction(problem);
-	HessianShifter hessian_shifting_penalty_qp_solve(problem);
-	HessianShifter hessian_shifting_feasibility_qp_solve(problem);
+	PenaltyFunction penalty_function(control, problem);
+	ResidualFunction kkt_residual(control, problem);
+	SolveQuadraticProgram solve_qp(control, problem);
+	ConstraintViolationFunction constraint_violation(control, problem);
+	LineSearchFunction line_search(control, problem);
+	LinearReductionFunction linear_reduction(control, problem);
+	HessianShifter hessian_shifting_penalty_qp_solve(control, problem);
+	HessianShifter hessian_shifting_feasibility_qp_solve(control, problem);
 	// Other
-	TextOutput text_output(problem);
+	TextOutput text_output(control, problem);
 	
     text_output.nlp();
     
@@ -156,7 +162,7 @@ int main(int argc, char **argv) {
 		// ALGORITHM A // STEP 3
 		//////////////////////////
 		// Penalty problem is set up AND SOLVED, 
-		MAGIC_SUBPROBLEM penalty_subproblem(problem, penalty_iterate);
+		MAGIC_SUBPROBLEM penalty_subproblem(control, problem, penalty_iterate);
         // std::cout << "Penalty QP start:" << std::endl;
 		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_iterate, penalty_subproblem);
         // std::cout << "Penalty QP end:" << std::endl;
@@ -182,7 +188,7 @@ int main(int argc, char **argv) {
 			//////////////////////////
 			// Feasibility problem is set up and solved.
             // std::cout << "Feasibility QP start:" << std::endl;
-			MAGIC_SUBPROBLEM feasibility_subproblem(problem, feasibility_iterate);
+			MAGIC_SUBPROBLEM feasibility_subproblem(control, problem, feasibility_iterate);
 			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_iterate, feasibility_subproblem);
             // std::cout << "Feasibility QP end:" << std::endl;
             assert(feasibility_step.get_status() == 0);

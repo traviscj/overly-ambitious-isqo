@@ -4,7 +4,7 @@
 #include "utilities.hh"
 #include "residual_function.hh"
 
-ResidualFunction::ResidualFunction(Nlp &nlp) : FunctionWithNLPState(nlp) {
+ResidualFunction::ResidualFunction(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp) {
 	// std::cout << "-- Initializing nlp residual function." << std::endl;
 }
 double ResidualFunction::resid_helper(const iSQOIterate &iterate, std::vector<double> stationarity, std::vector<double> constraint_eq_values, std::vector<double> constraint_ieq_values, std::vector<double> constraint_eq_dual_values, std::vector<double> constraint_ieq_dual_values) const {

@@ -9,7 +9,7 @@
 //! \brief class which returns a function for actually solving QPs with qpOASES
 class SolveQuadraticProgram : public FunctionWithNLPState {
 public:
-	SolveQuadraticProgram(Nlp &nlp);
+	SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp);
 	~SolveQuadraticProgram();
 
     // iSQOStep operator()(iSQOSparseQuadraticSubproblem &subproblem);

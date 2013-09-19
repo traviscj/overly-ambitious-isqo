@@ -22,5 +22,5 @@ overly_ambitious_isqo_includedir = .
 overly_ambitious_isqodir = .
 bin_PROGRAMS = overly_ambitious_isqo
 overly_ambitious_isqo_LDADD=${ASL_LOCATION}/amplsolver.a
-overly_ambitious_isqo_SOURCES = constraint_violation.cc hessian_shifter.cc isqo_functor.cc iterate.cc line_search.cc linear_model.cc linear_model_reduction.cc matrix.cc nlp.cc nlp_ampl.cc nlp_hs014.cc penalty_function.cc residual_function.cc solve_subproblem.cc step.cc subproblem.cc text_output.cc utilities.cc
-overly_ambitious_isqo_HEADERS = constraint_violation.hh hessian_shifter.hh isqo.hh iterate.hh line_search.hh linear_model.hh linear_model_reduction.hh matrix.hh nlp.hh nlp_ampl.hh nlp_hs014.hh nlp_state.hh penalty_function.hh residual_function.hh solve_subproblem.hh step.hh subproblem.hh text_output.hh utilities.hh
+overly_ambitious_isqo_SOURCES = constraint_violation.cc hessian_shifter.cc isqo_config.cc isqo_functor.cc iterate.cc line_search.cc linear_model.cc linear_model_reduction.cc matrix.cc nlp.cc nlp_ampl.cc nlp_hs014.cc penalty_function.cc residual_function.cc solve_subproblem.cc step.cc subproblem.cc text_output.cc utilities.cc
+overly_ambitious_isqo_HEADERS = constraint_violation.hh hessian_shifter.hh isqo.hh isqo_config.hh iterate.hh line_search.hh linear_model.hh linear_model_reduction.hh matrix.hh nlp.hh nlp_ampl.hh nlp_hs014.hh nlp_state.hh penalty_function.hh residual_function.hh solve_subproblem.hh step.hh subproblem.hh text_output.hh utilities.hh

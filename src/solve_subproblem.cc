@@ -8,6 +8,10 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
     example_(NULL),
     backup_(NULL),
     opt_(NULL),
+    qpoases_identity_for_hessian_(NULL),
+    initial_constraints_(NULL),
+    initial_bounds_(NULL),
+    qpoases_hessian_diag_info_(NULL),
     first_(true),
     last_successful_(false)
     {
@@ -53,7 +57,7 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
     }
 
 SolveQuadraticProgram::~SolveQuadraticProgram() {
-    
+  delete [] qpoases_hessian_diag_info_;
 }
 
 std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hessian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> hessian) {
@@ -85,14 +89,24 @@ std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hes
     
     int num_qp_var = (int)subproblem.num_qp_variables_;
     
+    //qpoases_hessian_diag_info_ = std::shared_ptr<int>(new int[num_qp_var]);
+    //qpoases_hessian_diag_info_.resize(num_qp_var);
+    //int current_diag=0, current_nnz=0;
+    // for (size_t current_column=0; current_column<num_qp_var; ++current_column) {
+    //   for (current_nnz=hessian->get_col_start(current_column); current_nnz < hessian->get_col_start(current_column+1) && hessian->get_row_index(current_nnz) < current_column; ++current_nnz);
+    //   qpoases_hessian_diag_info_[ current_column ] = current_nnz;
+    //}
     std::shared_ptr<qpOASES::SymSparseMat> qpoases_hessian(new qpOASES::SymSparseMat(   
                                                                 num_qp_var, 
                                                                 num_qp_var, 
                                                                 (int*)(&hessian->get_row_indices()[0]),
                                                                 (int*)(&hessian->get_col_starts()[0]), 
                                                                 (double*)(&hessian->get_vals()[0])
+								//int*)qpoases_hessian_diag_info_[0]
                                                                     ));
-    qpoases_hessian->createDiagInfo();
+    if (qpoases_hessian_diag_info_ != NULL)
+      delete [] qpoases_hessian_diag_info_;
+    qpoases_hessian_diag_info_ = qpoases_hessian->createDiagInfo();
     return qpoases_hessian;
     // return (new qpOASES::SymSparseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &hessian->data_[0]));
 }
@@ -155,25 +169,28 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
         int num_qp_var = (int)subproblem.num_qp_variables_;
                 // qpOASES::Bounds *initial_bounds = new qpOASES::Bounds(num_qp_var);
                 // qpOASES::Bounds initial_bounds = new qpOASES::Bounds(num_qp_var);
-                qpOASES::Bounds *initial_bounds = new qpOASES::Bounds(example_->getNV());
-                qpOASES::returnValue retval = example_->getBounds(*initial_bounds);
+                //qpOASES::Bounds *
+	        initial_bounds_ = std::shared_ptr<qpOASES::Bounds>(new qpOASES::Bounds(example_->getNV()));
+                qpOASES::returnValue retval = example_->getBounds(*initial_bounds_);
                 assert(retval == 0);
                 // initial_bounds.setupAllFree();
-                initial_bounds->setupAllFree();
+                initial_bounds_->setupAllFree();
                 for (int variable_index=(int)(nlp_->num_primal()); variable_index < (int)(nlp_->num_primal() + 2*nlp_->num_dual()); ++variable_index)
-                    initial_bounds->setStatus(variable_index, qpOASES::ST_LOWER);
+                    initial_bounds_->setStatus(variable_index, qpOASES::ST_LOWER);
                 // int num_qp_con = (int)subproblem.num_qp_variables_;
                 
                 // qpOASES::Constraints *initial_constraints = new qpOASES::Constraints(num_qp_con);
-                qpOASES::Constraints *initial_constraints = new qpOASES::Constraints(example_->getNC());
-                retval = example_->getConstraints(*initial_constraints);
+                //qpOASES::Constraints *
+		initial_constraints_ = std::shared_ptr<qpOASES::Constraints>(new qpOASES::Constraints(example_->getNC()));
+                retval = example_->getConstraints(*initial_constraints_);
                 assert(retval == 0);
-                initial_constraints->setupAllLower();
+                initial_constraints_->setupAllUpper();
                 // for (int constraint_index=0; constraint_index < (int)(nlp_->num_dual()); ++constraint_index)
                     // initial_constraints->setType(constraint_index, qpOASES::ST_EQUALITY);
 
-                sparse_matrix *identity_for_hessian = new sparse_matrix(nlp_->num_primal() + 2*nlp_->num_dual(), +1.0);
-                qpOASES::SymSparseMat *qpoases_identity_for_hessian(new qpOASES::SymSparseMat(   
+		std::shared_ptr<sparse_matrix> identity_for_hessian = std::shared_ptr<sparse_matrix>(new sparse_matrix(nlp_->num_primal() + 2*nlp_->num_dual(), +1.0));
+                //qpOASES::SymSparseMat *
+		qpoases_identity_for_hessian_ = std::shared_ptr<qpOASES::SymSparseMat>(new qpOASES::SymSparseMat(   
                                                                             num_qp_var, 
                                                                             num_qp_var, 
                                                                             (int*)(&identity_for_hessian->get_row_indices()[0]),
@@ -208,8 +225,8 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
                            0,
                            NULL,
                            NULL,
-                           initial_bounds,
-                           initial_constraints);
+			      initial_bounds_.get(),
+			      initial_constraints_.get());
            // assert(ret == 0);
         // std::cout << "DONEDONEDONE:" << std::endl;
          // ret = example_->hotstart( qpoases_hessian_.get(),

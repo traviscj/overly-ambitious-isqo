@@ -46,6 +46,11 @@ protected:
     // QPOASES_PROBLEM *backup_;
     
     std::shared_ptr<qpOASES::Options> opt_;
+  std::shared_ptr<qpOASES::SymSparseMat> qpoases_identity_for_hessian_;
+  std::shared_ptr<qpOASES::Constraints> initial_constraints_;
+  std::shared_ptr<qpOASES::Bounds> initial_bounds_;
+  //std::vector<long int> qpoases_hessian_diag_info_;
+  int *qpoases_hessian_diag_info_;
 	bool first_;
     bool last_successful_;
 };

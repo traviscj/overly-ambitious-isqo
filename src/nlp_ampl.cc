@@ -30,7 +30,7 @@ void AmplNlp::ConstructHelper(std::string stub_str) {
 	if (PRINT_) std::cout << "Constructing an AmplNlp" << std::endl;
 	ASL *asl;
 	asl = ASL_alloc(ASL_read_pfgh);
-	nerror_ = new int;
+	nerror_ = new fint;
 	*nerror_ = 0;
 	// char * punt = stub_str.data();
 	// if (PRINT_) 
@@ -127,7 +127,7 @@ AmplNlp::~AmplNlp() {
 	
 	delete nerror_;
 	ASL_free(&asl);
-	fclose(nl_);
+	//	fclose(nl_); -- ASL_free does this.
 }
 
 iSQOIterate AmplNlp::initial(double penalty_parameter) {

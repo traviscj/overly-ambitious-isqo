@@ -12,9 +12,10 @@ double LinearReductionFunction::operator()(const iSQOIterate &iterate, const iSQ
     double iterate_constraint_violation = constraint_violation_func_(iterate);
     double iterate_step_constraint_violation = constraint_violation_func_(iterate,step);
     double retval =  penalty_scaled_objective_decrease + iterate_constraint_violation - iterate_step_constraint_violation;
-    if ((retval < 0)) {
+    // added the 'not feas prob' check to shut up the output a bit...
+    if ((retval < 0) && iterate.get_penalty_parameter() != 0.0) {
     	std::cout << std::endl;
-        std::cout << "linear decrease was negative!!" << std::endl;
+        std::cout << "******* linear decrease was negative!!" << std::endl;
         std::cout << "iterate: " << iterate << std::endl;
         std::cout << "step: " << step << std::endl;
         std::cout << "gradient: " << gradient << std::endl;

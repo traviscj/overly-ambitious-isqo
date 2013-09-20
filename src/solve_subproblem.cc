@@ -17,7 +17,7 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
         int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual());
         
         // example_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
-        example_ = new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN);
+        example_ = new QPOASES_PROBLEM(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN);
         
         opt_ = std::shared_ptr<qpOASES::Options>(new qpOASES::Options);
         // 
@@ -277,7 +277,6 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index)
 		step.set_primal_value(primal_index, primal_and_slack_values[primal_index]);
 
-	// std::cout << "primal: " << step.primal_values_ << std::endl;
 	// 	- every QP variable has a multiplier:
 	//		-- iterate.num_primal_: primal variables in NLP
 	// 		-- 2*iterate.num_dual_eq_: positive & negative slacks for equalities
@@ -295,8 +294,17 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	}
 	// to get inequality constraint multipliers, read past NLP & slack variables and eq con multipliers:
 	for (size_t dual_ieq_index=0; dual_ieq_index<nlp_->num_dual_ieq(); ++dual_ieq_index) {
-		step.set_dual_ieq_value(dual_ieq_index, -yOpt[nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual_eq() + dual_ieq_index]);
+        step.set_dual_ieq_value(dual_ieq_index, -yOpt[nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual_eq() + dual_ieq_index]);
 	}
+    
+    std::cout << "*** SEARCHABLE SOLUTION AND SUBPROBLEM " << std::endl
+             // << "**** Iterate        : " << std::endl << iterate << std::endl
+             << "**** Primal + Slacks: "<< primal_and_slack_values << std::endl
+             << "**** Dual           : "<< yOpt << std::endl
+             << "**** Step           : " << std::endl << step << std::endl
+             << "**** Subproblem     : "<<std::endl << subproblem << std::endl;
+
+
 
 	bool PRINT=false;
 	if (PRINT) {

@@ -20,11 +20,12 @@
 //     solve_qp_ = new SolveDenseQuadraticProgram(nlp);
 // }
 
-HessianShifter::HessianShifter(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp), solve_qp_(control, nlp), linear_model_reduction_(control, nlp), last_shift_(0.0) {
+HessianShifter::HessianShifter(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp), solve_qp_(control, nlp), linear_model_reduction_(control, nlp), last_shift_(0.0), shifter_info("") {
     // solve_qp_ = new (nlp);
 }
 
 iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSubproblem &subproblem) {
+    shifter_info.str("");
 	bool PRINT=false;
 	double shift_w0 = 1e-4;
 	double shift_min = 1e-20;
@@ -36,6 +37,7 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 	
 	double current_shift = 0.0;
 	
+    shifter_info << "*** Entering the hessian shifter, penalty = " << iterate.get_penalty_parameter() << std::endl;
 	// try to solve without regularization:
     // WHY would this line be necessary? (maybe so the matrix has the same sparsity structure?)
     subproblem.inc_regularization(current_shift, current_shift);
@@ -58,6 +60,7 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 	}
 	if (PRINT) std::cout << std::endl << "total: " << .5*total << "; norm: " << 1e-8*return_step.x_norm()*return_step.x_norm() << std::endl;
 	if (PRINT) std::cout << "required: " << (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
+    shifter_info << "**** Solve: "<< current_regularization_steps << "; Pivots: " << return_step.get_pivots() << "; Status: " << return_step.get_status() << " xxx: " << (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm()))<< std::endl;
 	// std::vector<double> hessian_step = subproblem.hessian_.multiply()
 	while (        (return_step.get_status() != 0) 
                 // || (return_step.x_norm() > 1e9) 
@@ -80,7 +83,8 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 		}
 		subproblem.inc_regularization(current_shift, last_shift);
 		return_step = solve_qp_(subproblem);
-        // std::cout << "hessianShifter :: operator() return_step (after shift): " << return_step << std::endl;
+        int pivots_this_qp=return_step.get_pivots();
+        // shifter_info << "**** Solve; Pivots: " << return_step.get_pivots() << "; Status: " << return_step.get_status() << std::endl;
         total_pivots += return_step.get_pivots();
         return_step.set_pivots(total_pivots);
 		
@@ -100,6 +104,8 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 		if (PRINT) std::cout << "required: " << (total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
 		
 		++current_regularization_steps;
+
+        shifter_info << "**** Solve: "<< current_regularization_steps << "; Pivots: " << pivots_this_qp << "; Status: " << return_step.get_status() << " xxx: " << (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm()))<< std::endl;
 		
 		if (current_regularization_steps == 20){
 			std::cout << "FAILURE!" << std::endl;

@@ -61,7 +61,8 @@ iSQOQuadraticSubproblem::iSQOQuadraticSubproblem(iSQOControlPanel &control, Nlp 
             upper_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + eq_index] = INFINITY;
         }
         for (size_t ieq_index=0; ieq_index<nlp_->num_dual_ieq(); ++ieq_index) {
-            jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
+            // jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
+            jacobian_lower_bound_[nlp_->num_dual_eq()+ieq_index] = -INFINITY;
             jacobian_upper_bound_[nlp_->num_dual_eq()+ieq_index] = -con_values_ieq[ieq_index];
             lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + ieq_index] = 0.0;
             lower_bound_[nlp_->num_primal() + nlp_->num_dual_eq() + nlp_->num_dual_ieq() + nlp_->num_dual_eq() + ieq_index] = 0.0;
@@ -251,7 +252,7 @@ void iSQOQuadraticSubproblem::setup_matrix_data(const iSQOIterate &iterate, std:
     
         std::shared_ptr<sparse_matrix> jacobian_p_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), -1.0));
         if (PRINT) std::cout << "jacobian_p_slack: " << *jacobian_p_slack << std::endl;
-        std::shared_ptr<sparse_matrix> jacobian_n_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), +1.0));
+        std::shared_ptr<sparse_matrix> jacobian_n_slack(new sparse_matrix(nlp_->num_dual_eq()+nlp_->num_dual_ieq(), +0.0));
         if (PRINT) std::cout << "jacobian_n_slack: " << *jacobian_n_slack << std::endl;
         std::shared_ptr<sparse_matrix> jacobian_slacks = jacobian_p_slack->horizontal(jacobian_n_slack);
         if (PRINT) std::cout << "jacobian_slacks: " << *jacobian_slacks << std::endl;

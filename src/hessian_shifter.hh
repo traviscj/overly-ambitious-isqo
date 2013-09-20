@@ -1,6 +1,9 @@
 #ifndef HESSIAN_SHIFTER_HH_Q33I3P8W
 #define HESSIAN_SHIFTER_HH_Q33I3P8W
 
+#include <string>
+#include <sstream>
+
 #include "linear_model_reduction.hh"
 
 //! \brief a basic hessian-shifting routine
@@ -19,11 +22,13 @@ public:
     void save_qp_state() { solve_qp_.save_qp_state(); }
     void restore_qp_state() { solve_qp_.restore_qp_state(); }
     
+    std::string get_info_str() { return shifter_info.str(); }
 private:
 protected:
 	SolveQuadraticProgram solve_qp_;
     LinearReductionFunction linear_model_reduction_;
 	double last_shift_;
+    std::stringstream shifter_info;
 };
 
 

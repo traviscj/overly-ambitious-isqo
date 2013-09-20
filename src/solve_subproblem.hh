@@ -6,6 +6,8 @@
 #include "subproblem.hh"
 #include "nlp_state.hh"
 
+#define QPOASES_PROBLEM qpOASES::SQProblem
+
 //! \brief class which returns a function for actually solving QPs with qpOASES
 class SolveQuadraticProgram : public FunctionWithNLPState {
 public:
@@ -17,10 +19,10 @@ public:
 
     void save_qp_state() {
         // backup_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(*example_));
-        backup_ = new qpOASES::SQProblemSchur(*example_);
+        backup_ = new QPOASES_PROBLEM(*example_);
     }
     void restore_qp_state() {
-        example_ = new qpOASES::SQProblemSchur(*backup_);
+        example_ = new QPOASES_PROBLEM(*backup_);
     }
     
         
@@ -40,8 +42,8 @@ protected:
     
     // std::shared_ptr<qpOASES::SQProblemSchur> example_;
     // std::shared_ptr<qpOASES::SQProblemSchur> backup_;
-	qpOASES::SQProblemSchur *example_;
-    qpOASES::SQProblemSchur *backup_;
+	QPOASES_PROBLEM *example_;
+    QPOASES_PROBLEM *backup_;
     
     std::shared_ptr<qpOASES::Options> opt_;
 	bool first_;

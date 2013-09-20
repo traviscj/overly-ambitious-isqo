@@ -15,6 +15,7 @@
 class TextOutput : public FunctionWithNLPState {
 public:
 	TextOutput (iSQOControlPanel &control, Nlp &nlp);
+    ~TextOutput();
     void nlp();
 	void start();
 	void pre(size_t iter, const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate) const;
@@ -23,8 +24,18 @@ public:
 	void post(const iSQOIterate &feasibility_iterate, const iSQOIterate &penalty_iterate, const iSQOStep &combination_step, std::string step_type, double step_mix);
     void line_search(double alpha);
     
+    void finish_success_opt() {
+        fprintf(text_output_file_, "\n* Final Status: Termination 2a - optimality\n");
+    }
+    void finish_success_inf() {
+        fprintf(text_output_file_, "\n* Final Status: Termination 2b - optimality\n");
+    }
+    void finish_fail() {
+        fprintf(text_output_file_, "\n* Final Status: Failure\n");
+    }
 protected:
 	// Nlp *nlp_;
+    FILE *text_output_file_;
 	ConstraintViolationFunction constraint_violation_func_;
 	LinearReductionFunction linear_decrease_func_;
 	PenaltyFunction pen_func_;

@@ -19,10 +19,10 @@ public:
 
     void save_qp_state() {
         // backup_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(*example_));
-        backup_ = new QPOASES_PROBLEM(*example_);
+        backup_ = std::shared_ptr<QPOASES_PROBLEM>(new QPOASES_PROBLEM(*example_));
     }
     void restore_qp_state() {
-        example_ = new QPOASES_PROBLEM(*backup_);
+        example_ = std::shared_ptr<QPOASES_PROBLEM>(new QPOASES_PROBLEM(*backup_));
     }
     
         
@@ -40,10 +40,10 @@ private:
 protected:
     // virtual void solve(iSQOQuadraticSubproblem *subproblem) = 0;
     
-    // std::shared_ptr<qpOASES::SQProblemSchur> example_;
-    // std::shared_ptr<qpOASES::SQProblemSchur> backup_;
-	QPOASES_PROBLEM *example_;
-    QPOASES_PROBLEM *backup_;
+    std::shared_ptr<QPOASES_PROBLEM> example_;
+    std::shared_ptr<QPOASES_PROBLEM> backup_;
+    //  *example_;
+    // QPOASES_PROBLEM *backup_;
     
     std::shared_ptr<qpOASES::Options> opt_;
 	bool first_;

@@ -16,8 +16,8 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
         int num_qp_con = (int)(nlp_->num_dual());
         int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual());
         
-        // example_ = std::shared_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
-        example_ = new QPOASES_PROBLEM(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN);
+        example_ = std::shared_ptr<QPOASES_PROBLEM>(new QPOASES_PROBLEM(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
+        // example_ = new (num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN);
         
         opt_ = std::shared_ptr<qpOASES::Options>(new qpOASES::Options);
         // 

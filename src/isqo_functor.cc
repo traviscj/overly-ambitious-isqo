@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 	// Utilities for NLP:
 	PenaltyFunction penalty_function(control, problem);
 	ResidualFunction kkt_residual(control, problem);
-	SolveQuadraticProgram solve_qp(control, problem);
+    // SolveQuadraticProgram solve_qp(control, problem);
 	ConstraintViolationFunction constraint_violation(control, problem);
 	LineSearchFunction line_search(control, problem);
 	LinearReductionFunction linear_reduction(control, problem);
@@ -146,7 +146,10 @@ int main(int argc, char **argv) {
     std::cout << "* Main iteration Loop: " << std::endl;
     
 	for (iter = 0; iter < maximum_iterations; iter ++ ) {
-        std::cout << "*** front matter..." << std::endl;
+        if (iter == 0)
+            std::cout << "** front matter..." << std::endl;
+        else
+            std::cout << "*** front matter..." << std::endl;
         // std::cout << std::endl << "penalty: " << penalty_iterate.penalty_parameter_ << std::endl;
         double pre_objective = problem.objective(penalty_iterate);
         double pre_infeas = constraint_violation(penalty_iterate);

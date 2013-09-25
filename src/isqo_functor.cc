@@ -91,9 +91,8 @@ const std::string sparse_version_string = "SparseAmplNlp and iSQOSparseQuadratic
 
 int main(int argc, char **argv) {
     
-    iSQOControlPanel control;
-    std::ifstream config_file("config_reader_input");
-    control.update_settings(config_file);
+    iSQOControlPanel control("config_reader_input");
+    control.update_settings();
     control.print();
     
     std::cout << "Hello world! We're serving " << sparse_version_string << " today, please buckle your seat belts and prepare for takeoff..." << std::endl;
@@ -158,9 +157,9 @@ int main(int argc, char **argv) {
         double pre_penkkt = kkt_residual(penalty_iterate);
 		iSQOStep combination_step(problem.num_primal(), problem.num_dual_eq(), problem.num_dual_ieq(), -42, -42);
 		
-        std::cout << "** Start of iteration #" << iter << "; " << std::endl;
-		text_output.pre(iter, feasibility_iterate, penalty_iterate);
-        std::cout << "(real!)" << std::scientific << std::setprecision(2) << std::showpos;
+        std::cout << "** Start of iteration #" << iter << "; " ;
+            // << std::endl;
+        std::cout << std::scientific << std::setprecision(2) << std::showpos;
         std::cout << "obj: " << pre_objective << "; ";
         std::cout << "infeas: " << pre_infeas << "; ";
 		std::cout << "pen: " << penalty_iterate.get_penalty_parameter() << "; ";
@@ -168,6 +167,7 @@ int main(int argc, char **argv) {
         std::cout << "feaskkt: " << pre_penkkt << "; ";
         std::cout << "penkkt: " << pre_penkkt << "; ";
         std::cout << std::endl;
+		text_output.pre(iter, feasibility_iterate, penalty_iterate);
         
 		//////////////////////////
 		// ALGORITHM A // STEP 2

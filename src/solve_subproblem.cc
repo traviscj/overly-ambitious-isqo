@@ -1,6 +1,10 @@
+#include <fstream>
 #include <memory>
-#include <typeinfo>
+#include <sstream>
 
+#include <typeinfo>
+#include <qpOASES/extras/SolutionAnalysis.hpp>
+#include "residual_function.hh"
 #include "solve_subproblem.hh"
 
 SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp) : 
@@ -18,7 +22,7 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
         // TODO: switch this based on sparsity.
         // TODO: smart pointer or deconstruct this.
         int num_qp_con = (int)(nlp_->num_dual());
-        int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual());
+        int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual_eq() + nlp_->num_dual_ieq());
         
         example_ = std::shared_ptr<QPOASES_PROBLEM>(new QPOASES_PROBLEM(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
         // example_ = new (num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN);
@@ -31,7 +35,7 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
         opt_->enableEqualities = qpOASES::BooleanType(true);
         // opt_->enableFarBounds = qpOASES::BooleanType(false);
         opt_->enableFullLITests = qpOASES::BooleanType(true);
-        opt_->epsLITests = 1e-12; // maybe play with this later. (maybe 1e-8)
+        opt_->epsLITests = 1e-8; // maybe play with this later. (maybe 1e-8)
         // usually too low, rather than too high, but might help with the 'infeasible QP' troubles.
         //     opt->enableRegularisation = qpOASES::BooleanType(true);
         opt_->enableNZCTests = qpOASES::BooleanType(true);
@@ -87,28 +91,23 @@ std::shared_ptr<qpOASES::SymmetricMatrix> SolveQuadraticProgram::get_qpoases_hes
     // std::cout << "SolveQuadraticProgram::get_qpoases_hessian: sizeof subproblem.num_qp_constraints: " << sizeof(subproblem.num_qp_constraints_);
     // std::cout << "; sizeof num_qp_con: " << sizeof(num_qp_con) << std::endl;
     
+    assert(hessian != NULL);
     int num_qp_var = (int)subproblem.num_qp_variables_;
     
-    //qpoases_hessian_diag_info_ = std::shared_ptr<int>(new int[num_qp_var]);
-    //qpoases_hessian_diag_info_.resize(num_qp_var);
-    //int current_diag=0, current_nnz=0;
-    // for (size_t current_column=0; current_column<num_qp_var; ++current_column) {
-    //   for (current_nnz=hessian->get_col_start(current_column); current_nnz < hessian->get_col_start(current_column+1) && hessian->get_row_index(current_nnz) < current_column; ++current_nnz);
-    //   qpoases_hessian_diag_info_[ current_column ] = current_nnz;
-    //}
     std::shared_ptr<qpOASES::SymSparseMat> qpoases_hessian(new qpOASES::SymSparseMat(   
                                                                 num_qp_var, 
                                                                 num_qp_var, 
                                                                 (int*)(&hessian->get_row_indices()[0]),
                                                                 (int*)(&hessian->get_col_starts()[0]), 
                                                                 (double*)(&hessian->get_vals()[0])
-								//int*)qpoases_hessian_diag_info_[0]
                                                                     ));
+
     if (qpoases_hessian_diag_info_ != NULL)
       delete [] qpoases_hessian_diag_info_;
     qpoases_hessian_diag_info_ = qpoases_hessian->createDiagInfo();
+        
     return qpoases_hessian;
-    // return (new qpOASES::SymSparseMat(subproblem.num_qp_variables_, subproblem.num_qp_variables_, subproblem.num_qp_variables_, &hessian->data_[0]));
+    
 }
 std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQOQuadraticSubproblem &subproblem, std::shared_ptr<matrix_base_class> jacobian) {
     // std::shared_ptr<dense_matrix> attempt_dense = std::dynamic_pointer_cast< dense_matrix  >(nlp_eq_jacobian);
@@ -148,7 +147,7 @@ std::shared_ptr<qpOASES::Matrix> SolveQuadraticProgram::get_qpoases_jacobian(iSQ
 }
 
 // DENSE quadratic subproblem solver:
-iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) {
+iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem, const iSQOIterate &iterate) {
 	int nWSR = 50000;
     if (!first_ && !last_successful_ && backup_!= NULL) {
         restore_qp_state();
@@ -175,7 +174,7 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
                 assert(retval == 0);
                 // initial_bounds.setupAllFree();
                 initial_bounds_->setupAllFree();
-                for (int variable_index=(int)(nlp_->num_primal()); variable_index < (int)(nlp_->num_primal() + 2*nlp_->num_dual()); ++variable_index)
+                for (int variable_index=(int)(nlp_->num_primal()); variable_index < (int)(nlp_->num_primal() + 2*nlp_->num_dual_eq() + nlp_->num_dual_ieq()); ++variable_index)
                     initial_bounds_->setStatus(variable_index, qpOASES::ST_LOWER);
                 // int num_qp_con = (int)subproblem.num_qp_variables_;
                 
@@ -188,15 +187,16 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
                 // for (int constraint_index=0; constraint_index < (int)(nlp_->num_dual()); ++constraint_index)
                     // initial_constraints->setType(constraint_index, qpOASES::ST_EQUALITY);
 
-		std::shared_ptr<sparse_matrix> identity_for_hessian = std::shared_ptr<sparse_matrix>(new sparse_matrix(nlp_->num_primal() + 2*nlp_->num_dual(), +1.0));
+        // std::shared_ptr<sparse_matrix> identity_for_hessian = std::shared_ptr<sparse_matrix>(new sparse_matrix(nlp_->num_primal() + 2*nlp_->num_dual(), +1.0));
+        // std::shared_ptr<sparse_matrix> identity_for_hessian = std::shared_ptr<sparse_matrix>(sparse_matrix::diagonal_matrix(nlp_->num_primal() + 2*nlp_->num_dual(),nlp_->num_primal() + 2*nlp_->num_dual(), +1.0));
                 //qpOASES::SymSparseMat *
-		qpoases_identity_for_hessian_ = std::shared_ptr<qpOASES::SymSparseMat>(new qpOASES::SymSparseMat(   
-                                                                            num_qp_var, 
-                                                                            num_qp_var, 
-                                                                            (int*)(&identity_for_hessian->get_row_indices()[0]),
-                                                                            (int*)(&identity_for_hessian->get_col_starts()[0]), 
-                                                                            (double*)(&identity_for_hessian->get_vals()[0])
-                                                                                ));
+        // qpoases_identity_for_hessian_ = std::shared_ptr<qpOASES::SymSparseMat>(new qpOASES::SymSparseMat(   
+        //                                                                             num_qp_var, 
+        //                                                                             num_qp_var, 
+        //                                                                             (int*)(&identity_for_hessian->get_row_indices()[0]),
+        //                                                                             (int*)(&identity_for_hessian->get_col_starts()[0]), 
+        //                                                                             (double*)(&identity_for_hessian->get_vals()[0])
+        //                                                                                 ));
 
         // std::cout << "QPOASES INIT CALL:" << std::endl;
         // ret = example_->init( qpoases_identity_for_hessian,
@@ -250,12 +250,14 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem) 
 							 nWSR,
 							 0);
 	}
-	return operator_finish(subproblem, nWSR, ret);
+	return operator_finish(subproblem, iterate, nWSR, ret);
 }
+
+static int solve_index=0;
 
 void SolveQuadraticProgram::operator_setup() {
 }
-iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &subproblem, int nWSR, qpOASES::returnValue ret) {
+iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &subproblem, const iSQOIterate &iterate, int nWSR, qpOASES::returnValue ret) {
 	std::cerr.flush();
 	std::cout.flush();
     
@@ -305,6 +307,13 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	std::vector<double> yOpt(nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual());
 	example_->getDualSolution( &yOpt[0] );				
 
+    // for (size_t variable_dual_index=0; variable_dual_index < nlp_->num_primal(); ++variable_dual_index) {
+    //     if (yOpt[variable_dual_index] != 0) {
+    //         last_successful_ = false;
+    //         step.set_status( 9000 );
+    //     }
+    // }    
+    
 	// to get eq con multipliers, read past NLP & slack variables:
 	for (size_t dual_eq_index=0; dual_eq_index<nlp_->num_dual_eq(); ++dual_eq_index) {
 		step.set_dual_eq_value(dual_eq_index, -yOpt[nlp_->num_primal() + 2*(nlp_->num_dual()) + dual_eq_index]);
@@ -314,14 +323,26 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
         step.set_dual_ieq_value(dual_ieq_index, -yOpt[nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual_eq() + dual_ieq_index]);
 	}
     
+    qpOASES::SolutionAnalysis sa;
+    
+    qpOASES::real_t violation;
+    sa.getMaxKKTviolation(example_.get(), violation);
+    ResidualFunction residual(*control_, *nlp_);
+    
+    std::stringstream subproblem_filename;
+    subproblem_filename << "subproblem_" << solve_index << ".m";
+    std::ofstream subproblem_output(subproblem_filename.str());
+    subproblem_output << subproblem ;
     std::cout << "*** SEARCHABLE SOLUTION AND SUBPROBLEM " << std::endl
              // << "**** Iterate        : " << std::endl << iterate << std::endl
              << "**** Primal + Slacks: "<< primal_and_slack_values << std::endl
              << "**** Dual           : "<< yOpt << std::endl
              << "**** Step           : " << std::endl << step << std::endl
-             << "**** Subproblem     : "<<std::endl << subproblem << std::endl;
-
-
+             << "**** Subproblem     : " << solve_index << std::endl;
+    if (ret == 0)
+        std::cout << "**** Subproblem     : " << solve_index << "; ret: " << ret<< "; sa.getMaxKKTviolation(example_) = " << violation << "; residual: " << residual(iterate, subproblem, step)<< std::endl;
+    
+    ++solve_index;
 
 	bool PRINT=false;
 	if (PRINT) {

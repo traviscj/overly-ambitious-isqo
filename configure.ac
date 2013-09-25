@@ -12,10 +12,14 @@ AC_CONFIG_MACRO_DIR([m4])
 # Checks for programs.
 AC_LANG([C++])
 AC_PROG_CXX
-AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+AM_PROG_AR
 AC_PROG_MAKE_SET
 
+# check for C++11
+AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
+# 
+LT_INIT
 
 # Checks for libraries.
 AC_CHECK_LIB([blas], [dgemm_],[],AC_MSG_ERROR([Could not find blas!!]))
@@ -63,11 +67,6 @@ AX_CXX_CHECK_LIB([qpOASES_aw], [qpOASES::SparseMatrix], [], AC_MSG_ERROR([Could 
 # adding the amplsolver library (e.g. with static name 'amplsolver.a')
 ##########################################################################
 
-AC_CHECK_HEADER([asl.h],
-[],
-[AC_MSG_ERROR([required header file "asl.h" not found. (specify with --with-amplsolver= ?)])])
-
-
 # introduce the optional configure parameter for a non-standard install prefix of amplsolver
 AC_ARG_WITH([amplsolver],
     [AS_HELP_STRING([--with-amplsolver=prefix],
@@ -93,7 +92,9 @@ AC_SUBST([AM_LDFLAGS])
 
 
 # Checks for header files.
-
+#AC_CHECK_HEADER([asl.h],
+#[],
+#[AC_MSG_ERROR([required header file "asl.h" not found. (specify with --with-amplsolver= ?)])])
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
 AC_C_INLINE

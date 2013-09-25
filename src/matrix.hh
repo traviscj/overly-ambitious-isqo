@@ -43,7 +43,7 @@ public:
     //!
     //! \param num_rows the number of rows the 'null' sparse matrix has
     //! \param num_cols the number of columns the 'null' sparse matrix has
-    dense_matrix(std::size_t num_rows, std::size_t num_cols);
+    dense_matrix(std::size_t rows, std::size_t columns);
     
     // 
     //! \brief a 'relevant identity' dense matrix constructor
@@ -51,7 +51,8 @@ public:
     //! \param num_cols the number of columns the sparse matrix has
     //! \param relevant_variables specifies which rows of the identity to include.
     //! \param cur_sign value to assign the nonzero elements
-    dense_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign);
+    // dense_matrix(std::size_t rows, std::size_t columns, const std::vector<std::size_t> &relevant_variables, double cur_sign);
+    // dense_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign);
     
     //! \brief pure identity dense matrix constructor
     //! \param num_variables size of the matrix to be created
@@ -61,7 +62,10 @@ public:
     //!  - values_{I_n}: scalar*[1.0, 1.0, 1.0,...] (num_variables entries)
     //!  - row_indices_{I_n}: [0,1,2,...,num_variables-1] (num_variables entries)
     //!  - col_starts_{I_n}: [0,1,2,...,num_variables] (num_variables+1 entries)
-    dense_matrix(std::size_t num_variables, double scalar);
+    // dense_matrix(std::size_t rows, std::size_t columns, double scalar);
+    
+    // (std::size_t num_variables, double scalar);
+    static std::shared_ptr<dense_matrix> diagonal_matrix(std::size_t rows, std::size_t columns, double diagonal, std::vector<int> *selected_rows=NULL);
     
     void regularize(double hessian_shift, double last_shift) {
         // only allow regularization on square matrices.
@@ -96,20 +100,28 @@ inline std::ostream& operator<< (std::ostream& os, const dense_matrix& m) {
 //!
 class sparse_matrix : public matrix_base_class {
 public:
+    
+    sparse_matrix(std::size_t rows, std::size_t cols, std::size_t nonzeros);
+    
+    
     //! \brief create a 'null' sparse matrix
     //!
     //! \param num_rows the number of rows the 'null' sparse matrix has
     //! \param num_cols the number of columns the 'null' sparse matrix has
     //! \param num_nonzeros the number of nonzeros the matrix will have.
-    sparse_matrix(std::size_t num_rows, std::size_t num_cols, std::size_t num_nonzeros);
+    // static std::shared_ptr<sparse_matrix> sparse_null_matrix(std::size_t rows, std::size_t columns);
+    // Call with 
+    
     
     // 
-    //! \brief a 'relevant identity' sparse matrix constructor
+    //! \brief a diagonal_matrix sparse matrix constructor
     //!
     //! \param num_cols the number of columns the sparse matrix has
     //! \param relevant_variables specifies which rows of the identity to include.
     //! \param cur_sign value to assign the nonzero elements
-    sparse_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign);
+    // static std::shared_ptr<sparse_matrix> sparse_diagonal_matrix(std::size_t rows, std::size_t columns, double diagonal, std::vector<int> *selected_rows=NULL);
+    static std::shared_ptr<sparse_matrix> diagonal_matrix(std::size_t rows, std::size_t columns, double diagonal, std::vector<size_t> *selected_rows=NULL);
+    // sparse_matrix(std::size_t rows, std::size_t cols, std::vector<std::size_t> relevant_variables, double cur_sign);
     
     //! \brief pure identity sparse matrix constructor
     //! \param num_variables size of the matrix to be created
@@ -119,9 +131,9 @@ public:
     //!  - values_{I_n}: scalar*[1.0, 1.0, 1.0,...] (num_variables entries)
     //!  - row_indices_{I_n}: [0,1,2,...,num_variables-1] (num_variables entries)
     //!  - col_starts_{I_n}: [0,1,2,...,num_variables] (num_variables+1 entries)
-    sparse_matrix(std::size_t num_variables, double scalar);
+    // sparse_matrix(std::size_t rows, std::size_t cols, double scalar);
     
-    // ! \brief construct a sparse matrix from the bare column compressed format
+    // ! \brief construct a sparse matrix from the bare column compressed format -- disabled because it violates encapsulation
     // sparse_matrix(std::size_t num_rows, std::size_t num_cols, std::vector<double> values, std::vector<int> row_indices, std::vector<int> column_starts);
     
     
@@ -155,6 +167,7 @@ protected:
     std::vector<double> vals_;
     std::vector<int> row_indices_;
     std::vector<int> col_starts_;
+    
 };
 
 //! \brief print a sparse matrix

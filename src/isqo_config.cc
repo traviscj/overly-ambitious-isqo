@@ -5,11 +5,15 @@
 #include "isqo_config.hh"
 
 // TODO should be a singleton??
-iSQOControlPanel::iSQOControlPanel() {
-    hessian_shift_print_level = HSPL_NONE;
-    initial_penalty_parameter = 1e-1;
-    qp_print_level=QPL_NONE;
-    termination_tolerance=1e-6;
+iSQOControlPanel::iSQOControlPanel(std::string config_filename)
+     : 
+ hessian_shift_print_level(HSPL_NONE),
+ initial_penalty_parameter(1e-1),
+ qp_print_level(QPL_NONE),
+ termination_tolerance(1e-6),
+ map_hessian_shift_print_levels(),
+ map_qp_print_levels(),
+config_file_(config_filename) {
     
     // setup the maps from config strings -> *_t
     map_hessian_shift_print_levels["none"] = HSPL_NONE;
@@ -19,6 +23,8 @@ iSQOControlPanel::iSQOControlPanel() {
     map_qp_print_levels["medium"] = QPL_MEDIUM;
     map_qp_print_levels["high"] = QPL_HIGH;
     map_qp_print_levels["table"] = QPL_TABLE;
+    
+    // if(!)
 } 
 
 template <typename T, typename S>
@@ -31,19 +37,19 @@ void iSQOControlPanel::update_junk(std::istream &is, std::map<std::string, T> up
         std::cerr << "unknown " << "??? option specified: [" << scratch << "]."<< std::endl;
     }
 }
-void iSQOControlPanel::update_settings(std::istream &is) {
+void iSQOControlPanel::update_settings() {
     std::string identifier;
     // string scratch;
-    while (!is.eof()) {
-        is >> identifier;
+    while (config_file_.is_open() && !config_file_.eof()) {
+        config_file_ >> identifier;
         if (identifier.compare("hessian_shift_print_level:") == 0) {
-            update_junk(is, map_hessian_shift_print_levels, hessian_shift_print_level);
+            update_junk(config_file_, map_hessian_shift_print_levels, hessian_shift_print_level);
         } else if (identifier.compare("initial_penalty_parameter:") == 0) {
-            is >> initial_penalty_parameter;
+            config_file_ >> initial_penalty_parameter;
         } else if (identifier.compare("qp_print_level:") == 0) {
-            update_junk(is, map_qp_print_levels, qp_print_level);
+            update_junk(config_file_, map_qp_print_levels, qp_print_level);
         } else if (identifier.compare("termination_tolerance:") == 0) {
-            is >> termination_tolerance;
+            config_file_ >> termination_tolerance;
         } else {
             std::cerr << "undefined identifier in input file: [" << identifier << "]." << std::endl;
         }

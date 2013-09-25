@@ -15,11 +15,11 @@ enum qp_print_level_t {QPL_NONE, QPL_LOW, QPL_MEDIUM, QPL_HIGH, QPL_TABLE};
 class iSQOControlPanel {
 public:    
     // TODO should be a singleton??
-    iSQOControlPanel();
+    iSQOControlPanel(std::string config_filename);
     
     template <typename T, typename S>
     void update_junk(std::istream &is, std::map<std::string, T> update_map, S &value_to_update);
-    void update_settings(std::istream &is);
+    void update_settings();
     
     void print();
     hessian_shift_print_level_t get_hessian_shift_print_level();
@@ -35,6 +35,8 @@ private:
     
     std::map<std::string, hessian_shift_print_level_t> map_hessian_shift_print_levels;
     std::map<std::string, qp_print_level_t> map_qp_print_levels;
+    
+    std::ifstream config_file_;
 };
 
 

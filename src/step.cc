@@ -18,19 +18,19 @@ iSQOStep::iSQOStep(int number_primal, int number_dual_eq, int number_dual_ieq, i
 			dual_ieq_values_(num_dual_ieq_),
             pivots_(pivots),
 			status_(status),
-			serial(isqostep_serial++)
+			serial_(isqostep_serial++)
 	{
         // X("iSQOStep::iSQOStep()");
 	}
-iSQOStep::iSQOStep(const iSQOStep& other) : serial(isqostep_serial++),
-	num_primal_(other.num_primal_),
+iSQOStep::iSQOStep(const iSQOStep& other) : num_primal_(other.num_primal_),
 	num_dual_eq_(other.num_dual_eq_),
 	num_dual_ieq_(other.num_dual_ieq_),
 	primal_values_(num_primal_),
 	dual_eq_values_(num_dual_eq_),
 	dual_ieq_values_(num_dual_ieq_),
     pivots_(other.pivots_),
-    status_(other.status_)
+    status_(other.status_),
+    serial_(isqostep_serial++)
 	{
     // X("iSQOStep::iSQOStep(const iSQOStep&)");
 	// cerr << "copy being made!" << std::endl;

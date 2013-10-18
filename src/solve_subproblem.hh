@@ -6,8 +6,8 @@
 #include "subproblem.hh"
 #include "nlp_state.hh"
 
-// #define QPOASES_PROBLEM qpOASES::SQProblem
-#define QPOASES_PROBLEM qpOASES::SQProblemSchur
+#define QPOASES_PROBLEM qpOASES::SQProblem
+// #define QPOASES_PROBLEM qpOASES::SQProblemSchur
 
 //! \brief class which returns a function for actually solving QPs with qpOASES
 class SolveQuadraticProgram : public FunctionWithNLPState {

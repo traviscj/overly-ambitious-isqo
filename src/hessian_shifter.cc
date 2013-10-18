@@ -65,10 +65,11 @@ iSQOStep HessianShifter::operator()(const iSQOIterate &iterate, iSQOQuadraticSub
 	if (PRINT) std::cout << "required: " << (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm())) << std::endl;
     shifter_info << "**** Solve: "<< current_regularization_steps << "; Pivots: " << return_step.get_pivots() << "; Status: " << return_step.get_status() << " xxx: " << (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm()))<< std::endl;
 	// std::vector<double> hessian_step = subproblem.hessian_.multiply()
+    double EPS = 1e-12;
 	while (        (return_step.get_status() != 0) 
                 // || (return_step.x_norm() > 1e9) 
                 || (.5*total < (1e-8*return_step.x_norm()*return_step.x_norm()))
-                || linear_model_reduction_(iterate, return_step) < 0
+                || linear_model_reduction_(iterate, return_step) < -EPS
                 ) {
         double last_shift=current_shift;
 		if (current_regularization_steps == 0) {

@@ -26,3 +26,22 @@ I'd like to have some object where I refer to fields directly--I want compile ti
 But that's actually a problem--now we need a different type of control panel for each different shitty class or option, or a mega-control-panel that knows about all types. :-(
 
 For now: engineering pragmatism. Implement as a mega-control-panel, sort out later.
+* tests, for someday
+** can we do hs1-20?
+** matrix multiply tests
+* residual
+I think I finally figured out the bug.
+
+The algorithm assumes it has primal/dual solutions from the problem
+min .5*d'*W*d + g'*d  s.t. A*d = c, Abar*d <= cbar
+but really has solutions to
+min .5*d'*W*d + g'*d  s.t. A*d = c, Abar*d + s = cbar
+
+So the multipliers we get back think the constraint is active but really, it might not be.
+
+- 
+
+* todo
+** autoreconf -fvi doesn't work on linux.
+** ASL weirdness
+** 

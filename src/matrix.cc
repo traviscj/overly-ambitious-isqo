@@ -145,12 +145,14 @@ std::shared_ptr<sparse_matrix> sparse_matrix::diagonal_matrix(std::size_t rows, 
         for (int i=0; i<columns; i++) (*selected_rows)[i] = i;
     }
     
+    assert(selected_rows != NULL);
+    // std::cout << "selected rows: " << (*selected_rows) << std::endl;
     // std::cout << "creating a sparse matrix for ::diag, nnz: " << number_nonzeros << std::endl;
     std::shared_ptr<sparse_matrix> retval(new sparse_matrix(rows, columns, number_nonzeros));
     
     std::size_t current_relevant_index=0;
     for (std::size_t total_variable_index=0; total_variable_index < retval->num_columns(); ++total_variable_index) {
-        if (total_variable_index == (*selected_rows)[current_relevant_index]) {
+        if (selected_rows->size() > current_relevant_index && total_variable_index == (*selected_rows)[current_relevant_index]) {
             retval->vals_[current_relevant_index] = diagonal;
             retval->row_indices_[current_relevant_index] = current_relevant_index; 
             ++current_relevant_index;

@@ -467,7 +467,7 @@ void sparse_matrix::regularize(double hessian_shift, double last_shift) {
 //             }
 //         }
 //         // last_hessian_shift_ = hessian_shift;
-    std::shared_ptr<sparse_matrix> scaled_identity(new sparse_matrix(num_rows(), num_columns(), hessian_shift - last_shift));
+    std::shared_ptr<sparse_matrix> scaled_identity(sparse_matrix::diagonal_matrix(num_rows(), num_columns(), hessian_shift - last_shift));
     // sparse_matrix sib(num_columns(), hessian_shift - last_shift);
      // *scaled_identity_nosmart = scaled_identity.get();
     

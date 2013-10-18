@@ -9,7 +9,7 @@ ResidualFunction::ResidualFunction(iSQOControlPanel &control, Nlp &nlp) : Functi
 }
 double ResidualFunction::resid_helper(const iSQOIterate &iterate, const std::vector<double> &stationarity, const std::vector<double> &constraint_eq_values, const std::vector<double> &constraint_ieq_values, const std::vector<double> &constraint_eq_dual_values, const std::vector<double> &constraint_ieq_dual_values) const {
 	bool PRINT=true;
-    std::cout << "******* resid_helper" << std::endl;
+    // std::cout << "******* resid_helper" << std::endl;
 	std::vector<double> rho(stationarity.size() + 2*constraint_eq_values.size() + 2*constraint_ieq_values.size());
 	
 	std::shared_ptr<matrix_base_class> jac_ce = nlp_->constraints_equality_jacobian(iterate);
@@ -28,11 +28,13 @@ double ResidualFunction::resid_helper(const iSQOIterate &iterate, const std::vec
 	
 	for (size_t stationarity_index=0; stationarity_index < stationarity.size(); ++stationarity_index) {
 		rho[rho_index] = stationarity[stationarity_index] + eq_jacobian_trans_times_mults[stationarity_index] + ieq_jacobian_trans_times_mults[stationarity_index];
-        std::cout << "******** Stationarity, i=" << stationarity_index << ": " << rho[rho_index] << std::endl;
+        if (PRINT) std::cout << "******** Stationarity, i=" << stationarity_index << ": " << rho[rho_index] << std::endl;
 		++rho_index;
 	}
     if (PRINT) std::cout << "                                                                              sta pre: " << stationarity << std::endl;
     
+    std::cout << " constraint_eq_values: " << constraint_eq_values  << "\t" <<  constraint_eq_dual_values << std::endl;
+    std::cout << "constraint_ieq_values: " << constraint_ieq_values << "\t" << constraint_ieq_dual_values << std::endl;
 	for (size_t constraint_eq_index=0; constraint_eq_index < nlp_->num_dual_eq(); ++constraint_eq_index) {        
 		rho[rho_index] = fmin(bracket_plus(constraint_eq_values[constraint_eq_index]), 1.0 - eq_signflip*constraint_eq_dual_values[constraint_eq_index]);
 		++rho_index;
@@ -51,18 +53,18 @@ double ResidualFunction::resid_helper(const iSQOIterate &iterate, const std::vec
 		++rho_index;
 		
 	}
-    std::cout << "******** Full Rho: " << rho << std::endl;
+    if (PRINT) std::cout << "******** Full Rho: " << rho << std::endl;
     if (PRINT) std::cout << "rho(" << iterate.get_penalty_parameter() << "): " << rho << std::endl;
 	double total = 0.0;
 	for (size_t rho_index = 0; rho_index < rho.size(); ++rho_index)
 		total += rho[rho_index]*rho[rho_index];
-    std::cout << "******** ||Rho||_2: " << sqrt(total) << std::endl;
+    if (PRINT) std::cout << "******** ||Rho||_2: " << sqrt(total) << std::endl;
 	
 	return sqrt(total);
 }
 double ResidualFunction::operator()(const iSQOIterate &iterate) const {
-    std::cout << "******* ResidualFunction::operator()(const iSQOIterate &iterate) const {" << std::endl;
-	bool PRINT=true;
+    // std::cout << "******* ResidualFunction::operator()(const iSQOIterate &iterate) const {" << std::endl;
+	bool PRINT=false;
     if (PRINT) std::cout << "OPERATOR FOR RESID FUNC: " << iterate.get_penalty_parameter() << std::endl;
 	
 	std::vector<double> stationarity = nlp_->objective_gradient(iterate);
@@ -95,12 +97,12 @@ double ResidualFunction::operator()(const iSQOIterate &iterate) const {
 	return resid_helper(iterate, stationarity, eq_con_values, ieq_con_values, dual_eq_values, dual_ieq_values);
 }
 double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step) const {
-        std::cout << "******* ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step" << std::endl;
+    // std::cout << "******* ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadraticSubproblem &subproblem, const iSQOStep &step" << std::endl;
 	bool PRINT=true;
     
 	if (PRINT) std::cout << "===== START OF STEP RESIDUAL CALCULATION" << std::endl;
 
-    std::cout << "step: " << step << std::endl;
+    // std::cout << "step: " << step << std::endl;
 
 	std::vector<double> stationarity = nlp_->objective_gradient(iterate);	
 	std::shared_ptr<matrix_base_class> hessian = nlp_->lagrangian_hessian(iterate);
@@ -114,8 +116,12 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
 	
 	std::shared_ptr<matrix_base_class> jacobian_eq = nlp_->constraints_equality_jacobian(iterate);
 	std::vector<double> con_values_eq = nlp_->constraints_equality(iterate);
+    if (PRINT) std::cout << "con_values_eq 0: " << con_values_eq << std::endl;
+    if (PRINT) std::cout << "jacobian_eq: " << jacobian_eq << std::endl;
+    if (PRINT) std::cout << "step.get_primal_values(): " << step.get_primal_values() << std::endl;
 	// std::cout << "about to do j eq" << std::endl;
 	std::vector<double> linear_step_eq = jacobian_eq->multiply(step.get_primal_values());
+    if (PRINT) std::cout << "linear_step_eq 0: " << linear_step_eq << std::endl;
 	
 	// std::cout << "about to do j ieq" << std::endl;
 	std::shared_ptr<matrix_base_class> jacobian_ieq = nlp_->constraints_inequality_jacobian(iterate);
@@ -127,10 +133,14 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
     if (PRINT) std::cout << "linear_step_ieq 0: " << linear_step_ieq << std::endl;
 
 	for (size_t eq_con_index=0; eq_con_index< nlp_->num_dual_eq(); ++eq_con_index) {
+        std::cout << "equality copy. con_values_eq[eq_con_index=" << eq_con_index << "]: " << con_values_eq[eq_con_index] << " + "<< linear_step_eq[eq_con_index];
 		con_values_eq[eq_con_index] += linear_step_eq[eq_con_index];
+        std::cout << " = " << con_values_eq[eq_con_index] << std::endl;
 	}
 	for (size_t ieq_con_index=0; ieq_con_index< nlp_->num_dual_ieq(); ++ieq_con_index) {
+        std::cout << "inequality copy. con_values_ieq[ieq_con_index=" << ieq_con_index << "]: " << con_values_ieq[ieq_con_index] << " + "<< linear_step_ieq[ieq_con_index];
 		con_values_ieq[ieq_con_index] += linear_step_ieq[ieq_con_index];
+        std::cout << " = " << con_values_ieq[ieq_con_index] << std::endl;
 	}
     if (PRINT) std::cout << "con_values_ieq 1: " << con_values_ieq << std::endl;
 	if (PRINT) {
@@ -154,6 +164,9 @@ double ResidualFunction::operator()(const iSQOIterate &iterate, const iSQOQuadra
     dual_ieq_values.assign(step.get_dual_ieq_values().begin(), step.get_dual_ieq_values().end());
     
     double retval = resid_helper(iterate, stationarity, con_values_eq, con_values_ieq, dual_eq_values, dual_ieq_values);
+    if (retval > 1e-5) {
+        std::cerr << "WHOA THERE, SLOW DOWN, BIG RESIDUAL: " << retval << std::endl;
+    }
     if (PRINT) std::cout << "===== END OF STEP RESIDUAL CALCULATION" << std::endl;
 	return retval;
 }

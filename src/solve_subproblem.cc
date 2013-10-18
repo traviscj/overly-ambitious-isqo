@@ -25,22 +25,15 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
         int num_qp_var = (int)(nlp_->num_primal() + 2*nlp_->num_dual_eq() + nlp_->num_dual_ieq());
         
         example_ = std::shared_ptr<QPOASES_PROBLEM>(new QPOASES_PROBLEM(num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN));
-        // example_ = new (num_qp_var, num_qp_con, qpOASES::HST_UNKNOWN);
         
         opt_ = std::shared_ptr<qpOASES::Options>(new qpOASES::Options);
-        // 
-        //     // opt.terminationTolerance = 1e-6;
-        // opt->setToReliable();
         opt_->enableWorkingSetRepair = qpOASES::BooleanType(true);
         opt_->enableEqualities = qpOASES::BooleanType(true);
-        // opt_->enableFarBounds = qpOASES::BooleanType(false);
         opt_->enableFullLITests = qpOASES::BooleanType(true);
         opt_->epsLITests = 1e-8; // maybe play with this later. (maybe 1e-8)
         // usually too low, rather than too high, but might help with the 'infeasible QP' troubles.
         //     opt->enableRegularisation = qpOASES::BooleanType(true);
         opt_->enableNZCTests = qpOASES::BooleanType(true);
-        // opt_->initialStatusBounds = qpOASES::ST_INACTIVE;
-        // opt_->initialStatusBounds = qpOASES::ST_LOWER;
         switch (control_->get_qp_print_level()) {
             case QPL_NONE: opt_->printLevel = qpOASES::PL_NONE;break;
             case QPL_LOW: opt_->printLevel = qpOASES::PL_LOW;break;
@@ -48,16 +41,7 @@ SolveQuadraticProgram::SolveQuadraticProgram(iSQOControlPanel &control, Nlp &nlp
             case QPL_HIGH: opt_->printLevel = qpOASES::PL_HIGH;break;
             case QPL_TABLE: opt_->printLevel = qpOASES::PL_TABULAR;break;
         }
-        
-        // opt_->printLevel = qpOASES::PL_MEDIUM;
-        // opt_->printLevel = qpOASES::PL_TABULAR;
-    
-        //     // opt->numRegularisationSteps = 200;
-        //     // std::cout << std::endl << "max reg steps: " <<  opt.numRegularisationSteps << std::endl;
         example_->setOptions(*opt_);
-        // example_->setPrintLevel(qpOASES::PL_NONE);
-            // example_->setPrintLevel(qpOASES::PL_MEDIUM);
-        
     }
 
 SolveQuadraticProgram::~SolveQuadraticProgram() {
@@ -184,8 +168,8 @@ iSQOStep SolveQuadraticProgram::operator()(iSQOQuadraticSubproblem &subproblem, 
                 retval = example_->getConstraints(*initial_constraints_);
                 assert(retval == 0);
                 initial_constraints_->setupAllUpper();
-                // for (int constraint_index=0; constraint_index < (int)(nlp_->num_dual()); ++constraint_index)
-                    // initial_constraints->setType(constraint_index, qpOASES::ST_EQUALITY);
+                for (int constraint_index=0; constraint_index < (int)(nlp_->num_dual_eq()); ++constraint_index)
+                    initial_constraints->setType(constraint_index, qpOASES::ST_EQUALITY);
 
         // std::shared_ptr<sparse_matrix> identity_for_hessian = std::shared_ptr<sparse_matrix>(new sparse_matrix(nlp_->num_primal() + 2*nlp_->num_dual(), +1.0));
         // std::shared_ptr<sparse_matrix> identity_for_hessian = std::shared_ptr<sparse_matrix>(sparse_matrix::diagonal_matrix(nlp_->num_primal() + 2*nlp_->num_dual(),nlp_->num_primal() + 2*nlp_->num_dual(), +1.0));
@@ -291,7 +275,7 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	// std::cout << "address of step: " << &step << std::endl;
 
 	// full_primal needs to hold primal variables and all slack variables
-	std::vector<double> primal_and_slack_values(nlp_->num_primal() + 2*nlp_->num_dual());
+	std::vector<double> primal_and_slack_values(subproblem.num_primal());
 	example_->getPrimalSolution( &primal_and_slack_values[0] );
 	for (size_t primal_index=0; primal_index<nlp_->num_primal(); ++primal_index)
 		step.set_primal_value(primal_index, primal_and_slack_values[primal_index]);
@@ -304,23 +288,17 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
 	//		-- iterate.num_dual_eq_
 	//		-- iterate.num_dual_ieq_
 	// so in total:          VARIABLE MULTIPLIERS   SLACK MULTIPLIERS    CONSTRAINT MULTIPLIERS
-	std::vector<double> yOpt(nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual());
+	std::vector<double> yOpt(subproblem.num_primal() + subproblem.num_dual());
 	example_->getDualSolution( &yOpt[0] );				
-
-    // for (size_t variable_dual_index=0; variable_dual_index < nlp_->num_primal(); ++variable_dual_index) {
-    //     if (yOpt[variable_dual_index] != 0) {
-    //         last_successful_ = false;
-    //         step.set_status( 9000 );
-    //     }
-    // }    
     
 	// to get eq con multipliers, read past NLP & slack variables:
 	for (size_t dual_eq_index=0; dual_eq_index<nlp_->num_dual_eq(); ++dual_eq_index) {
-		step.set_dual_eq_value(dual_eq_index, -yOpt[nlp_->num_primal() + 2*(nlp_->num_dual()) + dual_eq_index]);
+        // TODO decide if this is the right sign??
+		step.set_dual_eq_value(dual_eq_index, -yOpt[subproblem.num_primal() + dual_eq_index]);
 	}
 	// to get inequality constraint multipliers, read past NLP & slack variables and eq con multipliers:
 	for (size_t dual_ieq_index=0; dual_ieq_index<nlp_->num_dual_ieq(); ++dual_ieq_index) {
-        step.set_dual_ieq_value(dual_ieq_index, -yOpt[nlp_->num_primal() + 2*(nlp_->num_dual()) + nlp_->num_dual_eq() + dual_ieq_index]);
+        step.set_dual_ieq_value(dual_ieq_index, -yOpt[subproblem.num_primal() + nlp_->num_dual_eq() + dual_ieq_index]);
 	}
     
     qpOASES::SolutionAnalysis sa;
@@ -333,14 +311,17 @@ iSQOStep SolveQuadraticProgram::operator_finish(const iSQOQuadraticSubproblem &s
     subproblem_filename << "subproblem_" << solve_index << ".m";
     std::ofstream subproblem_output(subproblem_filename.str());
     subproblem_output << subproblem ;
+    subproblem_output << "qpOASES_d_" << solve_index << " = " << primal_and_slack_values << ";" << std::endl;
+    subproblem_output << "qpOASES_lambda_" << solve_index << " = " << yOpt << ";" << std::endl;
     std::cout << "*** SEARCHABLE SOLUTION AND SUBPROBLEM " << std::endl
              // << "**** Iterate        : " << std::endl << iterate << std::endl
              << "**** Primal + Slacks: "<< primal_and_slack_values << std::endl
              << "**** Dual           : "<< yOpt << std::endl
-             << "**** Step           : " << std::endl << step << std::endl
-             << "**** Subproblem     : " << solve_index << std::endl;
+             << "**** Step           : " << std::endl << step << std::endl;
     if (ret == 0)
         std::cout << "**** Subproblem     : " << solve_index << "; ret: " << ret<< "; sa.getMaxKKTviolation(example_) = " << violation << "; residual: " << residual(iterate, subproblem, step)<< std::endl;
+    else
+        std::cout << "**** Subproblem     : " << solve_index << "; ret: " << ret<< "; sa.getMaxKKTviolation(example_) = " << violation << "; residual: (skipped) ; error: " << qpOASES::getGlobalMessageHandler()->getErrorCodeMessage( ret ) << std::endl;
     
     ++solve_index;
 

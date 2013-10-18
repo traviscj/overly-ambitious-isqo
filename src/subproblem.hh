@@ -31,8 +31,8 @@ public:
     }
 	void inc_regularization(double hessian_shift, double last_shift);
     
-    size_t num_primal() { return num_qp_variables_; }
-    size_t num_dual() { return num_qp_constraints_; }
+    size_t num_primal() const { return num_qp_variables_; }
+    size_t num_dual() const { return num_qp_constraints_; }
     
 	std::ostream &print(std::ostream &os) const;
 	size_t num_qp_variables_, num_qp_constraints_;

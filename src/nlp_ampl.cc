@@ -412,7 +412,7 @@ void SparseAmplNlp::jacobian_update(const iSQOIterate &iterate) {
         ampl_full_jacobian->set_col_start(col_index+1, accumulate_num_nnz);
     }
     
-    if (PRINT_) std::cout << "ampl_full_jacobian: " << ampl_full_jacobian << std::endl;    
+    if (PRINT_) std::cout << "ampl_full_jacobian: " << ampl_full_jacobian << std::endl;
     if (PRINT_) std::cout << "=================================================== (have full AMPL jacobian now.)" << std::endl;
     
     eq_jacobian_ = submatrix(ampl_full_jacobian, equality_constraints_, num_eq_nnz, +1.0);
@@ -427,8 +427,6 @@ void SparseAmplNlp::jacobian_update(const iSQOIterate &iterate) {
     std::shared_ptr<sparse_matrix> constraints_ieq = ieq_lower_jacobian->vertical(ieq_upper_jacobian);
     if (PRINT_) std::cout << constraints_ieq << std::endl;
 
-    std::cout << "variable_bound_lower_: " << variable_bound_lower_ << std::endl;
-    std::cout << "variable_bound_upper_: " << variable_bound_upper_ << std::endl;
     std::shared_ptr<sparse_matrix> lower_var(sparse_matrix::diagonal_matrix(variable_bound_lower_.size(), n_var, -1.0, &variable_bound_lower_));
     std::shared_ptr<sparse_matrix> upper_var(sparse_matrix::diagonal_matrix(variable_bound_upper_.size(), n_var, +1.0, &variable_bound_upper_));
     // std::shared_ptr<sparse_matrix> upper_var(new sparse_matrix(n_var, variable_bound_upper_, +1.0));

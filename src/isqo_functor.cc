@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
         
         double val = linear_reduction(penalty_iterate,penalty_step);
         std::cout << "*** linear_reduction(penalty_iterate,penalty_step): " << val << std::endl;
-        assert(val>=0);
+        assert(val>=-1e-12); // need val to be... mostly positive.
 		if (val >= linear_decrease_threshold*constraint_violation(penalty_iterate) + 10*machine_precision*val) {
 			//////////////////////////
 			// ALGORITHM A // STEP 3a

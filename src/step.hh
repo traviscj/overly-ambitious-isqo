@@ -8,7 +8,7 @@
 //! \brief class for storing iSQO steps (primal values and one set of dual values)
 class iSQOStep {
 public:
-	iSQOStep(int number_primal, int number_dual_eq, int number_dual_ieq, int status);
+	iSQOStep(int number_primal, int number_dual_eq, int number_dual_ieq, int status, int pivots);
 	iSQOStep(const iSQOStep& other);
 	const iSQOStep *operator=(const iSQOStep& other);
 	
@@ -28,8 +28,12 @@ public:
     const std::vector<double> &get_dual_eq_values() const { return dual_eq_values_; }
     const std::vector<double> &get_dual_ieq_values() const { return dual_ieq_values_; }
     
-    
+
+    int get_pivots() const { return pivots_; }    
+    void set_pivots(int num_pivots) { pivots_ = num_pivots; }
     int get_status() const { return status_; }
+    void set_status(int status) { status_ = status; }
+    
     int num_primal() const { return num_primal_; }
     int num_dual_eq() const { return num_dual_eq_; }
     int num_dual_ieq() const { return num_dual_ieq_; }
@@ -43,10 +47,11 @@ protected:
 	std::vector<double> primal_values_;
 	std::vector<double> dual_eq_values_;
 	std::vector<double> dual_ieq_values_;
-	
+
+	int pivots_;	
 	int status_;
 	
-	const int serial;
+	const int serial_;
 private:
 };
 

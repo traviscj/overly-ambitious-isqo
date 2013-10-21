@@ -1,9 +1,9 @@
 
 #include "penalty_function.hh"
 
-PenaltyFunction::PenaltyFunction(Nlp &nlp) : 
-		FunctionWithNLPState(nlp), 
-		constraint_violation_func_(nlp)
+PenaltyFunction::PenaltyFunction(iSQOControlPanel &control, Nlp &nlp) : 
+		FunctionWithNLPState(control, nlp), 
+		constraint_violation_func_(control, nlp)
 		{
 	// std::cout << "-- Initializing penalty function." << std::endl;
 }

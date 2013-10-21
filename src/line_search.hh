@@ -11,7 +11,7 @@
 //! \brief class returning a function to perform line search
 class LineSearchFunction : public FunctionWithNLPState {
 public:
-	LineSearchFunction(Nlp &nlp);
+	LineSearchFunction(iSQOControlPanel &control, Nlp &nlp);
 	double operator()(const iSQOIterate &iterate, const iSQOStep &step);
 private:
 protected:

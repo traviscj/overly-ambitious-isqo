@@ -2,6 +2,7 @@
 #define SUBPROBLEM_HH_FOZWW1AF
 
 #include <iostream>
+#include <map>
 #include <vector>
 
 #include "nlp.hh"
@@ -23,15 +24,21 @@
 
 class iSQOQuadraticSubproblem : public FunctionWithNLPState {
 public:
-	iSQOQuadraticSubproblem(Nlp &nlp, const iSQOIterate &iterate);
-
+	iSQOQuadraticSubproblem(iSQOControlPanel &control, Nlp &nlp, const iSQOIterate &iterate);
+    ~iSQOQuadraticSubproblem() {
+        // std::cout << "I had " << prior_constructed_hessians_.size() << " items in the hessian cache.\n"
+            // << " & " << prior_constructed_jacobians_.size() << " items in the jacobian cache.\n" << std::endl;
+    }
 	void inc_regularization(double hessian_shift, double last_shift);
+    
+    size_t num_primal() const { return num_qp_variables_; }
+    size_t num_dual() const { return num_qp_constraints_; }
     
 	std::ostream &print(std::ostream &os) const;
 	size_t num_qp_variables_, num_qp_constraints_;
 	size_t num_nlp_variables_, num_nlp_constraints_eq_, num_nlp_constraints_ieq_;
 	std::shared_ptr<matrix_base_class> hessian_;
-	bool first_shift_;
+    // bool first_shift_;
 	std::vector<double> unshifted_hessian_diagonal_;
 	std::shared_ptr<matrix_base_class> jacobian_;
 	std::vector<double> gradient_;
@@ -44,6 +51,7 @@ public:
 	std::shared_ptr<matrix_base_class> nlp_ieq_jacobian_;
 	std::vector<double> nlp_objective_gradient_;
 
+    const iSQOIterate *iterate_pointer;
 	
 private:
 protected:
@@ -53,7 +61,9 @@ protected:
     void setup_matrix_data(const iSQOIterate &iterate, std::shared_ptr<sparse_matrix> nlp_eq_jacobian, std::shared_ptr<sparse_matrix> nlp_ieq_jacobian, std::shared_ptr<sparse_matrix> nlp_hessian);
     
 
-    
+    std::map<int, std::shared_ptr<matrix_base_class> > prior_constructed_hessians_;
+    std::map<int, std::shared_ptr<matrix_base_class> > prior_constructed_jacobians_;
+    // static std::map<int, std::shared_ptr<matrix_base_class> > prior_constructed_hessians;
 };
 
 //! \brief print a subproblem

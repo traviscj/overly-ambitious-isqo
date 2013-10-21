@@ -25,7 +25,7 @@ public:
     //! \brief construct a ConstraintViolationFunction
     //!
     //! \param nlp an Nlp object capable of returning constraint values and jacobians.
-	ConstraintViolationFunction(Nlp &nlp);
+	ConstraintViolationFunction(iSQOControlPanel &control, Nlp &nlp);
     
     //! \brief evaluate the constraint violation function at a particular iterate
 	double operator()(const iSQOIterate &iterate) const;

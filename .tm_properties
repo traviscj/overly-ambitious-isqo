@@ -1,3 +1,1 @@
-TM_GXX=g++
-TM_CXX_FLAGS=-I/Users/traviscj/optimization/qpOASES/include -L/Users/traviscj/optimization/qpOASES/src /Users/traviscj/optimization/qpOASES/src/libqpOASES.a -lqpOASES /Users/traviscj/optimization/qpOASES/src/libqpOASESextras.a -lqpOASESextras  -L/usr/local/Cellar/gfortran/4.8.1/gfortran/lib -lgfortran -llapack -lblas
-# -I/Users/traviscj/LocalPrograms/qpOASES-aw/include -L/Users/traviscj/LocalPrograms/qpOASES-aw/src -lqpOASES -lqpOASESextras -lgfortran
+

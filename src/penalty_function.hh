@@ -13,7 +13,7 @@
 //! \f[ \phi(x, \mu) := \mu f(x) + \| c_{\mathcal{E}}(x) \|_1 + \| \left[ c_{\mathcal{I}}(x) \right]^+ \|_1 \f]
 class PenaltyFunction : public FunctionWithNLPState{
 public:
-	PenaltyFunction(Nlp &nlp);
+	PenaltyFunction(iSQOControlPanel &control, Nlp &nlp);
 	double operator()(const iSQOIterate &iterate) const;
 protected:
 	ConstraintViolationFunction constraint_violation_func_;

@@ -1,7 +1,12 @@
 overly-ambitious-isqo
 =====================
 
-a c++ implementation of the isqo algorithm
+a c++ implementation of the [isqo algorithm](http://www.optimization-online.org/DB_HTML/2013/05/3855.html).
+
+Limitations
+-----------
+* Currently only the "exact algorithm" is implemented.
+* You need to install AMPL and qpOASES.
 
 Instructions
 ------------

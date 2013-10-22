@@ -7,7 +7,7 @@
 #include "linear_model.hh"
 #include "utilities.hh"
 
-LinearModelFunction::LinearModelFunction(Nlp &nlp) : FunctionWithNLPState(nlp), constraint_violation_func_(nlp) {
+LinearModelFunction::LinearModelFunction(iSQOControlPanel &control, Nlp &nlp) : FunctionWithNLPState(control, nlp), constraint_violation_func_(control, nlp) {
 	
 }
 double LinearModelFunction::operator()(const iSQOIterate &iterate, const iSQOStep &step) {

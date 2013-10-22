@@ -15,7 +15,7 @@
 //! \brief class returning a function to evaluate linear model reduction
 class LinearReductionFunction : public FunctionWithNLPState {
 public:
-	LinearReductionFunction(Nlp &nlp);
+	LinearReductionFunction(iSQOControlPanel &control, Nlp &nlp);
 	double operator()(const iSQOIterate &iterate, const iSQOStep &step) const;
 private:
 protected:

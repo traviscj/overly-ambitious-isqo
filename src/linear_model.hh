@@ -15,7 +15,7 @@
 //! \brief class returning a function to evaluate linear models
 class LinearModelFunction : public FunctionWithNLPState {
 public:
-	LinearModelFunction(Nlp &nlp);
+	LinearModelFunction(iSQOControlPanel &control, Nlp &nlp);
 	double operator()(const iSQOIterate &iterate, const iSQOStep &step);
 private:
 protected:

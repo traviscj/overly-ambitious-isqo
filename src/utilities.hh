@@ -27,6 +27,16 @@ inline std::ostream& operator<< (std::ostream& os, const std::vector< T >& vec) 
     os << " ]";
     return os;
 }
+template < class T >
+inline std::ostream& operator<< (std::ostream& os, const std::vector< T > *vec) {
+    os << "[";
+	for (size_t vector_index = 0; vector_index < vec->size(); ++vector_index) {
+		if (vector_index != 0) os << ", ";
+		os << (*vec)[vector_index];
+	}
+    os << " ]";
+    return os;
+}
 
 double dot_product(const std::vector<double> &vector_one, const std::vector<double> &vector_two);
 

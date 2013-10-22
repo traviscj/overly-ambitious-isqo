@@ -12,6 +12,8 @@
 
 #include "step.hh"
 
+static size_t global_iSQOIterate_serial = 0;
+
 //! \brief class for storing iSQO iterates (primal values and one set of dual values)
 class iSQOIterate {
 public:
@@ -47,14 +49,19 @@ public:
     void set_penalty_parameter(double new_penalty_parameter) { penalty_parameter_ = new_penalty_parameter; }
     
     void assign_primal(const std::vector<double> &primals) {
+        serial_ = global_iSQOIterate_serial++;
         primal_values_.assign(&primals[0], &primals[0] + num_primal_);
     }
     void assign_dual_eq(const std::vector<double> &dual_eq) {
+        serial_ = global_iSQOIterate_serial++;
         dual_eq_values_.assign(&dual_eq[0], &dual_eq[0] + num_dual_eq_);
     }
     void assign_dual_ieq(const std::vector<double> &dual_ieq) {
+        serial_ = global_iSQOIterate_serial++;
         dual_ieq_values_.assign(&dual_ieq[0], &dual_ieq[0] + num_dual_ieq_);
     }
+    
+    size_t get_serial() const { return serial_; }
 // private:
 protected:
 	size_t num_primal_;
@@ -65,6 +72,8 @@ protected:
 	std::vector<double> dual_eq_values_;
 	std::vector<double> dual_ieq_values_;
 	double penalty_parameter_;
+    
+    size_t serial_;
 };
 
 //! \brief print an iterate

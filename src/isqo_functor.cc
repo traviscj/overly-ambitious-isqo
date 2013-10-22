@@ -71,9 +71,12 @@
 // hs99exp.out:Failure - Did not converge - iteration limit in MATLAB implementation.
 
 // standard libraries:
+#include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <limits>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <cmath>
 #include <cassert>
@@ -92,8 +95,13 @@ const std::string sparse_version_string = "SparseAmplNlp and iSQOSparseQuadratic
 #endif
 
 int main(int argc, char **argv) {
-	
+    
+    iSQOControlPanel control("config_reader_input");
+    control.update_settings();
+    control.print();
+    
     std::cout << "Hello world! We're serving " << sparse_version_string << " today, please buckle your seat belts and prepare for takeoff..." << std::endl;
+    std::cout << "* AMPL Setup Caterwalling..." << std::endl;
 	std::string problem_file("/Users/traviscj/optimization/cute_nl_nopresolve/qpcstair.nl");
 	if (argc>1) {
 		problem_file = std::string(argv[1]);
@@ -102,16 +110,16 @@ int main(int argc, char **argv) {
     MAGIC_PROBLEM problem(problem_file);
 	
 	// Utilities for NLP:
-	PenaltyFunction penalty_function(problem);
-	ResidualFunction kkt_residual(problem);
-	SolveQuadraticProgram solve_qp(problem);
-	ConstraintViolationFunction constraint_violation(problem);
-	LineSearchFunction line_search(problem);
-	LinearReductionFunction linear_reduction(problem);
-	HessianShifter hessian_shifting_penalty_qp_solve(problem);
-	HessianShifter hessian_shifting_feasibility_qp_solve(problem);
+	PenaltyFunction penalty_function(control, problem);
+	ResidualFunction kkt_residual(control, problem);
+    // SolveQuadraticProgram solve_qp(control, problem);
+	ConstraintViolationFunction constraint_violation(control, problem);
+	LineSearchFunction line_search(control, problem);
+	LinearReductionFunction linear_reduction(control, problem);
+	HessianShifter hessian_shifting_penalty_qp_solve(control, problem);
+	HessianShifter hessian_shifting_feasibility_qp_solve(control, problem);
 	// Other
-	TextOutput text_output(problem);
+	TextOutput text_output(control, problem);
 	
     text_output.nlp();
     
@@ -125,9 +133,9 @@ int main(int argc, char **argv) {
 	double hessian_min_convexity = 1e-8;	// theta in the paper.
 	// Code-defined parameter values:
 	double convex_combination_search_decrease = .9;
-	bool PRINT=false;
+    // bool PRINT=false;
 	size_t maximum_iterations = 1000;
-	size_t max_num_comb_reductions = 100;
+    size_t max_num_comb_reductions = 100;
 	double machine_precision = std::numeric_limits<double>::epsilon();
 	
 	text_output.start();
@@ -136,26 +144,47 @@ int main(int argc, char **argv) {
 	// ALGORITHM A // STEP 1
 	//////////////////////////
 	iSQOIterate penalty_iterate = problem.initial(1.0e-1);
-    // penalty_iterate.penalty_parameter_ = ;
-
 	iSQOIterate feasibility_iterate = problem.initial(0.0);
-    // feasibility_iterate.penalty_parameter_ = 0.0;
+
 	size_t iter=-1;
+    std::cout << "* Main iteration Loop: " << std::endl;
+    
 	for (iter = 0; iter < maximum_iterations; iter ++ ) {
+        if (iter == 0)
+            std::cout << "** front matter..." << std::endl;
+        else
+            std::cout << "*** front matter..." << std::endl;
         // std::cout << std::endl << "penalty: " << penalty_iterate.penalty_parameter_ << std::endl;
-		iSQOStep combination_step(problem.num_primal(), problem.num_dual_eq(), problem.num_dual_ieq(), -42);
+        double pre_objective = problem.objective(penalty_iterate);
+        double pre_infeas = constraint_violation(penalty_iterate);
+        double pre_merit = penalty_function(penalty_iterate);
+        double pre_feaskkt = kkt_residual(feasibility_iterate);
+        double pre_penkkt = kkt_residual(penalty_iterate);
+		iSQOStep combination_step(problem.num_primal(), problem.num_dual_eq(), problem.num_dual_ieq(), -42, -42);
 		
+        std::cout << "** Start of iteration #" << iter << "; " ;
+            // << std::endl;
+        std::cout << std::scientific << std::setprecision(2) << std::showpos;
+        std::cout << "obj: " << pre_objective << "; ";
+        std::cout << "infeas: " << pre_infeas << "; ";
+		std::cout << "pen: " << penalty_iterate.get_penalty_parameter() << "; ";
+        std::cout << "merit: " << pre_feaskkt << "; ";
+        std::cout << "feaskkt: " << pre_penkkt << "; ";
+        std::cout << "penkkt: " << pre_penkkt << "; ";
+        std::cout << std::endl;
 		text_output.pre(iter, feasibility_iterate, penalty_iterate);
-		
+        
 		//////////////////////////
 		// ALGORITHM A // STEP 2
 		//////////////////////////
 		if ((kkt_residual(penalty_iterate) < termination_threshold) && (constraint_violation(penalty_iterate) < termination_threshold)) {
-			std::cout << std::endl << "Termination 2a - optimality" << std::endl;
+			std::cout << std::endl << "* Final Status: Termination 2a - optimality" << std::endl;
+            text_output.finish_success_opt();
 			break;
 		}
 		if ((kkt_residual(feasibility_iterate) < termination_threshold) && (constraint_violation(penalty_iterate) > termination_threshold) && (penalty_iterate.get_penalty_parameter() < termination_penalty_threshold)) {
-			std::cout << std::endl << "Termination 2b - infeasible problem!" << std::endl;
+			std::cout << std::endl << "* Final Status: Termination 2b - infeasible problem!" << std::endl;
+            text_output.finish_success_inf();
 			break;
 		}
 		
@@ -163,20 +192,38 @@ int main(int argc, char **argv) {
 		// ALGORITHM A // STEP 3
 		//////////////////////////
 		// Penalty problem is set up AND SOLVED, 
-		MAGIC_SUBPROBLEM penalty_subproblem(problem, penalty_iterate);
-		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_subproblem);
-		iSQOStep feasibility_step(problem.num_primal(),problem.num_dual_eq(),problem.num_dual_ieq(), -43);
+        std::cout << "*** creating the PENALTY subproblem: "<< std::endl;
+        std::cout << "**** penalty_iterate: " << penalty_iterate << std::endl;
+		MAGIC_SUBPROBLEM penalty_subproblem(control, problem, penalty_iterate);
+        // std::cout << "Penalty QP start:" << std::endl;
+		iSQOStep penalty_step = hessian_shifting_penalty_qp_solve(penalty_iterate, penalty_subproblem);
+        // std::cout << "Penalty QP end:" << std::endl;
+		iSQOStep feasibility_step(problem.num_primal(),problem.num_dual_eq(),problem.num_dual_ieq(), -43, -43);
 		
 		// per-iteration variable setup.
 		std::string steptype = "4a";
 		double combination_step_contribution_from_penalty_step = -1.0;
-		
-		if (linear_reduction(penalty_iterate,penalty_step) >= linear_decrease_threshold*constraint_violation(penalty_iterate) + 10*machine_precision*linear_reduction(penalty_iterate,penalty_step)) {
+		double next_penalty_parameter;
+
+        std::cout << "*** matrices for shift: " << hessian_shifting_penalty_qp_solve.get_last_shift() << std::endl;
+        std::shared_ptr<matrix_base_class> nlp_hessian(problem.lagrangian_hessian(penalty_iterate));
+        
+        std::cout << "**** NLP hessian: " << std::endl << nlp_hessian << std::endl;
+        std::cout << "**** subproblem hessian: " << std::endl << penalty_subproblem.hessian_ << std::endl;
+        std::cout << "*** Output for subsequent KKT residual call:" << std::endl;
+        double pen_kkt_resid = kkt_residual(penalty_iterate, penalty_subproblem, penalty_step);
+        std::cout << "*** kkt_residual(penalty_iterate,penalty_step): " << pen_kkt_resid << std::endl;
+        
+        double val = linear_reduction(penalty_iterate,penalty_step);
+        std::cout << "*** linear_reduction(penalty_iterate,penalty_step): " << val << std::endl;
+        assert(val>=-1e-12); // need val to be... mostly positive.
+		if (val >= linear_decrease_threshold*constraint_violation(penalty_iterate) + 10*machine_precision*val) {
 			//////////////////////////
 			// ALGORITHM A // STEP 3a
 			combination_step_contribution_from_penalty_step = 1.0;
 			text_output.subproblem_skip();
-
+            
+            next_penalty_parameter = penalty_iterate.get_penalty_parameter();
 			combination_step.set_primal(penalty_step);
 		} else {
 			
@@ -184,8 +231,14 @@ int main(int argc, char **argv) {
 			// ALGORITHM A // STEP 4
 			//////////////////////////
 			// Feasibility problem is set up and solved.
-			MAGIC_SUBPROBLEM feasibility_subproblem(problem, feasibility_iterate);
-			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_subproblem);
+            // std::cout << "Feasibility QP start:" << std::endl;
+            std::cout << "*** creating the FEASIBILITY subproblem: "<< std::endl;
+			MAGIC_SUBPROBLEM feasibility_subproblem(control, problem, feasibility_iterate);
+			feasibility_step = hessian_shifting_feasibility_qp_solve(feasibility_iterate, feasibility_subproblem);
+            std::cout << "*** linear_reduction(penalty_iterate,feasibility_step): " << linear_reduction(penalty_iterate,feasibility_step) << std::endl;
+            
+            // std::cout << "Feasibility QP end:" << std::endl;
+            assert(feasibility_step.get_status() == 0);
 			
 			if (linear_reduction(penalty_iterate,penalty_step) >= linear_decrease_threshold*linear_reduction(feasibility_iterate,feasibility_step)) {
 				//////////////////////////
@@ -204,7 +257,12 @@ int main(int argc, char **argv) {
 					
 					combination_step_contribution_from_penalty_step = convex_combination_search_decrease*combination_step_contribution_from_penalty_step;
 					++num_comb_reductions;
-                    // assert(! (num_comb_reductions >= max_num_comb_reductions));
+                    if (num_comb_reductions >= max_num_comb_reductions) {
+                        combination_step_contribution_from_penalty_step = 0;
+                        combination_step.convex_combination(penalty_step, feasibility_step, combination_step_contribution_from_penalty_step);
+                        break;
+                    }
+                    // assert(! );
 				}
 				steptype = "5b";
 				
@@ -214,16 +272,18 @@ int main(int argc, char **argv) {
 				if (linear_decrease_in_penalty_combination >= linear_reduction_threshold_for_penalty_reduction*linear_decrease_in_feasibility_combination + 10*machine_precision*linear_decrease_in_penalty_combination) {
 					if (combination_step_contribution_from_penalty_step >= mostly_feasibility_step_threshold) {
 						// no-op: keep the current penalty parameter.
+                        next_penalty_parameter = penalty_iterate.get_penalty_parameter();
 					} else {
-						penalty_iterate.set_penalty_parameter(penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter());
+                        // penalty_iterate.set_penalty_parameter();
+                        next_penalty_parameter = penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter();
 					}
 				} else {
 					std::vector<double> gradient = problem.objective_gradient(penalty_iterate);
 					double potential_new_penalty_parameter_numerator = (1-linear_reduction_threshold_for_penalty_reduction)*linear_decrease_in_feasibility_combination;
 					double potential_new_penalty_parameter_denominator = combination_step.x_dot_product(gradient) + hessian_min_convexity*pow(combination_step.x_norm(),2);
-                    assert(potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator > 0);
-					penalty_iterate.set_penalty_parameter(std::min(  penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter(), 
-                                                                    potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator));
+                    // assert(potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator > 0);
+					next_penalty_parameter = std::min(  penalty_parameter_reduction_factor*penalty_iterate.get_penalty_parameter(), 
+                                                                    INFINITY*potential_new_penalty_parameter_numerator / potential_new_penalty_parameter_denominator);
 				}
 			}
 
@@ -232,30 +292,52 @@ int main(int argc, char **argv) {
 			
 			text_output.subproblem(hessian_shifting_feasibility_qp_solve.get_last_shift(), feasibility_iterate, feasibility_subproblem, feasibility_step);
 		}
+		text_output.subproblem(hessian_shifting_penalty_qp_solve.get_last_shift(), penalty_iterate, penalty_subproblem, penalty_step);
+        std::cout << "*** Termination Type: " << steptype << std::endl;
+        
+        double val2 = linear_reduction(penalty_iterate,combination_step);
+        std::cout << "*** linear_reduction(penalty_iterate,combination_step): " << val2 << std::endl;
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 5
 		//////////////////////////
+        
+        std::cout << "*** pre .post " << std::endl;
+		text_output.post(feasibility_iterate, penalty_iterate, combination_step, steptype, combination_step_contribution_from_penalty_step);
+        std::cout << "*** post .post " << std::endl;
+        
+        penalty_iterate.set_penalty_parameter(next_penalty_parameter);
+        std::cout << "*** pre .line_search " << std::endl;
 		double step_size = line_search(penalty_iterate, combination_step);
-		
-		text_output.subproblem(hessian_shifting_penalty_qp_solve.get_last_shift(), penalty_iterate, penalty_subproblem, penalty_step);
-		text_output.post(feasibility_iterate, penalty_iterate, combination_step, steptype, combination_step_contribution_from_penalty_step, step_size);
+        std::cout << "*** post .line_search; step size: " << step_size << std::endl;
+        text_output.line_search(step_size);
 		
 		//////////////////////////
 		// ALGORITHM A // STEP 6
 		//////////////////////////
 		// update penalty iterate & dual values:
+		// update FEASIBILITY iterate first, since penalty iterate update changes this answer.
 		penalty_iterate.update(penalty_iterate, step_size, combination_step);
 		penalty_iterate.update_dual(penalty_step);
-		// update feasibility iterate & dual values:
-		feasibility_iterate.update(penalty_iterate, step_size, combination_step);
+
+        // feasibility_iterate.update(penalty_iterate, step_size, combination_step);
+        feasibility_iterate.assign_primal(*(penalty_iterate.get_primal_values()));
 		feasibility_iterate.update_dual(feasibility_step);
+        
+        problem.reset_cache();
+        hessian_shifting_penalty_qp_solve.save_qp_state();
+        if (feasibility_step.get_status() == 0) hessian_shifting_feasibility_qp_solve.save_qp_state();
+        
+        std::cout << hessian_shifting_penalty_qp_solve.get_info_str();
+        std::cout << hessian_shifting_feasibility_qp_solve.get_info_str();
+        // std::cout << combination_info.str();
 	}
 	
 	if (iter == maximum_iterations) {
-		std::cout << "Failure - Did not converge" << std::endl;
+        std::cout << "* Final Status: Failure - Did not converge" << std::endl;
+        text_output.finish_fail();
 	}
-	std::cout << penalty_iterate.get_primal_values() << std::endl;
+    // std::cout << penalty_iterate.get_primal_values() << std::endl;
 	return 0;
 }
 

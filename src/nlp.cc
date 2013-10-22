@@ -6,7 +6,15 @@
 
 #include "nlp.hh"
 
-Nlp::Nlp(size_t num_primal, size_t num_dual_eq, size_t num_dual_ieq) : num_primal_(num_primal), num_dual_eq_(num_dual_eq), num_dual_ieq_(num_dual_ieq) {
+Nlp::Nlp(size_t num_primal, size_t num_dual_eq, size_t num_dual_ieq) 
+    : num_primal_(num_primal)
+    , num_dual_eq_(num_dual_eq)
+    , num_dual_ieq_(num_dual_ieq)
+    , num_objective_eval_(0)
+    , num_constraint_eval_(0)
+    , num_objective_gradient_eval_(0)
+    , num_constraint_jacobian_eval_(0)
+    , num_lagrangian_eval_(0) {
 	// cout << "-- initializing Nlp" << endl; 
 }
 

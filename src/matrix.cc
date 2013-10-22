@@ -10,6 +10,7 @@
 
 #include "matrix.hh"
 
+//////////////////////////////////////////////////////////////////////////
 matrix_base_class::matrix_base_class(std::size_t rows, std::size_t columns) 
                     : rows_(rows)
                     , columns_(columns)
@@ -21,18 +22,44 @@ matrix_base_class::~matrix_base_class() {
     // std::cout << "destroying matrix base class" << std::endl;
 }
 
+//////////////////////////////////////////////////////////////////////////
 dense_matrix::dense_matrix(std::size_t rows, std::size_t columns) : matrix_base_class(rows, columns), data_(rows*columns) {
 	// cout << "initializing a matrix..." << endl;
 }
-dense_matrix::dense_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign) : matrix_base_class(num_cols, relevant_variables.size()), data_(rows_*columns_) {
-    for (size_t current_relevant_variable=0; current_relevant_variable < relevant_variables.size(); ++current_relevant_variable) {
-        set(current_relevant_variable, relevant_variables[current_relevant_variable], cur_sign);
+// dense_matrix::dense_matrix(std::size_t rows, std::size_t columns, const std::vector<std::size_t> &relevant_variables, double cur_sign) : matrix_base_class(rows, rows), data_(rows_*columns_) {
+//     assert(rows == relevant_variables.size());
+//     for (size_t current_relevant_variable=0; current_relevant_variable < relevant_variables.size(); ++current_relevant_variable) {
+//         set(current_relevant_variable, relevant_variables[current_relevant_variable], cur_sign);
+//     }
+// }    
+// std::shared_ptr<dense_matrix> dense_matrix::diagonal_matrix(std::size_t rows, std::size_t columns, double scalar) {
+//      // matrix_base_class(rows, columns), data_(rows_*columns_) {
+//     
+//     std::shared_ptr<dense_matrix> retval()
+//     for (size_t current_variable=0; current_variable < columns_; ++current_variable) {
+//         set(current_variable, current_variable, scalar);
+//     }
+// }
+std::shared_ptr<dense_matrix> dense_matrix::diagonal_matrix(std::size_t rows, std::size_t columns, double diagonal, std::vector<int> *selected_rows) {
+    assert(rows == columns);
+    bool must_destroy = false;
+    if (selected_rows != NULL) {
+        assert(rows == selected_rows->size());
+    } else {
+        selected_rows = new std::vector<int>(rows);
+        must_destroy = true;
+        for (int i=0; i<rows; i++) (*selected_rows)[i]=i;
     }
-}    
-dense_matrix::dense_matrix(std::size_t num_variables, double scalar) : matrix_base_class(num_variables, num_variables), data_(rows_*columns_) {
-    for (size_t current_variable=0; current_variable < num_variables; ++current_variable) {
-        set(current_variable, current_variable, scalar);
+    
+    std::shared_ptr<dense_matrix> retval(new dense_matrix(rows, columns));
+    for (size_t current_relevant_variable=0; current_relevant_variable < selected_rows->size(); ++current_relevant_variable) {
+            retval->set(current_relevant_variable, (*selected_rows)[current_relevant_variable], diagonal);
     }
+    
+    if (must_destroy)
+        delete selected_rows;
+    
+    return retval;
 }
 
 void dense_matrix::set(std::size_t r, std::size_t c, double val) {
@@ -53,9 +80,22 @@ std::ostream &dense_matrix::print(std::ostream& os) const {
     return os;
 }
 std::ostream &sparse_matrix::print(std::ostream& os) const {
-    os << "values       : " << this->vals_ << std::endl;
-    os << "row indices  : " << this->row_indices_ << std::endl;
-    os << "column starts: " << this->col_starts_ << std::endl;
+    // TODO pick between these two as a control parameter.
+    
+    // print raw-style column compressed output:
+    os << "% rows: " << this->num_rows() << "; cols: " << this->num_columns() << "; nnz: " << this->num_nnz() << std::endl;
+    os << "% values       : " << this->vals_ << std::endl;
+    os << "% row indices  : " << this->row_indices_ << std::endl;
+    os << "% column starts: " << this->col_starts_ << std::endl;
+    
+    // print MATLAB-style matrix output.
+    for (std::size_t col_index=0; col_index < this->columns_; ++col_index) {
+        // os 
+        for (std::size_t nnz_index=this->col_starts_[col_index]; nnz_index < this->col_starts_[col_index+1]; ++nnz_index) {
+            // if (nnz_index != this->col_starts_[col_index]) os << "\t";
+            os << "mat(" << this->row_indices_[nnz_index]+1 << ", " << col_index+1 << ")=" << this->vals_[nnz_index] << ";" << std::endl;
+        }
+    }
     return os;
 }
 
@@ -81,57 +121,82 @@ std::vector<double> dense_matrix::multiply_transpose(const std::vector<double> &
 	return retval;
 }
 
-sparse_matrix::sparse_matrix(std::size_t num_rows, std::size_t num_cols, std::size_t num_nonzeros) 
-            : matrix_base_class(num_rows, num_cols)
-            , vals_(num_nonzeros)
-            , row_indices_(num_nonzeros)
-            , col_starts_(num_cols+1) {
-    
+//////////////////////////////////////////////////////////////////////////
+sparse_matrix::sparse_matrix(std::size_t rows, std::size_t columns, std::size_t nonzeros) 
+            : matrix_base_class(rows, columns)
+            , vals_(nonzeros)
+            , row_indices_(nonzeros)
+            , col_starts_(columns+1) {
+                // bug fixed here: col_starts_ always needs at least two elements. even if #nnz is 0. ???
+                // TODO accurately describe however this turns out to be.
+                // TODO find out if vector<double,int> are really 0 on init.
 }
 
-sparse_matrix::sparse_matrix(std::size_t num_cols, std::vector<std::size_t> relevant_variables, double cur_sign) 
-            : matrix_base_class(relevant_variables.size(), num_cols)
-            , vals_(relevant_variables.size())
-            , row_indices_(relevant_variables.size())
-            , col_starts_(num_cols+1) {
-    // sparse_matrix retval(relevant_variables.size(),total_variables);
-    // double cur_sign = -1.0;
-    if (relevant_variables.size()==0) return;
-    std::size_t total_variable_index=0;
-    for (std::size_t relevant_variable_index=0; relevant_variable_index < relevant_variables.size(); ++relevant_variable_index) {
-        while (total_variable_index < relevant_variables[relevant_variable_index]) {
+// @TODO figure out why this couldn't be static.
+std::shared_ptr<sparse_matrix> sparse_matrix::diagonal_matrix(std::size_t rows, std::size_t columns, double diagonal, std::vector<size_t> *selected_rows) {
+    // assert((rows != 0) && (columns != 0));
+    // assert(rows == columns);  // oops, this is wrong.
     
-            ++total_variable_index;
-            col_starts_[total_variable_index] = relevant_variable_index;
+    int number_nonzeros = columns;
+    bool must_destroy = false;
+    if (selected_rows != NULL) {
+        // if we have a list of selected values, we will initialize that many!
+        // std::cout << "Found some selected rows!: " << (*selected_rows) << std::endl;
+        number_nonzeros = selected_rows->size();
+        assert(number_nonzeros == rows);
+    } else {
+        selected_rows = new std::vector<size_t>(columns);
+        must_destroy = true;
+        for (int i=0; i<columns; i++) (*selected_rows)[i] = i;
+    }
+    
+    assert(selected_rows != NULL);
+    // std::cout << "selected rows: " << (*selected_rows) << std::endl;
+    // std::cout << "creating a sparse matrix for ::diag, nnz: " << number_nonzeros << std::endl;
+    std::shared_ptr<sparse_matrix> retval(new sparse_matrix(rows, columns, number_nonzeros));
+    
+    std::size_t current_relevant_index=0;
+    for (std::size_t total_variable_index=0; total_variable_index < retval->num_columns(); ++total_variable_index) {
+        if (selected_rows->size() > current_relevant_index && total_variable_index == (*selected_rows)[current_relevant_index]) {
+            retval->vals_[current_relevant_index] = diagonal;
+            retval->row_indices_[current_relevant_index] = current_relevant_index; 
+            ++current_relevant_index;
         }
-        vals_[relevant_variable_index] = cur_sign;
-        row_indices_[relevant_variable_index] = relevant_variable_index;
+        retval->col_starts_[total_variable_index+1] = current_relevant_index;
     }
-    for (std::size_t i=total_variable_index; i < num_cols; ++i) {
-        col_starts_[i+1] = col_starts_[total_variable_index]+1;
-    }
-}
-
-
-sparse_matrix::sparse_matrix(std::size_t num_variables, double scalar)
-            : matrix_base_class(num_variables, num_variables)
-            , vals_(num_variables)
-            , row_indices_(num_variables)
-            , col_starts_(num_variables+1) {
-    if (num_variables == 0) return;
     
-    for (size_t current_nonzero=0; current_nonzero < num_variables; ++current_nonzero) {
-        vals_[current_nonzero] = scalar;
-        row_indices_[current_nonzero] = current_nonzero;
-    }
-    for (size_t current_column=0; current_column < num_variables + 1; ++current_column) {
-        col_starts_[current_column] = current_column;
-    }
+    // std::cout << "retval->vals_: " << retval->vals_ << std::endl;
+    // std::cout << "retval->row_indices_: " << retval->row_indices_ << std::endl;
+    // std::cout << "retval->col_starts_: " << retval->col_starts_ << std::endl;
+    // std::cout << "final product: " << retval << std::endl;
+    // assert(relevant_variables.size() == rows);
+    // if (relevant_variables.size()==0) return;
+    if (must_destroy)
+        delete selected_rows;
+    return retval;
 }
+
+
+// sparse_matrix::sparse_matrix(std::size_t rows, std::size_t columns)
+//             : sparse_matrix(rows, columns, columns) {
+//     assert(rows == columns);
+//     
+//     if (columns == 0) return;
+//     
+//     for (size_t current_nonzero=0; current_nonzero < columns; ++current_nonzero) {
+//         vals_[current_nonzero] = scalar;
+//         row_indices_[current_nonzero] = current_nonzero;
+//     }
+//     for (size_t current_column=0; current_column < columns + 1; ++current_column) {
+//         col_starts_[current_column] = current_column;
+//     }
+// }
 
 std::vector<double> sparse_matrix::multiply(const std::vector<double> &vector_factor) const {
     assert(vector_factor.size() == columns_);
     std::vector<double> product(rows_);
+    // std::cout << "product, pre: " << product << std::endl;
+    for (size_t row_index=0; row_index < rows_; ++row_index) product[row_index]=0.0;
     int current_row=-1;
     
     for (size_t column_index=0; column_index < columns_; ++column_index) {
@@ -140,6 +205,7 @@ std::vector<double> sparse_matrix::multiply(const std::vector<double> &vector_fa
             product[current_row] += vals_[nonzero_index]*vector_factor[column_index];
         }
     }
+    // std::cout << "product, post: " << product << std::endl;
     return product;
 }
 std::vector<double> sparse_matrix::multiply_transpose(const std::vector<double> &vector_factor) const {
@@ -172,16 +238,15 @@ void sparse_matrix::sum(const std::shared_ptr<sparse_matrix> b) {
     assert(num_rows() == b->num_rows());
     assert(num_columns() == b->num_columns());
     bool PRINT = false;
-    // std::shared_ptr<sparse_matrix> result(new sparse_matrix(num_rows(), a->num_columns(), 0));
     
     if (PRINT) std::cout << std::endl << "summing: " << std::endl << *this << std::endl;
     if (PRINT) std::cout << "and : " << std::endl << *b << std::endl;
     std::vector<double> result_vals;
     std::vector<int> result_row_indices;
     std::vector<int> result_col_starts;
-    size_t A_nnz_index=0, A_row_index=0, A_col_index=0;
-    size_t B_nnz_index=0, B_row_index=0, B_col_index=0;
-    size_t C_nnz_index=0, C_row_index=0, C_col_index=0;
+    size_t A_nnz_index=0;
+    size_t B_nnz_index=0;
+    size_t C_nnz_index=0, C_col_index=0;
     result_col_starts.push_back(C_nnz_index);
     for (; C_col_index < col_starts_.size() - 1; ) {        
         if (PRINT) std::cout << "A bounds: " << col_starts_[C_col_index] << " <= A_nnz_index < " << col_starts_[C_col_index+1] << "; "
@@ -256,12 +321,11 @@ std::shared_ptr<dense_matrix> vertical(const std::shared_ptr<dense_matrix> top, 
 
 std::shared_ptr<sparse_matrix> sparse_matrix::vertical(const std::shared_ptr<sparse_matrix> bottom)  const {
     assert(num_columns() == bottom->num_columns());
-    std::shared_ptr<sparse_matrix> result(new sparse_matrix(num_rows() + bottom->num_rows(), 
+    std::shared_ptr<sparse_matrix> result(new sparse_matrix(
+                            num_rows() + bottom->num_rows(), 
                             num_columns(), 
                             num_nnz() + bottom->num_nnz()));
     
-    size_t current_a_index=0, current_b_index=0;
-
     size_t current_nnz_index=0;
     std::vector<double> bottom_vals        = bottom->get_vals();
     std::vector<   int> bottom_row_indices = bottom->get_row_indices();
@@ -410,7 +474,7 @@ void sparse_matrix::regularize(double hessian_shift, double last_shift) {
 //             }
 //         }
 //         // last_hessian_shift_ = hessian_shift;
-    std::shared_ptr<sparse_matrix> scaled_identity(new sparse_matrix(num_columns(), hessian_shift - last_shift));
+    std::shared_ptr<sparse_matrix> scaled_identity(sparse_matrix::diagonal_matrix(num_rows(), num_columns(), hessian_shift - last_shift));
     // sparse_matrix sib(num_columns(), hessian_shift - last_shift);
      // *scaled_identity_nosmart = scaled_identity.get();
     

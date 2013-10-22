@@ -8,6 +8,7 @@
 #define __GUARD_NLP_AMPL_HH
 
 #include <vector>
+#include <map>
 #include <string>
 
 #include <qpOASES.hpp>
@@ -48,7 +49,7 @@ public:
     
     std::vector<double> mux_multipliers(const iSQOIterate &iterate);
     
-    
+    virtual void reset_cache() = 0;
 private:
 protected:
 	bool PRINT_;
@@ -77,6 +78,8 @@ public:
     std::shared_ptr<matrix_base_class> constraints_equality_jacobian(const iSQOIterate &iterate);
     std::shared_ptr<matrix_base_class> constraints_inequality_jacobian(const iSQOIterate &iterate);
     std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate);
+    
+    void reset_cache() {} 
 private:
 protected:
 
@@ -91,8 +94,16 @@ public:
     std::shared_ptr<matrix_base_class> constraints_equality_jacobian(const iSQOIterate &iterate);
     std::shared_ptr<matrix_base_class> constraints_inequality_jacobian(const iSQOIterate &iterate);
     std::shared_ptr<matrix_base_class> lagrangian_hessian(const iSQOIterate &iterate);
+    
+    void reset_cache() {
+        prior_eq_jacobians_.clear();
+        prior_ieq_jacobians_.clear();
+        
+        prior_hessians_.clear();
+    }
 private:
 protected:
+    std::shared_ptr<sparse_matrix> submatrix(std::shared_ptr<sparse_matrix> matrix, std::vector<size_t> rows_to_keep, size_t num_result_nnz, double scale);
     void jacobian_update(const iSQOIterate &iterate);
     void hessian_update(const iSQOIterate &iterate);
     // TODO make these returned, let a caching class worry about it.
@@ -102,9 +113,14 @@ protected:
     // maybe we can only get away with not storing the hessian?
     // or maybe we should be more careful about which functions we 'coneval', which might help?
     // or... maybe we just throw caution to the wind for now, and clean it up later.
+    
+    // these two structures exist to allow passing back and forth between jacobian_update:
     std::shared_ptr<matrix_base_class> eq_jacobian_;
     std::shared_ptr<matrix_base_class> ieq_jacobian_;
-    std::shared_ptr<matrix_base_class> hessian_;  
+    
+    std::map<int, std::shared_ptr<matrix_base_class> > prior_hessians_;
+    std::map<int, std::shared_ptr<matrix_base_class> > prior_eq_jacobians_;
+    std::map<int, std::shared_ptr<matrix_base_class> > prior_ieq_jacobians_;
 };
 
 #endif

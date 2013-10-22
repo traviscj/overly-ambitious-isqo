@@ -1,3 +1,8 @@
+// Copyright (C) 2013 Travis C. Johnson (traviscj@traviscj.com)
+// All Rights Reserved.
+// This code is published under the Eclipse Public License.
+//
+// Author:  Travis C. Johnson (traviscj@traviscj.com)
 #ifndef TEXT_OUTPUT_HH_45I5FVHZ
 #define TEXT_OUTPUT_HH_45I5FVHZ
 

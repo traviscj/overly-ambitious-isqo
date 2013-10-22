@@ -1,3 +1,8 @@
+// Copyright (C) 2013 Travis C. Johnson (traviscj@traviscj.com)
+// All Rights Reserved.
+// This code is published under the Eclipse Public License.
+//
+// Author:  Travis C. Johnson (traviscj@traviscj.com)
 #ifndef SOLVE_SUBPROBLEM_HH_9BLKFD95
 #define SOLVE_SUBPROBLEM_HH_9BLKFD95
 
